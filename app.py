@@ -430,4 +430,5 @@ title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; 
         f"</h3>"
 
 # Hiển thị ra màn hình
-st.markdown(title + render_html_table(data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, truc_su), unsafe_allow_html=True)
+html_string = title + render_html_table(data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, truc_su)
+st.components.v1.html(html_string, height=450)
