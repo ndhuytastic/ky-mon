@@ -458,7 +458,7 @@ tuan_khong_str = list(set(tk_ngay + tk_gio))
 data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc)
 
 title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px;'>" \
-        f"奇门遁甲 | {chuoi_cuc} | {bazi_chuoi} {hour_str}" \
+        f"奇门 | {chuoi_cuc} | {bazi_chuoi} {hour_str}" \
         f"</h3>"
 
 html_string = title + render_html_table(data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, truc_su)
