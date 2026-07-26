@@ -476,12 +476,14 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 now_vn = get_current_vn_time()
 current_chi_idx = int((now_vn.hour + 1) / 2) % 12
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 with col1:
-    selected_date = st.date_input("Ngày", now_vn.date())
+    display_mode = st.selectbox("Hiển thị", ["Mặc định", "六十花甲"])
 with col2:
-    selected_branch_str = st.selectbox("Giờ", danh_sach_12_gio, index=current_chi_idx)
+    selected_date = st.date_input("Ngày", now_vn.date())
 with col3:
+    selected_branch_str = st.selectbox("Giờ", danh_sach_12_gio, index=current_chi_idx)
+with col4:
     dropdown_ju = st.selectbox("Cục số", ["Mặc định", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
 
 chi_gio = selected_branch_str[0]
@@ -516,71 +518,89 @@ sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-ser
 qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su)
 jiazi_board_html = render_jiazi_table()
 
-# Sử dụng CSS Flexbox để tự động xếp cạnh nhau trên PC và xếp chồng trên Mobile
-combined_html = f"""
-    <style>
-        .main-wrapper {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            align-items: flex-start;
-            justify-content: flex-start;
-            font-family: "Microsoft YaHei", sans-serif;
-        }}
-    </style>
-    <div class="main-wrapper">
-        <div>
-            {title}
-            {sub_title}
-            {qimen_board_html}
-        </div>
-        <div>
-            <div style="visibility: hidden; pointer-events: none;">
+js_script = """
+<script>
+    const relations = {
+        1: [9, 2, 7], // Khảm
+        2: [8, 4, 1], // Khôn
+        3: [7, 9, 8], // Chấn
+        4: [6, 7, 2], // Tốn
+        6: [4, 8, 9], // Càn
+        7: [3, 1, 4], // Đoài
+        8: [2, 3, 6], // Cấn
+        9: [1, 6, 3]  // Ly
+    };
+    
+    let currentActive = null;
+
+    function toggleHighlight(palace) {
+        if(palace === 5) return;
+        
+        for(let i=1; i<=9; i++) {
+            if(i===5) continue;
+            document.getElementById('palace-' + i).style.backgroundColor = '#fefefe';
+        }
+
+        if (currentActive === palace) {
+            currentActive = null;
+        } else {
+            let targets = relations[palace];
+            if(targets) {
+                targets.forEach(t => {
+                    let cell = document.getElementById('palace-' + t);
+                    if(cell) cell.style.backgroundColor = '#e6e6e6';
+                });
+            }
+            currentActive = palace;
+        }
+    }
+</script>
+"""
+
+# Điều hướng hiển thị 1 Bảng (Mặc định) hoặc 2 Bảng dựa trên lựa chọn Selectbox
+if display_mode == "Mặc định":
+    combined_html = f"""
+        <div style="display: flex; justify-content: center; font-family: 'Microsoft YaHei', sans-serif;">
+            <div>
                 {title}
                 {sub_title}
-            </div>
-            <div style="margin-top: 5px;">
-                {jiazi_board_html}
+                {qimen_board_html}
             </div>
         </div>
-    </div>
-    
-    <script>
-        const relations = {{
-            1: [9, 2, 7], // Khảm
-            2: [8, 4, 1], // Khôn
-            3: [7, 9, 8], // Chấn
-            4: [6, 7, 2], // Tốn
-            6: [4, 8, 9], // Càn
-            7: [3, 1, 4], // Đoài
-            8: [2, 3, 6], // Cấn
-            9: [1, 6, 3]  // Ly
-        }};
-        
-        let currentActive = null;
+        {js_script}
+    """
+else:
+    dummy_title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 18px; user-select: none;'>_</h3>"
+    dummy_sub = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 16px; user-select: none;'>_</h4>"
 
-        function toggleHighlight(palace) {{
-            if(palace === 5) return;
-            
-            for(let i=1; i<=9; i++) {{
-                if(i===5) continue;
-                document.getElementById('palace-' + i).style.backgroundColor = '#fefefe';
+    combined_html = f"""
+        <style>
+            .main-wrapper {{
+                display: flex;
+                flex-wrap: wrap;
+                gap: 60px;
+                align-items: flex-start;
+                justify-content: center;
+                font-family: "Microsoft YaHei", sans-serif;
             }}
-
-            if (currentActive === palace) {{
-                currentActive = null;
-            }} else {{
-                let targets = relations[palace];
-                if(targets) {{
-                    targets.forEach(t => {{
-                        let cell = document.getElementById('palace-' + t);
-                        if(cell) cell.style.backgroundColor = '#e6e6e6';
-                    }});
-                }}
-                currentActive = palace;
-            }}
-        }}
-    </script>
-"""
+        </style>
+        <div class="main-wrapper">
+            <div>
+                {title}
+                {sub_title}
+                {qimen_board_html}
+            </div>
+            <div>
+                <div style="visibility: hidden; pointer-events: none;">
+                    {title}
+                    {sub_title}
+                </div>
+                <div style="margin-top: 5px;">
+                    {jiazi_board_html}
+                </div>
+            </div>
+        </div>
+        {js_script}
+    """
 
 st.components.v1.html(combined_html, height=880, scrolling=True)
