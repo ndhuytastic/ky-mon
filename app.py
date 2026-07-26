@@ -37,6 +37,12 @@ branch_elements = {"亥": "水", "子": "水", "寅": "木", "卯": "木", "巳"
 stem_punish = {"戊": 3, "己": 2, "庚": 8, "辛": 9, "壬": 4, "癸": 4}
 stem_tomb = {"辛": [4], "壬": [4], "丁": [8], "己": [8], "庚": [8], "癸": [2], "乙": [2, 6], "丙": [6], "戊": [6]}
 
+# Mapping Địa chi nhỏ cho Thập Gia Chuyển Bàn
+shijia_earth_branch_map = {
+    "戊": "子", "己": "戌", "庚": "申", "辛": "午", "壬": "辰", 
+    "癸": "寅", "丁": "卯", "丙": "寅", "乙": "丑"
+}
+
 solar_term_ju = {
     "冬至":[1,7,4], "小寒":[2,8,5], "大寒":[3,9,6], "立春":[8,5,2], "雨水":[9,6,3], "惊蛰":[1,7,4],
     "春分":[3,9,6], "清明":[4,1,7], "谷雨":[5,2,8], "立夏":[4,1,7], "小满":[5,2,8], "芒种":[6,3,9],
@@ -219,7 +225,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 'ancan': ''} for i in range(1, 10)}
     cung_data[vi_tri_ngua]['ngua'] = "马"
 
-    # FIX: Gán Địa Bàn Can chuẩn xác (Cung 2 hiển thị A/B)
     for i in range(1, 10):
         if i == 2:
             cung_data[i]['dia'] = f"{dia_ban.get(2, '')}/{dia_ban.get(5, '')}"
@@ -300,15 +305,25 @@ def format_stem_with_rules(stem_str, cung, can_gio_ban, can_ngay_ban, is_heaven=
         formatted.append(f"{wrapper_start}<span style='color:{color}; font-weight:{weight}; text-decoration:{text_decor}; text-underline-offset: 4px; {shape_style}'>{inner_text}</span>{wrapper_end}")
     return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(formatted)
 
-def format_stem_simple(stem_str):
+def format_stem_simple_with_chi(stem_str):
     if not stem_str: return ""
     parts = stem_str.split('/')
     formatted = []
     for p in parts:
         el = stem_elements.get(p, "")
         color = element_colors.get(el, "#1a1a1a")
-        formatted.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center; font-weight:normal;'>{p}</span>")
-    return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(formatted)
+        
+        # Bổ sung chữ Địa chi mờ phía dưới can
+        chi_mo = shijia_earth_branch_map.get(p, "")
+        chi_html = f"<div style='font-size: 11px; color: #999; line-height: 0.8; margin-top: -2px;'>{chi_mo}</div>" if chi_mo else ""
+        
+        formatted.append(f"""
+            <span style='display: inline-flex; flex-direction: column; align-items: center; width: 26px; text-align: center; vertical-align: top;'>
+                <span style='color:{color}; font-weight:normal; line-height: 1.1;'>{p}</span>
+                {chi_html}
+            </span>
+        """)
+    return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px; display: inline-flex; align-items: flex-start; padding-top: 2px;'>/</span>".join(formatted)
 
 def format_door_with_rules(door, cung, truc_su):
     if not door: return ""
@@ -339,10 +354,11 @@ def render_jiazi_table():
 
     html = """
     <style>
-        .jiazi-table { border-collapse: collapse; width: 480px; min-width: 480px; height: 360px; font-family: "Microsoft YaHei", sans-serif; font-size: 15px; text-align: center; background-color: #fefefe; color: #000; }
-        .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 4px; }
+        .jiazi-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 300px; height: 360px; font-family: "Microsoft YaHei", sans-serif; font-size: 14px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; }
+        .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 3px; }
         .jz-header { font-weight: normal; }
         .jz-footer { font-weight: normal; line-height: 1.2;}
+        @media (max-width: 500px) { .jiazi-table { font-size: 12px; } }
     </style>
     <table class="jiazi-table"><tr class="jz-header">
     """
@@ -351,7 +367,7 @@ def render_jiazi_table():
     for i in range(10):
         html += "<tr>"
         for j in range(6):
-            html += f"<td>{stems[i]}&nbsp;{branches[(12 - j * 2 + i) % 12]}</td>"
+            html += f"<td>{stems[i]}<br>{branches[(12 - j * 2 + i) % 12]}</td>"
         html += "</tr>"
     html += "<tr class='jz-footer'>"
     for kw in ["戌<br>亥", "申<br>酉", "午<br>未", "辰<br>巳", "寅<br>卯", "子<br>丑"]: html += f"<td>{kw}</td>"
@@ -378,30 +394,39 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
     html = f"""
     <style>
-        .qmdj-table {{ border-collapse: collapse; width: 480px; min-width: 480px; height: 360px; table-layout: fixed; font-size: 15px; background-color: #fefefe; }}
-        .qmdj-td {{ border: 1px solid #bfbfbf; width: 33.33%; padding: 10px 6px 20px 6px; position: relative; vertical-align: top; overflow: visible; transition: background-color 0.2s; }}
+        .qmdj-table {{ border-collapse: collapse; width: 100%; max-width: 480px; min-width: 320px; height: 360px; table-layout: fixed; font-size: 15px; background-color: #fefefe; margin: 0 auto; }}
+        .qmdj-td {{ border: 1px solid #bfbfbf; width: 33.33%; padding: 8px 4px 15px 4px; position: relative; vertical-align: top; overflow: visible; transition: background-color 0.2s; }}
         
         .row-top, .row-mid, .row-bot {{ display: flex; align-items: center; justify-content: flex-start; }}
-        .item-left {{ width: 55px; text-align: left; margin-left: 5px; flex-shrink: 0; line-height: 1.2; }}
-        .item-right {{ display: flex; align-items: center; flex-wrap: wrap; flex-grow: 1; gap: 2px 3px; line-height: 1.2; margin-left: 20px; }}
-        .stem {{ font-size: 16px; margin-right: 2px; font-weight: normal; display: flex; align-items: center; }}
+        .item-left {{ width: 55px; text-align: left; margin-left: 2px; flex-shrink: 0; line-height: 1.2; }}
+        .item-right {{ display: flex; align-items: center; flex-wrap: wrap; flex-grow: 1; gap: 2px 3px; line-height: 1.2; margin-left: 10px; }}
+        .stem {{ font-size: 16px; margin-right: 1px; font-weight: normal; display: flex; align-items: center; }}
         
         /* Default Spacing */
         .default-top {{ margin-bottom: 8px; }}
         .default-mid {{ margin-bottom: 6px; }}
         .default-bot {{ margin-bottom: 0px; }}
 
-        /* Shijia Zhuanpan Spacing (More distributed padding) */
+        /* Shijia Zhuanpan Spacing */
         .shijia-top {{ margin-top: 5px; margin-bottom: 22px; }}
         .shijia-mid {{ margin-bottom: 22px; }}
         .shijia-bot {{ margin-bottom: 0px; }}
 
-        .horse {{ position: absolute; top: 6px; right: 8px; color: #1a1a1a; font-weight: normal; font-size: 14px; cursor: default; }}
-        .bagua-mark {{ position: absolute; bottom: 2px; right: 8px; color: #1a1a1a; font-size: 14px; cursor: pointer; z-index: 20; }}
+        .horse {{ position: absolute; top: 4px; right: 6px; color: #1a1a1a; font-weight: normal; font-size: 13px; cursor: default; }}
+        .bagua-mark {{ position: absolute; bottom: 2px; right: 6px; color: #1a1a1a; font-size: 13px; cursor: pointer; z-index: 20; }}
         .inner-numbers {{ position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #000; font-weight: normal; letter-spacing: 0.5px; white-space: nowrap; }}
         .center-fuyin {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 10; gap: 2px; }}
-        .fuyin-badge {{ background-color: #FFD700; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 13px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
-        .wubu-badge {{ background-color: #FF4500; color: #FFF; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 13px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
+        .fuyin-badge {{ background-color: #FFD700; color: #000; padding: 2px 4px; border-radius: 3px; font-weight: bold; font-size: 12px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
+        .wubu-badge {{ background-color: #FF4500; color: #FFF; padding: 2px 4px; border-radius: 3px; font-weight: bold; font-size: 12px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
+        
+        .toggle-btn {{ position: absolute; top: 2px; left: 2px; font-size: 10px; color: #999; cursor: pointer; user-select: none; border: 1px solid #ccc; padding: 1px 3px; border-radius: 2px; background: #fafafa; z-index: 30; }}
+        .toggle-btn:hover {{ background: #eee; }}
+        
+        @media (max-width: 400px) {{
+            .item-left {{ width: 45px; font-size: 13px; }}
+            .item-right {{ margin-left: 5px; }}
+            .stem {{ font-size: 14px; }}
+        }}
     </style>
     <table class="qmdj-table">
     """
@@ -419,10 +444,21 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 than_html = get_colored_span(d['than'], deity_elements)
                 sao_html = format_star_with_rules(d['sao'])
                 mon_html = format_door_simple_with_circle(d['mon'], truc_su)
-                thien_display = format_stem_simple(d['thien'])
-                dia_display = format_stem_simple(d['dia'])
+                
+                # Format Thiên Bàn (không có chi mờ)
+                thien_parts = d['thien'].split('/')
+                thien_res = []
+                for tp in thien_parts:
+                    el = stem_elements.get(tp, "")
+                    color = element_colors.get(el, "#1a1a1a")
+                    thien_res.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center; font-weight:normal;'>{tp}</span>")
+                thien_display = "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(thien_res)
+
+                # Format Địa Bàn (CÓ chi mờ)
+                dia_display = format_stem_simple_with_chi(d['dia'])
                 
                 horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = ""
+                toggle_btn_html = ""
             else:
                 class_top = "row-top default-top"
                 class_mid = "row-mid default-mid"
@@ -438,23 +474,25 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
                 void_html = ""
                 if p in cung_tk_ngay or p in cung_tk_gio:
-                    right_pos = "26px" if d['ngua'] else "8px"
+                    right_pos = "22px" if d['ngua'] else "6px"
                     if p in cung_tk_gio:
-                        void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 2px solid #000; border-radius: 50%; box-sizing: border-box;"></div>'
+                        void_html = f'<div style="position: absolute; top: 6px; right: {right_pos}; width: 10px; height: 10px; border: 2px solid #000; border-radius: 50%; box-sizing: border-box;"></div>'
                     else:
-                        void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 1px solid #999; border-radius: 50%; box-sizing: border-box;"></div>'
+                        void_html = f'<div style="position: absolute; top: 6px; right: {right_pos}; width: 10px; height: 10px; border: 1px solid #999; border-radius: 50%; box-sizing: border-box;"></div>'
 
                 gua_char = cung_to_gua[p]
                 gua_html = ""
                 if gua_char:
-                    w_style = "bold; font-size:16px;" if is_cung_vuong_tuong(p, month_branch) else "normal;"
+                    w_style = "bold; font-size:14px;" if is_cung_vuong_tuong(p, month_branch) else "normal;"
                     gua_html = f"<div class='bagua-mark' style='font-weight:{w_style}' onclick='toggleHighlight({p})'>{gua_char}</div>"
 
                 nums_str = inner_numbers.get(p, "")
                 inner_nums_html = f"<div class='inner-numbers'>{nums_str}</div>" if nums_str else ""
 
                 center_alert_html = ""
+                toggle_btn_html = ""
                 if p == 5:
+                    toggle_btn_html = "<div class='toggle-btn' onclick='toggleJiazi()'>六十</div>"
                     badges = []
                     if is_wu_bu_yu_shi: badges.append("<div class='wubu-badge'>五不遇时</div>")
                     if is_star_fuyin and is_door_fuyin: badges.append("<div class='fuyin-badge'>星门全伏吟</div>")
@@ -469,10 +507,12 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
+                # Cung 5 đặc biệt: Trong chế độ 拆补转盘 sẽ có nút Toggle Lục thập hoa giáp
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
+                    {toggle_btn_html}
                     {center_alert_html}
-                    <div style="position: absolute; bottom: 6px; right: 10px; font-size: 18px;">{dia_display}</div>
+                    <div style="position: absolute; bottom: 6px; right: 10px; font-size: 16px;">{dia_display}</div>
                     {ancan_html}
                 </td>"""
             else:
@@ -511,7 +551,7 @@ current_chi_idx = int((now_vn.hour + 1) / 2) % 12
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    display_mode = st.selectbox("Hiển thị", ["拆补转盘", "六十花甲", "十家转盘"])
+    display_mode = st.selectbox("Hiển thị", ["拆补转盘", "十家转盘"])
 with col2:
     selected_date = st.date_input("Ngày", now_vn.date())
 with col3:
@@ -546,8 +586,8 @@ tk_gio = tinh_tuan_khong(hoa_giap_hien_tai)
 
 data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc, display_mode)
 
-title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; user-select: none;'>{bazi_chuoi} {hour_str}</h3>"
-sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none;'>奇门遁甲 | {chuoi_cuc}</h4>"
+title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; user-select: none; text-align: center;'>{bazi_chuoi} {hour_str}</h3>"
+sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none; text-align: center;'>奇门遁甲 | {chuoi_cuc}</h4>"
 
 qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode)
 jiazi_board_html = render_jiazi_table()
@@ -578,40 +618,35 @@ js_script = """
             currentActive = palace;
         }
     }
+    
+    function toggleJiazi() {
+        var jz = document.getElementById('jiazi-container');
+        if (jz.style.display === "none") {
+            jz.style.display = "block";
+        } else {
+            jz.style.display = "none";
+        }
+    }
 </script>
 """
 
-if display_mode in ["拆补转盘", "十家转盘"]:
-    combined_html = f"""
-        <div style="display: flex; justify-content: center; font-family: 'Microsoft YaHei', sans-serif;">
-            <div>
-                {title}
-                {sub_title}
-                {qimen_board_html}
-            </div>
+combined_html = f"""
+    <style>
+        .main-wrapper {{ display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }}
+        .board-container {{ margin-bottom: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; }}
+        #jiazi-container {{ display: none; width: 100%; display: flex; justify-content: center; }}
+    </style>
+    <div class="main-wrapper">
+        <div class="board-container">
+            {title}
+            {sub_title}
+            {qimen_board_html}
         </div>
-        {js_script}
-    """
-else:
-    dummy_title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 18px; user-select: none;'>_</h3>"
-    dummy_sub = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 16px; user-select: none;'>_</h4>"
-
-    combined_html = f"""
-        <style>
-            .main-wrapper {{ display: flex; flex-wrap: wrap; gap: 60px; align-items: flex-start; justify-content: center; font-family: "Microsoft YaHei", sans-serif; }}
-        </style>
-        <div class="main-wrapper">
-            <div>
-                {title}
-                {sub_title}
-                {qimen_board_html}
-            </div>
-            <div>
-                <div style="visibility: hidden; pointer-events: none;">{title}{sub_title}</div>
-                <div style="margin-top: 5px;">{jiazi_board_html}</div>
-            </div>
+        <div id="jiazi-container" style="display: none;">
+            {jiazi_board_html}
         </div>
-        {js_script}
-    """
+    </div>
+    {js_script}
+"""
 
-st.components.v1.html(combined_html, height=880, scrolling=True)
+st.components.v1.html(combined_html, height=900, scrolling=True)
