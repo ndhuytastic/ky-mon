@@ -305,7 +305,17 @@ def format_stem_with_rules(stem_str, cung, can_gio_ban, can_ngay_ban, is_heaven=
         formatted.append(f"{wrapper_start}<span style='color:{color}; font-weight:{weight}; text-decoration:{text_decor}; text-underline-offset: 4px; {shape_style}'>{inner_text}</span>{wrapper_end}")
     return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(formatted)
 
-def format_stem_simple_with_chi(stem_str):
+def format_stem_simple(stem_str):
+    if not stem_str: return ""
+    parts = stem_str.split('/')
+    formatted = []
+    for p in parts:
+        el = stem_elements.get(p, "")
+        color = element_colors.get(el, "#1a1a1a")
+        formatted.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center; font-weight:normal;'>{p}</span>")
+    return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(formatted)
+
+def format_stem_simple_with_chi(stem_str, cung):
     if not stem_str: return ""
     parts = stem_str.split('/')
     formatted = []
@@ -313,9 +323,11 @@ def format_stem_simple_with_chi(stem_str):
         el = stem_elements.get(p, "")
         color = element_colors.get(el, "#1a1a1a")
         
-        # Bổ sung chữ Địa chi mờ phía dưới can
-        chi_mo = shijia_earth_branch_map.get(p, "")
-        chi_html = f"<div style='font-size: 11px; color: #999; line-height: 0.8; margin-top: -2px;'>{chi_mo}</div>" if chi_mo else ""
+        # Chỉ hiển thị Địa chi mờ nếu KHÔNG PHẢI là Cung 5 (Trung cung)
+        chi_mo = shijia_earth_branch_map.get(p, "") if cung != 5 else ""
+        
+        # Tăng margin-top lên 3px để cách xa chữ Thiên can ở trên
+        chi_html = f"<div style='font-size: 11px; color: #999; line-height: 0.8; margin-top: 3px;'>{chi_mo}</div>" if chi_mo else ""
         
         formatted.append(f"""
             <span style='display: inline-flex; flex-direction: column; align-items: center; width: 26px; text-align: center; vertical-align: top;'>
@@ -445,7 +457,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 sao_html = format_star_with_rules(d['sao'])
                 mon_html = format_door_simple_with_circle(d['mon'], truc_su)
                 
-                # Format Thiên Bàn (không có chi mờ)
                 thien_parts = d['thien'].split('/')
                 thien_res = []
                 for tp in thien_parts:
@@ -454,8 +465,8 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                     thien_res.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center; font-weight:normal;'>{tp}</span>")
                 thien_display = "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(thien_res)
 
-                # Format Địa Bàn (CÓ chi mờ)
-                dia_display = format_stem_simple_with_chi(d['dia'])
+                # Format Địa Bàn (truyền p vào để kiểm tra Cung 5)
+                dia_display = format_stem_simple_with_chi(d['dia'], p)
                 
                 horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = ""
                 toggle_btn_html = ""
@@ -507,7 +518,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
-                # Cung 5 đặc biệt: Trong chế độ 拆补转盘 sẽ có nút Toggle Lục thập hoa giáp
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
                     {toggle_btn_html}
