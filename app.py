@@ -88,7 +88,7 @@ def tinh_tuan_khong(hoa_giap):
     idx_tuan_dau = (idx_chi - idx_can) % 12
     return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
 
-# --- THUẬT TOÁN ĐỊNH CỤC CHO 拆补转盘 (Chuẩn chung) ---
+# --- THUẬT TOÁN ĐỊNH CỤC CHO 拆补转盘 ---
 def get_standard_term_and_cuc(day_obj):
     d_gz = day_obj.getDayGZ()
     current_jq_idx = -1
@@ -104,22 +104,19 @@ def get_standard_term_and_cuc(day_obj):
     yuan = 0 if phu_tou_chi_idx in [0, 6, 3, 9] else 1 if phu_tou_chi_idx in [2, 8, 5, 11] else 2
     return loai_don, solar_term_ju[tiet_khi][yuan], tiet_khi
 
-# --- THUẬT TOÁN ĐỊNH CỤC ĐỘC QUYỀN: 十家转盘 (Siêu thần Tiếp khí ±2 ngày) ---
+# --- THUẬT TOÁN ĐỊNH CỤC ĐỘC QUYỀN: 十家转盘 ---
 def get_shijia_term_and_cuc(day_obj):
     d_gz = day_obj.getDayGZ()
     offset = d_gz.tg % 5
-    # Tìm ngày Phù Đầu của hôm nay
     ft_d = sxtwl.fromSolar(day_obj.getSolarYear(), day_obj.getSolarMonth(), day_obj.getSolarDay())
     for _ in range(offset):
         ft_d = sxtwl.fromSolar(ft_d.getSolarYear(), ft_d.getSolarMonth(), ft_d.getSolarDay() - 1)
     
-    # Xác định Nguyên (Thượng/Trung/Hạ) từ Địa Chi của Phù Đầu
     ft_dz = ft_d.getDayGZ().dz
     if ft_dz in [0, 6, 3, 9]: yuan = 0
     elif ft_dz in [2, 8, 5, 11]: yuan = 1
     else: yuan = 2
 
-    # Lùi dần từng Phù Đầu (5 ngày/bước) để tìm xem Phù đầu nào kích hoạt Tiết Khí (nằm trong ±2 ngày)
     search_ft = sxtwl.fromSolar(ft_d.getSolarYear(), ft_d.getSolarMonth(), ft_d.getSolarDay())
     active_term = None
     
@@ -134,7 +131,6 @@ def get_shijia_term_and_cuc(day_obj):
                 break
         if term_found:
             break
-        # Nếu Phù đầu này không có tiết khí ±2 ngày, lùi tiếp 5 ngày về Phù đầu trước
         for _ in range(5):
             search_ft = sxtwl.fromSolar(search_ft.getSolarYear(), search_ft.getSolarMonth(), search_ft.getSolarDay() - 1)
 
@@ -193,9 +189,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     cg_idx = ring_8.index(cg_ring)
     truc_su = door_ring[cg_idx]
     
-    # ----------------------------------------------------
-    # TÍNH TOÁN TRỰC PHÙ THEO PHÁI "THẬP GIA CHUYỂN BÀN"
-    # ----------------------------------------------------
+    # --- TÍNH TOÁN TRỰC PHÙ THEO PHÁI "THẬP GIA CHUYỂN BÀN" ---
     if display_mode == "十家转盘":
         yang_stems = ['甲', '乙', '丙', '丁', '戊']
         yin_stems = ['己', '庚', '辛', '壬', '癸']
@@ -209,7 +203,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
         can_tim_kiem = can_tuan if can_gio == "甲" else can_gio
         target_star = [c for c, can in dia_ban.items() if can == can_tim_kiem][0]
 
-    # Trung ngũ cung ký Khôn 2
     if target_star == 5: target_star = 2
     ts_idx = ring_8.index(target_star)
 
@@ -223,8 +216,15 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     vi_tri_ngua = {"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]
 
-    cung_data = {i: {'dia': dia_ban.get(i, ""), 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 'ancan': ''} for i in range(1, 10)}
+    cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 'ancan': ''} for i in range(1, 10)}
     cung_data[vi_tri_ngua]['ngua'] = "马"
+
+    # FIX: Gán Địa Bàn Can chuẩn xác (Cung 2 hiển thị A/B)
+    for i in range(1, 10):
+        if i == 2:
+            cung_data[i]['dia'] = f"{dia_ban.get(2, '')}/{dia_ban.get(5, '')}"
+        else:
+            cung_data[i]['dia'] = dia_ban.get(i, "")
 
     for i in range(8):
         p = ring_8[i]
@@ -236,7 +236,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
         cung_data[p]['thien'] = dia_ban[orig_palace]
         if sao == "天芮":
             cung_data[p]['sao'] = "天芮/禽"
-            cung_data[p]['thien'] = dia_ban[orig_palace] + "/" + dia_ban.get(5, "")
+            cung_data[p]['thien'] = f"{dia_ban[orig_palace]}/{dia_ban.get(5, '')}"
 
         orig_door_idx = (cg_idx + (i - td_idx)) % 8
         cung_data[p]['mon'] = door_ring[orig_door_idx]
