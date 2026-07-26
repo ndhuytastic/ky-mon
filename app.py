@@ -326,8 +326,8 @@ def format_stem_simple_with_chi(stem_str, cung):
         # Chỉ hiển thị Địa chi mờ nếu KHÔNG PHẢI là Cung 5 (Trung cung)
         chi_mo = shijia_earth_branch_map.get(p, "") if cung != 5 else ""
         
-        # Tăng margin-top lên 3px để cách xa chữ Thiên can ở trên
-        chi_html = f"<div style='font-size: 11px; color: #999; line-height: 0.8; margin-top: 3px;'>{chi_mo}</div>" if chi_mo else ""
+        # Tăng margin-top lên 8px để cách xa hẳn chữ Thiên can ở trên
+        chi_html = f"<div style='font-size: 11px; color: #999; line-height: 0.8; margin-top: 8px;'>{chi_mo}</div>" if chi_mo else ""
         
         formatted.append(f"""
             <span style='display: inline-flex; flex-direction: column; align-items: center; width: 26px; text-align: center; vertical-align: top;'>
@@ -518,6 +518,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
+                # Cung 5 đặc biệt: Trong chế độ 拆补转盘 sẽ có nút Toggle Lục thập hoa giáp
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
                     {toggle_btn_html}
@@ -632,7 +633,7 @@ js_script = """
     function toggleJiazi() {
         var jz = document.getElementById('jiazi-container');
         if (jz.style.display === "none") {
-            jz.style.display = "block";
+            jz.style.display = "flex";
         } else {
             jz.style.display = "none";
         }
