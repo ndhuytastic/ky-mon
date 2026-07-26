@@ -78,7 +78,7 @@ jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分"
 
 chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
 chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
-hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
+hour_ranges = ["23:1", "1:3", "3:5", "5:7", "7:9", "9:11", "11:13", "13:15", "15:17", "17:19", "19:21", "21:23"]
 danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
 
 # ==========================================
@@ -504,7 +504,7 @@ tk_gio = tinh_tuan_khong(hoa_giap_hien_tai)
 data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc)
 
 title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px;'>" \
-        f"奇门遁甲 | {chuoi_cuc} | {bazi_chuoi} {hour_str}" \
+        f"奇门 | {chuoi_cuc} | {bazi_chuoi} {hour_str}" \
         f"</h3>"
 
 html_string = title + render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su)
