@@ -322,12 +322,7 @@ def format_stem_simple_with_chi(stem_str, cung):
     for p in parts:
         el = stem_elements.get(p, "")
         color = element_colors.get(el, "#1a1a1a")
-        
-        # Chỉ hiển thị Địa chi mờ nếu KHÔNG PHẢI là Cung 5 (Trung cung)
         chi_mo = shijia_earth_branch_map.get(p, "") if cung != 5 else ""
-        
-        # Dùng position absolute để gắn chữ Địa chi vào dưới đuôi Can, 
-        # Việc này không làm ảnh hưởng đến chiều cao thực tế của thẻ span, giữ cho Môn và Can luôn thẳng hàng ngang
         chi_html = f"<div style='position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999; line-height: 1; padding-top: 6px;'>{chi_mo}</div>" if chi_mo else ""
         
         formatted.append(f"""
@@ -367,7 +362,7 @@ def render_jiazi_table():
 
     html = """
     <style>
-        .jiazi-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 300px; height: 360px; font-family: "Microsoft YaHei", sans-serif; font-size: 14px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; }
+        .jiazi-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 320px; height: 360px; font-family: "Microsoft YaHei", sans-serif; font-size: 14px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; }
         .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 3px; }
         .jz-header { font-weight: normal; }
         .jz-footer { font-weight: normal; line-height: 1.2;}
@@ -466,7 +461,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                     thien_res.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center; font-weight:normal;'>{tp}</span>")
                 thien_display = "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(thien_res)
 
-                # Format Địa Bàn (truyền p vào để kiểm tra Cung 5)
                 dia_display = format_stem_simple_with_chi(d['dia'], p)
                 
                 horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = ""
@@ -519,7 +513,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
-                # Cung 5 đặc biệt: Trong chế độ 拆补转盘 sẽ có nút Toggle Lục thập hoa giáp
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
                     {toggle_btn_html}
@@ -644,9 +637,13 @@ js_script = """
 
 combined_html = f"""
     <style>
-        .main-wrapper {{ display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }}
-        .board-container {{ margin-bottom: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; }}
-        #jiazi-container {{ display: none; width: 100%; display: flex; justify-content: center; }}
+        .main-wrapper {{ display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 40px; width: 100%; padding-top: 10px; }}
+        .board-container {{ display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 480px; }}
+        #jiazi-container {{ display: none; flex-direction: column; align-items: center; width: 100%; max-width: 480px; }}
+        
+        @media (max-width: 1000px) {{
+            .main-wrapper {{ flex-direction: column; align-items: center; gap: 20px; }}
+        }}
     </style>
     <div class="main-wrapper">
         <div class="board-container">
@@ -655,6 +652,10 @@ combined_html = f"""
             {qimen_board_html}
         </div>
         <div id="jiazi-container" style="display: none;">
+            <div style="visibility: hidden; pointer-events: none;">
+                {title}
+                {sub_title}
+            </div>
             {jiazi_board_html}
         </div>
     </div>
