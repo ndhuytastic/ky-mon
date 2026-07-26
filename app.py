@@ -5,7 +5,8 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Kỳ Môn Độn Giáp", layout="centered", initial_sidebar_state="collapsed")
+# Đã đổi layout thành "wide" để đủ chỗ chứa 2 bảng nằm ngang nhau trên PC
+st.set_page_config(page_title="Kỳ Môn Độn Giáp", layout="wide", initial_sidebar_state="collapsed")
 
 # ==========================================
 # 1. DỮ LIỆU CƠ BẢN
@@ -78,7 +79,7 @@ jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分"
 
 chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
 chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
-hour_ranges = ["23 : 1", "1 : 3", "3 : 5", "5 : 7", "7 : 9", "9 : 11", "11 : 13", "13 : 15", "15 : 17", "17 : 19", "19 : 21", "21 : 23"]
+hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
 danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
 
 # ==========================================
@@ -206,7 +207,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc):
     return cung_data, can_gio, truc_su
 
 # ==========================================
-# 3. ĐỊNH DẠNG TEXT GIAO DIỆN
+# 3. ĐỊNH DẠNG TEXT GIAO DIỆN & BẢNG HOA GIÁP
 # ==========================================
 def get_colored_span(text, el_dict, cung):
     if not text: return ""
@@ -283,8 +284,56 @@ def get_ancan_html(can):
     color = element_colors.get(el, "#1a1a1a")
     return f"<div style='position: absolute; bottom: 2px; left: 6px; font-size: 14px; color:{color}; font-weight: normal;'>{can}</div>"
 
+# HÀM MỚI: TẠO BẢNG 60 HOA GIÁP
+def render_jiazi_table():
+    xun_headers = ["甲子", "甲戌", "甲申", "甲午", "甲辰", "甲寅"]
+    stems = "甲乙丙丁戊己庚辛壬癸"
+    branches = "子丑寅卯辰巳午未申酉戌亥"
+
+    html = """
+    <style>
+        .jiazi-table {
+            border-collapse: collapse;
+            width: 480px; min-width: 480px;
+            height: 360px;
+            font-family: "Microsoft YaHei", sans-serif;
+            font-size: 15px;
+            text-align: center;
+            background-color: #fefefe;
+            color: #000;
+        }
+        .jiazi-table th, .jiazi-table td {
+            border: 1px solid #bfbfbf;
+            padding: 4px;
+        }
+        .jz-header { font-weight: normal; }
+        .jz-footer { font-weight: normal; line-height: 1.2;}
+    </style>
+    <table class="jiazi-table">
+        <tr class="jz-header">
+    """
+    for h in xun_headers:
+        html += f"<th>{h}</th>"
+    html += "</tr>"
+
+    for i in range(10):
+        html += "<tr>"
+        for j in range(6):
+            start_branch_idx = (12 - j * 2) % 12
+            current_branch_idx = (start_branch_idx + i) % 12
+            html += f"<td>{stems[i]}&nbsp;{branches[current_branch_idx]}</td>"
+        html += "</tr>"
+
+    kong_wangs = ["戌<br>亥", "申<br>酉", "午<br>未", "辰<br>巳", "寅<br>卯", "子<br>丑"]
+    html += "<tr class='jz-footer'>"
+    for kw in kong_wangs:
+        html += f"<td>{kw}</td>"
+    html += "</tr></table>"
+
+    return html
+
 # ==========================================
-# 4. RENDER HTML BẢNG
+# 4. RENDER HTML BẢNG KỲ MÔN
 # ==========================================
 def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
@@ -313,7 +362,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
     html = f"""
     <style>
-        .layout-wrapper {{ overflow-x: auto; display: flex; justify-content: flex-start; margin-top: 5px; font-family: "Microsoft YaHei", sans-serif; }}
         .qmdj-table {{ border-collapse: collapse; width: 480px; min-width: 480px; height: 360px; table-layout: fixed; font-size: 15px; background-color: #fefefe; }}
         .qmdj-td {{ border: 1px solid #bfbfbf; width: 33.33%; padding: 10px 6px 20px 6px; position: relative; vertical-align: top; overflow: visible; transition: background-color 0.2s; }}
 
@@ -334,8 +382,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
         .wubu-badge {{ background-color: #FF4500; color: #FFF; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 13px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
     </style>
 
-    <div class="layout-wrapper">
-        <table class="qmdj-table">
+    <table class="qmdj-table">
     """
 
     for row in luoi_lac_thu:
@@ -422,44 +469,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
         
     html += """
         </table>
-    </div>
-    
-    <script>
-        const relations = {
-            1: [9, 2, 7], // Khảm
-            2: [8, 4, 1], // Khôn
-            3: [7, 9, 8], // Chấn
-            4: [6, 7, 2], // Tốn
-            6: [4, 8, 9], // Càn
-            7: [3, 1, 4], // Đoài
-            8: [2, 3, 6], // Cấn
-            9: [1, 6, 3]  // Ly
-        };
-        
-        let currentActive = null;
-
-        function toggleHighlight(palace) {
-            if(palace === 5) return;
-            
-            for(let i=1; i<=9; i++) {
-                if(i===5) continue;
-                document.getElementById('palace-' + i).style.backgroundColor = '#fefefe';
-            }
-
-            if (currentActive === palace) {
-                currentActive = null;
-            } else {
-                let targets = relations[palace];
-                if(targets) {
-                    targets.forEach(t => {
-                        let cell = document.getElementById('palace-' + t);
-                        if(cell) cell.style.backgroundColor = '#e6e6e6';
-                    });
-                }
-                currentActive = palace;
-            }
-        }
-    </script>
     """
     return html
 
@@ -503,9 +512,79 @@ tk_gio = tinh_tuan_khong(hoa_giap_hien_tai)
 
 data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc)
 
-title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px;'>" \
-        f"奇门 | {chuoi_cuc} | {bazi_chuoi} {hour_str}" \
-        f"</h3>"
+title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; user-select: none;'>{bazi_chuoi} {hour_str}</h3>"
+sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none;'>奇门遁甲 | {chuoi_cuc}</h4>"
 
-html_string = title + render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su)
-st.components.v1.html(html_string, height=450)
+qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su)
+jiazi_board_html = render_jiazi_table()
+
+# Dummy title to align the right table exactly with the left table's top
+dummy_title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 18px; user-select: none;'>_</h3>"
+dummy_sub = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 16px; user-select: none;'>_</h4>"
+
+
+# Sử dụng CSS Flexbox để tự động xếp cạnh nhau trên PC và xếp chồng trên Mobile
+combined_html = f"""
+    <style>
+        .main-wrapper {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: flex-start;
+            font-family: "Microsoft YaHei", sans-serif;
+        }}
+    </style>
+    <div class="main-wrapper">
+        <div>
+            {title}
+            {sub_title}
+            {qimen_board_html}
+        </div>
+        <div>
+            {dummy_title}
+            {dummy_sub}
+            {jiazi_board_html}
+        </div>
+    </div>
+    
+    <script>
+        const relations = {{
+            1: [9, 2, 7], // Khảm
+            2: [8, 4, 1], // Khôn
+            3: [7, 9, 8], // Chấn
+            4: [6, 7, 2], // Tốn
+            6: [4, 8, 9], // Càn
+            7: [3, 1, 4], // Đoài
+            8: [2, 3, 6], // Cấn
+            9: [1, 6, 3]  // Ly
+        }};
+        
+        let currentActive = null;
+
+        function toggleHighlight(palace) {{
+            if(palace === 5) return;
+            
+            for(let i=1; i<=9; i++) {{
+                if(i===5) continue;
+                document.getElementById('palace-' + i).style.backgroundColor = '#fefefe';
+            }}
+
+            if (currentActive === palace) {{
+                currentActive = null;
+            }} else {{
+                let targets = relations[palace];
+                if(targets) {{
+                    targets.forEach(t => {{
+                        let cell = document.getElementById('palace-' + t);
+                        if(cell) cell.style.backgroundColor = '#e6e6e6';
+                    }});
+                }}
+                currentActive = palace;
+            }}
+        }}
+    </script>
+"""
+
+# Chiều cao 880 để đảm bảo hiển thị đẹp trên điện thoại khi bị xếp chồng 2 bảng
+st.components.v1.html(combined_html, height=880, scrolling=True)
