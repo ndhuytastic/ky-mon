@@ -327,7 +327,7 @@ def format_stem_simple_with_chi(stem_str, cung):
         chi_mo = shijia_earth_branch_map.get(p, "") if cung != 5 else ""
         
         # Tăng margin-top lên 3px để cách xa chữ Thiên can ở trên
-        chi_html = f"<div style='font-size: 10px; color: #999; line-height: 0.8; margin-top: 4px;'>{chi_mo}</div>" if chi_mo else ""
+        chi_html = f"<div style='font-size: 10px; color: #999; line-height: 0.8; margin-top: 3px;'>{chi_mo}</div>" if chi_mo else ""
         
         formatted.append(f"""
             <span style='display: inline-flex; flex-direction: column; align-items: center; width: 26px; text-align: center; vertical-align: top;'>
