@@ -325,7 +325,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
         .stem {{ font-size: 16px; margin-right: 2px; font-weight: normal; display: flex; align-items: center; }}
 
         .horse {{ position: absolute; top: 6px; right: 8px; color: #1a1a1a; font-weight: normal; font-size: 14px; cursor: default; }}
-        .void-mark {{ position: absolute; display: flex; align-items: center; line-height: 1; }}
         
         .bagua-mark {{ position: absolute; bottom: 2px; right: 8px; color: #1a1a1a; font-size: 14px; cursor: pointer; z-index: 20; }}
         .inner-numbers {{ position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #000; font-weight: normal; letter-spacing: 0.5px; white-space: nowrap; }}
@@ -354,22 +353,17 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
             horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
 
-            # Không Vong nhường chỗ cho Dịch Mã (nếu có) để 2 biểu tượng đứng ngang hàng
-            void_style = "right: 26px;" if d['ngua'] else "right: 8px;"
+            # Xử lý Không Vong bằng CSS Shape (Đồng nhất kích thước, khác viền)
             void_html = ""
-            
             if p in cung_tk_ngay or p in cung_tk_gio:
+                right_pos = "26px" if d['ngua'] else "8px"
+                
                 if p in cung_tk_gio:
-                    # Không Vong Giờ: In đậm
-                    v_weight = "900"
-                    v_color = "#000"
+                    # Giờ: Vòng tròn màu đen, nét đậm (2px)
+                    void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 2px solid #000; border-radius: 50%; box-sizing: border-box;"></div>'
                 else:
-                    # Không Vong Ngày: Nét nhạt
-                    v_weight = "300"
-                    v_color = "#666"
-                    
-                # Kích thước 18px để vòng tròn to hơn bình thường
-                void_html = f'<div class="void-mark" style="{void_style} top: 4px; font-size: 18px; font-weight: {v_weight}; color: {v_color};">○</div>'
+                    # Ngày: Vòng tròn màu xám, nét siêu mỏng (1px)
+                    void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 1px solid #999; border-radius: 50%; box-sizing: border-box;"></div>'
 
             gua_char = cung_to_gua[p]
             gua_html = ""
