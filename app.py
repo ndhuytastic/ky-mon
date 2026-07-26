@@ -20,8 +20,6 @@ door_ring = ["休门", "生门", "伤门", "杜门", "景门", "死门", "惊门
 shen_yang = ["值符", "螣蛇", "太阴", "六合", "勾陈", "朱雀", "九地", "九天"]
 shen_yin = ["值符", "螣蛇", "太阴", "六合", "白虎", "玄武", "九地", "九天"]
 
-cung_to_gua = {1: "坎", 2: "坤", 3: "震", 4: "巽", 5: "", 6: "乾", 7: "兑", 8: "艮", 9: "离"}
-
 element_colors = {
     "木": "#007A00", "火": "#D90000", "土": "#996600", "金": "#555555", "水": "#0000CC"
 }
@@ -39,6 +37,24 @@ branch_elements = {"亥": "水", "子": "水", "寅": "木", "卯": "木", "巳"
 stem_punish = {"戊": 3, "己": 2, "庚": 8, "辛": 9, "壬": 4, "癸": 4}
 stem_tomb = {"辛": [4], "壬": [4], "丁": [8], "己": [8], "庚": [8], "癸": [2], "乙": [2, 6], "丙": [6], "戊": [6]}
 
+solar_term_ju = {
+    "冬至":[1,7,4], "小寒":[2,8,5], "大寒":[3,9,6], "立春":[8,5,2], "雨水":[9,6,3], "惊蛰":[1,7,4],
+    "春分":[3,9,6], "清明":[4,1,7], "谷雨":[5,2,8], "立夏":[4,1,7], "小满":[5,2,8], "芒种":[6,3,9],
+    "夏至":[9,3,6], "小暑":[8,2,5], "大暑":[7,1,4], "立秋":[2,5,8], "处暑":[1,4,7], "白露":[9,3,6],
+    "秋分":[7,1,4], "寒露":[6,9,3], "霜降":[5,8,2], "立冬":[6,9,3], "小雪":[5,8,2], "大雪":[4,7,1]
+}
+yang_terms = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种"]
+jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪"]
+
+cung_to_gua = {1: "坎", 2: "坤", 3: "震", 4: "巽", 5: "", 6: "乾", 7: "兑", 8: "艮", 9: "离"}
+chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
+chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
+hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
+danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
+
+# ==========================================
+# 2. LOGIC TÍNH ĐỘN CỤC CHUẨN XÁC
+# ==========================================
 def is_khac_cung(entity_el, cung):
     cung_el = palace_elements.get(cung)
     if not entity_el or not cung_el: return False
@@ -67,71 +83,85 @@ def is_ngu_bat_ngo_thoi(can_gio, can_ngay):
     khac_map = {"木": "土", "土": "水", "水": "火", "火": "金", "金": "木"}
     return khac_map.get(el_gio) == el_ngay
 
-solar_term_ju = {
-    "冬至":[1,7,4], "小寒":[2,8,5], "大寒":[3,9,6], "立春":[8,5,2], "雨水":[9,6,3], "惊蛰":[1,7,4],
-    "春分":[3,9,6], "清明":[4,1,7], "谷雨":[5,2,8], "立夏":[4,1,7], "小满":[5,2,8], "芒种":[6,3,9],
-    "夏至":[9,3,6], "小暑":[8,2,5], "大暑":[7,1,4], "立秋":[2,5,8], "处暑":[1,4,7], "白露":[9,3,6],
-    "秋分":[7,1,4], "寒露":[6,9,3], "霜降":[5,8,2], "立冬":[6,9,3], "小雪":[5,8,2], "大雪":[4,7,1]
-}
-yang_terms = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种"]
-jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪"]
+def tinh_tuan_khong(hoa_giap):
+    idx_can, idx_chi = thien_can.index(hoa_giap[0]), dia_chi.index(hoa_giap[1])
+    idx_tuan_dau = (idx_chi - idx_can) % 12
+    return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
 
-chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
-chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
-hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
-danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
-
-# ==========================================
-# 2. TÍNH ĐỘN CỤC & LẬP QUẺ
-# ==========================================
-def get_current_vn_time():
-    return datetime.now(timezone(timedelta(hours=7)))
-
-def tinh_don_cuc_va_bazi(year, month, day, hour_int):
-    day_obj = sxtwl.fromSolar(year, month, day)
-    y_gz, m_gz, d_gz = day_obj.getYearGZ(), day_obj.getMonthGZ(), day_obj.getDayGZ()
-    can_nam, chi_nam = thien_can[y_gz.tg], dia_chi[y_gz.dz]
-    can_thang, chi_thang = thien_can[m_gz.tg], dia_chi[m_gz.dz]
-    can_ngay, chi_ngay = thien_can[d_gz.tg], dia_chi[d_gz.dz]
-
+# --- THUẬT TOÁN ĐỊNH CỤC CHO 拆补转盘 (Chuẩn chung) ---
+def get_standard_term_and_cuc(day_obj):
+    d_gz = day_obj.getDayGZ()
     current_jq_idx = -1
-    user_dt = datetime(year, month, day, hour_int, 30, 0)
-    for i in range(24):
-        if day_obj.hasJieQi() and day_obj.getJieQi() == i:
-            jq_jd = day_obj.getJieQiJD()
-            t_obj = sxtwl.JD2DD(jq_jd)
-            jq_dt = datetime(int(t_obj.Y), int(t_obj.M), int(t_obj.D), int(t_obj.h), int(t_obj.m), int(t_obj.s))
-            if user_dt >= jq_dt: current_jq_idx = i
-            else: current_jq_idx = (i - 1) % 24
-            break
-
-    if current_jq_idx == -1:
-        temp_day = day_obj
-        while not temp_day.hasJieQi():
-            temp_day = sxtwl.fromSolar(temp_day.getSolarYear(), temp_day.getSolarMonth(), temp_day.getSolarDay() - 1)
-        current_jq_idx = temp_day.getJieQi()
+    temp_day = day_obj
+    while not temp_day.hasJieQi():
+        temp_day = sxtwl.fromSolar(temp_day.getSolarYear(), temp_day.getSolarMonth(), temp_day.getSolarDay() - 1)
+    current_jq_idx = temp_day.getJieQi()
 
     tiet_khi = jq_names[current_jq_idx]
     loai_don = "阳遁" if tiet_khi in yang_terms else "阴遁"
     offset = d_gz.tg % 5
     phu_tou_chi_idx = (d_gz.dz - offset) % 12
     yuan = 0 if phu_tou_chi_idx in [0, 6, 3, 9] else 1 if phu_tou_chi_idx in [2, 8, 5, 11] else 2
-    so_cuc = solar_term_ju[tiet_khi][yuan]
-    bazi_dict = {'nam': can_nam+chi_nam, 'thang': can_thang+chi_thang, 'ngay': can_ngay+chi_ngay}
-    return loai_don, so_cuc, bazi_dict
+    return loai_don, solar_term_ju[tiet_khi][yuan], tiet_khi
 
-def tinh_tuan_khong(hoa_giap):
-    idx_can, idx_chi = thien_can.index(hoa_giap[0]), dia_chi.index(hoa_giap[1])
-    idx_tuan_dau = (idx_chi - idx_can) % 12
-    return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
+# --- THUẬT TOÁN ĐỊNH CỤC ĐỘC QUYỀN: 十家转盘 (Siêu thần Tiếp khí ±2 ngày) ---
+def get_shijia_term_and_cuc(day_obj):
+    d_gz = day_obj.getDayGZ()
+    offset = d_gz.tg % 5
+    # Tìm ngày Phù Đầu của hôm nay
+    ft_d = sxtwl.fromSolar(day_obj.getSolarYear(), day_obj.getSolarMonth(), day_obj.getSolarDay())
+    for _ in range(offset):
+        ft_d = sxtwl.fromSolar(ft_d.getSolarYear(), ft_d.getSolarMonth(), ft_d.getSolarDay() - 1)
+    
+    # Xác định Nguyên (Thượng/Trung/Hạ) từ Địa Chi của Phù Đầu
+    ft_dz = ft_d.getDayGZ().dz
+    if ft_dz in [0, 6, 3, 9]: yuan = 0
+    elif ft_dz in [2, 8, 5, 11]: yuan = 1
+    else: yuan = 2
+
+    # Lùi dần từng Phù Đầu (5 ngày/bước) để tìm xem Phù đầu nào kích hoạt Tiết Khí (nằm trong ±2 ngày)
+    search_ft = sxtwl.fromSolar(ft_d.getSolarYear(), ft_d.getSolarMonth(), ft_d.getSolarDay())
+    active_term = None
+    
+    while True:
+        term_found = False
+        for i in range(-2, 3):
+            check_d = sxtwl.fromSolar(search_ft.getSolarYear(), search_ft.getSolarMonth(), search_ft.getSolarDay() + i)
+            if check_d.hasJieQi():
+                jq_idx = check_d.getJieQi()
+                active_term = jq_names[jq_idx]
+                term_found = True
+                break
+        if term_found:
+            break
+        # Nếu Phù đầu này không có tiết khí ±2 ngày, lùi tiếp 5 ngày về Phù đầu trước
+        for _ in range(5):
+            search_ft = sxtwl.fromSolar(search_ft.getSolarYear(), search_ft.getSolarMonth(), search_ft.getSolarDay() - 1)
+
+    loai_don = "阳遁" if active_term in yang_terms else "阴遁"
+    so_cuc = solar_term_ju[active_term][yuan]
+    return loai_don, so_cuc, active_term
+
+def tinh_don_cuc_va_bazi(year, month, day, hour_int, display_mode):
+    day_obj = sxtwl.fromSolar(year, month, day)
+    y_gz, m_gz, d_gz = day_obj.getYearGZ(), day_obj.getMonthGZ(), day_obj.getDayGZ()
+    bazi_dict = {
+        'nam': thien_can[y_gz.tg]+dia_chi[y_gz.dz],
+        'thang': thien_can[m_gz.tg]+dia_chi[m_gz.dz],
+        'ngay': thien_can[d_gz.tg]+dia_chi[d_gz.dz]
+    }
+    
+    if display_mode == "十家转盘":
+        loai_don, so_cuc, _ = get_shijia_term_and_cuc(day_obj)
+    else:
+        loai_don, so_cuc, _ = get_standard_term_and_cuc(day_obj)
+        
+    return loai_don, so_cuc, bazi_dict
 
 def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
     diem_xuat_phat = cung_truc_su
     if can_gio_goc == dia_ban_dict.get(cung_truc_su, ""):
-        if cung_truc_su == 5:
-            diem_xuat_phat = 2
-        else:
-            diem_xuat_phat = 5
+        diem_xuat_phat = 2 if cung_truc_su == 5 else 5
             
     an_can_dict = {}
     can_idx = luc_nghi.index(can_gio_goc)
@@ -144,9 +174,11 @@ def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
         current_cung = duong_bay[(start_idx_in_duong_bay + i) % 9]
         current_can = luc_nghi[(can_idx + i) % 9]
         an_can_dict[current_cung] = current_can
-        
     return an_can_dict
 
+# ==========================================
+# 3. HỆ THỐNG LẬP QUẺ THEO 2 TRƯỜNG PHÁI
+# ==========================================
 def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
     loai = "阳" if loai_don == "阳遁" else "阴"
@@ -159,7 +191,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
 
     cg_ring = 2 if cung_goc == 5 else cung_goc
     cg_idx = ring_8.index(cg_ring)
-    
     truc_su = door_ring[cg_idx]
     
     # ----------------------------------------------------
@@ -175,11 +206,10 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
             steps = yin_stems.index(can_gio)
             target_star = (so_cuc + steps) % 9 or 9 if loai == "阳" else (so_cuc - steps) % 9 or 9
     else:
-        # Truyền thống
         can_tim_kiem = can_tuan if can_gio == "甲" else can_gio
         target_star = [c for c, can in dia_ban.items() if can == can_tim_kiem][0]
 
-    # Cầm tinh luôn luôn ký Khôn 2
+    # Trung ngũ cung ký Khôn 2
     if target_star == 5: target_star = 2
     ts_idx = ring_8.index(target_star)
 
@@ -222,15 +252,15 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     return cung_data, can_gio, truc_su
 
 # ==========================================
-# 3. ĐỊNH DẠNG TEXT GIAO DIỆN & BẢNG HOA GIÁP
+# 4. GIAO DIỆN & RENDER HTML
 # ==========================================
-def get_colored_span(text, el_dict, cung=None):
+def get_colored_span(text, el_dict):
     if not text: return ""
     el = el_dict.get(text, "")
     color = element_colors.get(el, "#1a1a1a")
     return f"<span style='color:{color}; font-style:normal; font-weight:normal;'>{text}</span>"
 
-def format_star_with_rules(star_str, cung):
+def format_star_with_rules(star_str):
     if not star_str: return ""
     if "/" in star_str:
         p1, p2 = star_str.split('/')
@@ -277,7 +307,7 @@ def format_stem_simple(stem_str):
     for p in parts:
         el = stem_elements.get(p, "")
         color = element_colors.get(el, "#1a1a1a")
-        formatted.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center;'>{p}</span>")
+        formatted.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center; font-weight:normal;'>{p}</span>")
     return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(formatted)
 
 def format_door_with_rules(door, cung, truc_su):
@@ -288,6 +318,13 @@ def format_door_with_rules(door, cung, truc_su):
     f_weight = "bold" if is_khac_cung(el, cung) else "normal"
     shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
     return f"<span style='color:{color}; font-style:{f_style}; font-weight:{f_weight}; {shape_style}'>{door}</span>"
+
+def format_door_simple_with_circle(door, truc_su):
+    if not door: return ""
+    el = door_elements.get(door, "")
+    color = element_colors.get(el, "#1a1a1a")
+    shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
+    return f"<span style='color:{color}; font-style:normal; font-weight:normal; {shape_style}'>{door}</span>"
 
 def get_ancan_html(can):
     if not can: return ""
@@ -311,25 +348,16 @@ def render_jiazi_table():
     """
     for h in xun_headers: html += f"<th>{h}</th>"
     html += "</tr>"
-
     for i in range(10):
         html += "<tr>"
         for j in range(6):
-            start_branch_idx = (12 - j * 2) % 12
-            current_branch_idx = (start_branch_idx + i) % 12
-            html += f"<td>{stems[i]}&nbsp;{branches[current_branch_idx]}</td>"
+            html += f"<td>{stems[i]}&nbsp;{branches[(12 - j * 2 + i) % 12]}</td>"
         html += "</tr>"
-
-    kong_wangs = ["戌<br>亥", "申<br>酉", "午<br>未", "辰<br>巳", "寅<br>卯", "子<br>丑"]
     html += "<tr class='jz-footer'>"
-    for kw in kong_wangs: html += f"<td>{kw}</td>"
+    for kw in ["戌<br>亥", "申<br>酉", "午<br>未", "辰<br>巳", "寅<br>卯", "子<br>丑"]: html += f"<td>{kw}</td>"
     html += "</tr></table>"
-
     return html
 
-# ==========================================
-# 4. RENDER HTML BẢNG KỲ MÔN
-# ==========================================
 def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     cung_tk_ngay = [chi_to_cung[chi] for chi in tk_ngay]
@@ -352,12 +380,22 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
     <style>
         .qmdj-table {{ border-collapse: collapse; width: 480px; min-width: 480px; height: 360px; table-layout: fixed; font-size: 15px; background-color: #fefefe; }}
         .qmdj-td {{ border: 1px solid #bfbfbf; width: 33.33%; padding: 10px 6px 20px 6px; position: relative; vertical-align: top; overflow: visible; transition: background-color 0.2s; }}
+        
         .row-top, .row-mid, .row-bot {{ display: flex; align-items: center; justify-content: flex-start; }}
-        .row-top {{ margin-bottom: 8px; }}
-        .row-mid {{ margin-bottom: 6px; }}
         .item-left {{ width: 55px; text-align: left; margin-left: 5px; flex-shrink: 0; line-height: 1.2; }}
         .item-right {{ display: flex; align-items: center; flex-wrap: wrap; flex-grow: 1; gap: 2px 3px; line-height: 1.2; margin-left: 20px; }}
         .stem {{ font-size: 16px; margin-right: 2px; font-weight: normal; display: flex; align-items: center; }}
+        
+        /* Default Spacing */
+        .default-top {{ margin-bottom: 8px; }}
+        .default-mid {{ margin-bottom: 6px; }}
+        .default-bot {{ margin-bottom: 0px; }}
+
+        /* Shijia Zhuanpan Spacing (More distributed padding) */
+        .shijia-top {{ margin-top: 5px; margin-bottom: 22px; }}
+        .shijia-mid {{ margin-bottom: 22px; }}
+        .shijia-bot {{ margin-bottom: 0px; }}
+
         .horse {{ position: absolute; top: 6px; right: 8px; color: #1a1a1a; font-weight: normal; font-size: 14px; cursor: default; }}
         .bagua-mark {{ position: absolute; bottom: 2px; right: 8px; color: #1a1a1a; font-size: 14px; cursor: pointer; z-index: 20; }}
         .inner-numbers {{ position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #000; font-weight: normal; letter-spacing: 0.5px; white-space: nowrap; }}
@@ -374,21 +412,24 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
             d = cung_data[p]
 
             if display_mode == "十家转盘":
+                class_top = "row-top shijia-top"
+                class_mid = "row-mid shijia-mid"
+                class_bot = "row-bot shijia-bot"
+
                 than_html = get_colored_span(d['than'], deity_elements)
-                sao_html = format_star_with_rules(d['sao'], p)
-                mon_html = get_colored_span(d['mon'], door_elements)
+                sao_html = format_star_with_rules(d['sao'])
+                mon_html = format_door_simple_with_circle(d['mon'], truc_su)
                 thien_display = format_stem_simple(d['thien'])
                 dia_display = format_stem_simple(d['dia'])
                 
-                horse_html = ""
-                void_html = ""
-                gua_html = ""
-                inner_nums_html = ""
-                center_alert_html = ""
-                ancan_html = ""
+                horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = ""
             else:
+                class_top = "row-top default-top"
+                class_mid = "row-mid default-mid"
+                class_bot = "row-bot default-bot"
+
                 than_html = get_colored_span(d['than'], deity_elements)
-                sao_html = format_star_with_rules(d['sao'], p)
+                sao_html = format_star_with_rules(d['sao'])
                 mon_html = format_door_with_rules(d['mon'], p, truc_su)
                 thien_display = format_stem_with_rules(d['thien'], p, can_gio_ban, can_ngay_ban, is_heaven=True)
                 dia_display = format_stem_with_rules(d['dia'], p, can_gio_ban, can_ngay_ban, is_heaven=False)
@@ -442,14 +483,14 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                     {gua_html}
                     {inner_nums_html}
                     {ancan_html}
-                    <div class="row-top">
+                    <div class="{class_top}">
                         <div class="item-left">{than_html}</div><div class="item-right"></div>
                     </div>
-                    <div class="row-mid">
+                    <div class="{class_mid}">
                         <div class="item-left">{sao_html}</div>
                         <div class="item-right"><span class="stem">{thien_display}</span></div>
                     </div>
-                    <div class="row-bot">
+                    <div class="{class_bot}">
                         <div class="item-left">{mon_html}</div>
                         <div class="item-right"><span class="stem">{dia_display}</span></div>
                     </div>
@@ -462,12 +503,15 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 # ==========================================
 # 5. STREAMLIT APP
 # ==========================================
+def get_current_vn_time():
+    return datetime.now(timezone(timedelta(hours=7)))
+
 now_vn = get_current_vn_time()
 current_chi_idx = int((now_vn.hour + 1) / 2) % 12
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    display_mode = st.selectbox("Hiển thị", ["Mặc định", "六十花甲", "十家转盘"])
+    display_mode = st.selectbox("Hiển thị", ["拆补转盘", "六十花甲", "十家转盘"])
 with col2:
     selected_date = st.date_input("Ngày", now_vn.date())
 with col3:
@@ -485,7 +529,8 @@ can_gio_idx = (can_ngay_idx % 5 * 2 + chi_gio_idx) % 10
 can_gio_str = thien_can[can_gio_idx]
 
 hoa_giap_hien_tai = can_gio_str + chi_gio
-don, cuc_calc, bazi_dict = tinh_don_cuc_va_bazi(selected_date.year, selected_date.month, selected_date.day, hour_int)
+
+don, cuc_calc, bazi_dict = tinh_don_cuc_va_bazi(selected_date.year, selected_date.month, selected_date.day, hour_int, display_mode)
 
 if dropdown_ju != "Mặc định": cuc = int(dropdown_ju)
 else: cuc = cuc_calc
@@ -536,7 +581,7 @@ js_script = """
 </script>
 """
 
-if display_mode in ["Mặc định", "十家转盘"]:
+if display_mode in ["拆补转盘", "十家转盘"]:
     combined_html = f"""
         <div style="display: flex; justify-content: center; font-family: 'Microsoft YaHei', sans-serif;">
             <div>
