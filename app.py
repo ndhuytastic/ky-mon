@@ -125,30 +125,19 @@ def tinh_tuan_khong(hoa_giap):
     idx_tuan_dau = (idx_chi - idx_can) % 12
     return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
 
-# HÀM MỚI: Tính Ẩn Can
 def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
-    # 1. Chuyển Can Giờ (Ngoại trừ Giáp, biến thành Tuần Thủ. Hàm get_board_stem làm được điều này)
-    # Vì get_board_stem cần hoa_giap, ta sẽ xử lý từ bên ngoài và truyền can_gio_goc vào
-    
-    # 2. Kiểm tra Phục Ngâm
     diem_xuat_phat = cung_truc_su
-    
     if can_gio_goc == dia_ban_dict.get(cung_truc_su, ""):
-        # Bị Phục Ngâm
         if cung_truc_su == 5:
-            diem_xuat_phat = 2  # Trực sử ở 5 thì Ký cung sang 2
+            diem_xuat_phat = 2
         else:
-            diem_xuat_phat = 5  # Đẩy vào Trung Cung
+            diem_xuat_phat = 5
             
-    # 3. Phi Tinh
     an_can_dict = {}
     can_idx = luc_nghi.index(can_gio_goc)
-    
-    # Vòng bay Lạc Thư
     tien = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     lui =  [9, 8, 7, 6, 5, 4, 3, 2, 1]
     duong_bay = tien if loai_don == "阳遁" else lui
-    
     start_idx_in_duong_bay = duong_bay.index(diem_xuat_phat)
     
     for i in range(9):
@@ -209,7 +198,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc):
         else: deity_idx = (ts_idx - i) % 8
         cung_data[p]['than'] = shen_yang[deity_idx] if loai == "阳" else shen_yin[deity_idx]
 
-    # Tính Ẩn Can
     can_gio_thuc_ban = get_board_stem(hoa_giap_gio)
     an_can_dict = tinh_an_can(can_gio_thuc_ban, so_cuc, loai_don, dia_ban, cung_truc_su)
     for p in range(1, 10):
@@ -298,9 +286,12 @@ def get_ancan_html(can):
 # ==========================================
 # 4. RENDER HTML BẢNG
 # ==========================================
-def render_html_table(cung_data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, truc_su):
+def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
-    cung_tuan_khong = [chi_to_cung[chi] for chi in tuan_khong_str]
+    
+    cung_tk_ngay = [chi_to_cung[chi] for chi in tk_ngay]
+    cung_tk_gio = [chi_to_cung[chi] for chi in tk_gio]
+    
     month_branch = bazi_dict['thang'][1]
 
     can_gio_thuc = hoa_giap_hien_tai[0]
@@ -337,7 +328,6 @@ def render_html_table(cung_data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, t
         .void-mark {{ position: absolute; top: 6px; color: #1a1a1a; font-weight: normal; font-size: 14px; }}
         
         .bagua-mark {{ position: absolute; bottom: 2px; right: 8px; color: #1a1a1a; font-size: 14px; }}
-        /* Đẩy inner-numbers ra giữa cung */
         .inner-numbers {{ position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #000; font-weight: normal; letter-spacing: 0.5px; white-space: nowrap; }}
 
         .center-fuyin {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 10; gap: 2px; }}
@@ -363,7 +353,17 @@ def render_html_table(cung_data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, t
             ancan_html = get_ancan_html(d['ancan'])
 
             void_style = "right: 28px;" if d['ngua'] else "right: 8px;"
-            void_html = f'<div class="void-mark" style="{void_style}">○</div>' if p in cung_tuan_khong else ''
+            
+            # Xử lý Text Không Vong
+            void_labels = []
+            if p in cung_tk_ngay: void_labels.append("日")
+            if p in cung_tk_gio: void_labels.append("时")
+            
+            if void_labels:
+                label_str = "".join(void_labels)
+                void_html = f'<div class="void-mark" style="{void_style}"><span style="font-size: 11px; font-weight: bold; margin-right: 1px;">{label_str}</span>○</div>'
+            else:
+                void_html = ''
 
             gua_char = cung_to_gua[p]
             gua_html = ""
@@ -378,10 +378,18 @@ def render_html_table(cung_data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, t
             if p == 5:
                 badges = []
                 if is_wu_bu_yu_shi: badges.append("<div class='wubu-badge'>五不遇时</div>")
-                if is_star_fuyin: badges.append("<div class='fuyin-badge'>星伏吟</div>")
-                elif is_star_fanyin: badges.append("<div class='fuyin-badge'>星反吟</div>")
-                if is_door_fuyin: badges.append("<div class='fuyin-badge'>门伏吟</div>")
-                elif is_door_fanyin: badges.append("<div class='fuyin-badge'>门反吟</div>")
+                
+                # Gộp Phục Ngâm / Phản Ngâm
+                if is_star_fuyin and is_door_fuyin:
+                    badges.append("<div class='fuyin-badge'>星门全伏吟</div>")
+                elif is_star_fanyin and is_door_fanyin:
+                    badges.append("<div class='fuyin-badge'>星门全反吟</div>")
+                else:
+                    if is_star_fuyin: badges.append("<div class='fuyin-badge'>星伏吟</div>")
+                    elif is_star_fanyin: badges.append("<div class='fuyin-badge'>星反吟</div>")
+                    
+                    if is_door_fuyin: badges.append("<div class='fuyin-badge'>门伏吟</div>")
+                    elif is_door_fanyin: badges.append("<div class='fuyin-badge'>门反吟</div>")
                 
                 if badges:
                     center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
@@ -453,7 +461,6 @@ if can_gio_str == "甲": hour_str = f"<b>{hour_str}</b>"
 
 tk_ngay = tinh_tuan_khong(bazi_dict['ngay'])
 tk_gio = tinh_tuan_khong(hoa_giap_hien_tai)
-tuan_khong_str = list(set(tk_ngay + tk_gio))
 
 data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc)
 
@@ -461,5 +468,5 @@ title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; 
         f"奇门 | {chuoi_cuc} | {bazi_chuoi} {hour_str}" \
         f"</h3>"
 
-html_string = title + render_html_table(data, tuan_khong_str, bazi_dict, hoa_giap_hien_tai, truc_su)
+html_string = title + render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su)
 st.components.v1.html(html_string, height=450)
