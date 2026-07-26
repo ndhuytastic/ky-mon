@@ -5,7 +5,6 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-# Đã đổi layout thành "wide" để đủ chỗ chứa 2 bảng nằm ngang nhau trên PC
 st.set_page_config(page_title="Kỳ Môn Độn Giáp", layout="wide", initial_sidebar_state="collapsed")
 
 # ==========================================
@@ -284,7 +283,6 @@ def get_ancan_html(can):
     color = element_colors.get(el, "#1a1a1a")
     return f"<div style='position: absolute; bottom: 2px; left: 6px; font-size: 14px; color:{color}; font-weight: normal;'>{can}</div>"
 
-# HÀM MỚI: TẠO BẢNG 60 HOA GIÁP
 def render_jiazi_table():
     xun_headers = ["甲子", "甲戌", "甲申", "甲午", "甲辰", "甲寅"]
     stems = "甲乙丙丁戊己庚辛壬癸"
@@ -518,11 +516,6 @@ sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-ser
 qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su)
 jiazi_board_html = render_jiazi_table()
 
-# Dummy title to align the right table exactly with the left table's top
-dummy_title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 18px; user-select: none;'>_</h3>"
-dummy_sub = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: transparent; font-weight: normal; font-size: 16px; user-select: none;'>_</h4>"
-
-
 # Sử dụng CSS Flexbox để tự động xếp cạnh nhau trên PC và xếp chồng trên Mobile
 combined_html = f"""
     <style>
@@ -542,9 +535,13 @@ combined_html = f"""
             {qimen_board_html}
         </div>
         <div>
-            {dummy_title}
-            {dummy_sub}
-            {jiazi_board_html}
+            <div style="visibility: hidden; pointer-events: none;">
+                {title}
+                {sub_title}
+            </div>
+            <div style="margin-top: 5px;">
+                {jiazi_board_html}
+            </div>
         </div>
     </div>
     
@@ -586,5 +583,4 @@ combined_html = f"""
     </script>
 """
 
-# Chiều cao 880 để đảm bảo hiển thị đẹp trên điện thoại khi bị xếp chồng 2 bảng
 st.components.v1.html(combined_html, height=880, scrolling=True)
