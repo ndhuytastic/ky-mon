@@ -324,12 +324,10 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
         .item-right {{ display: flex; align-items: center; flex-wrap: wrap; flex-grow: 1; gap: 2px 3px; line-height: 1.2; margin-left: 20px; }}
         .stem {{ font-size: 16px; margin-right: 2px; font-weight: normal; display: flex; align-items: center; }}
 
-        .horse {{ position: absolute; right: 8px; color: #1a1a1a; font-weight: normal; font-size: 14px; cursor: default; }}
-        .void-mark {{ position: absolute; top: 6px; color: #1a1a1a; font-weight: normal; font-size: 14px; display: flex; align-items: center; }}
+        .horse {{ position: absolute; top: 6px; right: 8px; color: #1a1a1a; font-weight: normal; font-size: 14px; cursor: default; }}
+        .void-mark {{ position: absolute; display: flex; align-items: center; line-height: 1; }}
         
-        /* Chỉnh lại con trỏ chuột khi chỉ vào Tên Cung để báo hiệu có thể click */
         .bagua-mark {{ position: absolute; bottom: 2px; right: 8px; color: #1a1a1a; font-size: 14px; cursor: pointer; z-index: 20; }}
-        
         .inner-numbers {{ position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #000; font-weight: normal; letter-spacing: 0.5px; white-space: nowrap; }}
 
         .center-fuyin {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 10; gap: 2px; }}
@@ -354,28 +352,29 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
             dia_display = format_stem_with_rules(d['dia'], p, can_gio_ban, can_ngay_ban, is_heaven=False)
             ancan_html = get_ancan_html(d['ancan'])
 
-            # Xử lý Không Vong & Dịch Mã
-            has_void = False
-            void_html = ""
-            if p in cung_tk_ngay or p in cung_tk_gio:
-                has_void = True
-                labels = ""
-                # Chữ 日 nét thường, chữ 时 in đậm. Kích thước 10px bé lại.
-                if p in cung_tk_ngay: labels += '<span style="font-weight: normal; font-size: 10px; margin-right: 2px;">日</span>'
-                if p in cung_tk_gio:  labels += '<span style="font-weight: bold; font-size: 10px; margin-right: 2px;">时</span>'
-                void_html = f'<div class="void-mark" style="right: 8px;">{labels}○</div>'
+            horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
 
-            horse_html = ""
-            if d['ngua']:
-                # Dịch Mã đẩy xuống top: 22px nếu có Không Vong
-                horse_top = "22px" if has_void else "6px"
-                horse_html = f'<div class="horse" style="top: {horse_top};">{d["ngua"]}</div>'
+            # Không Vong nhường chỗ cho Dịch Mã (nếu có) để 2 biểu tượng đứng ngang hàng
+            void_style = "right: 26px;" if d['ngua'] else "right: 8px;"
+            void_html = ""
+            
+            if p in cung_tk_ngay or p in cung_tk_gio:
+                if p in cung_tk_gio:
+                    # Không Vong Giờ: In đậm
+                    v_weight = "900"
+                    v_color = "#000"
+                else:
+                    # Không Vong Ngày: Nét nhạt
+                    v_weight = "300"
+                    v_color = "#666"
+                    
+                # Kích thước 18px để vòng tròn to hơn bình thường
+                void_html = f'<div class="void-mark" style="{void_style} top: 4px; font-size: 18px; font-weight: {v_weight}; color: {v_color};">○</div>'
 
             gua_char = cung_to_gua[p]
             gua_html = ""
             if gua_char:
                 w_style = "bold; font-size:16px;" if is_cung_vuong_tuong(p, month_branch) else "normal;"
-                # Thêm sự kiện onclick vào chữ Cung Quái
                 gua_html = f"<div class='bagua-mark' style='font-weight:{w_style}' onclick='toggleHighlight({p})'>{gua_char}</div>"
 
             nums_str = inner_numbers.get(p, "")
@@ -386,7 +385,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 badges = []
                 if is_wu_bu_yu_shi: badges.append("<div class='wubu-badge'>五不遇时</div>")
                 
-                # Gộp Phục Ngâm / Phản Ngâm nếu trùng
                 if is_star_fuyin and is_door_fuyin:
                     badges.append("<div class='fuyin-badge'>星门全伏吟</div>")
                 elif is_star_fanyin and is_door_fanyin:
@@ -394,14 +392,12 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 else:
                     if is_star_fuyin: badges.append("<div class='fuyin-badge'>星伏吟</div>")
                     elif is_star_fanyin: badges.append("<div class='fuyin-badge'>星反吟</div>")
-                    
                     if is_door_fuyin: badges.append("<div class='fuyin-badge'>门伏吟</div>")
                     elif is_door_fanyin: badges.append("<div class='fuyin-badge'>门反吟</div>")
                 
                 if badges:
                     center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
-                # Thêm ID palace-{p} để tương tác JS
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
                     {center_alert_html}
@@ -430,13 +426,11 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 </td>"""
         html += "</tr>"
         
-    # Thêm đoạn mã JavaScript xử lý logic đổi màu Cung Tiên Thiên / Hậu Thiên
     html += """
         </table>
     </div>
     
     <script>
-        // Bản đồ quan hệ: { Cung Bấm: [Đối Xung, Vị Trí Tiên Thiên, Cung Chứa Quẻ Gốc] }
         const relations = {
             1: [9, 2, 7], // Khảm
             2: [8, 4, 1], // Khôn
@@ -451,20 +445,16 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
         let currentActive = null;
 
         function toggleHighlight(palace) {
-            if(palace === 5) return; // Bỏ qua Trung Cung
+            if(palace === 5) return;
             
-            // Xóa màu xám cũ ở tất cả các cung (trở về màu mặc định)
             for(let i=1; i<=9; i++) {
                 if(i===5) continue;
                 document.getElementById('palace-' + i).style.backgroundColor = '#fefefe';
             }
 
-            // Nếu bấm lại cung cũ -> Chỉ việc tắt đi
             if (currentActive === palace) {
                 currentActive = null;
-            } 
-            // Nếu bấm cung mới -> Tô màu xám nhẹ (#e6e6e6) cho các cung liên quan
-            else {
+            } else {
                 let targets = relations[palace];
                 if(targets) {
                     targets.forEach(t => {
