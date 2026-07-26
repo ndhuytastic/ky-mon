@@ -147,7 +147,7 @@ def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
         
     return an_can_dict
 
-def lap_que(hoa_giap_gio, loai_don, so_cuc):
+def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
     loai = "阳" if loai_don == "阳遁" else "阴"
     idx_can, idx_chi = thien_can.index(can_gio), dia_chi.index(chi_gio)
@@ -162,8 +162,24 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc):
     
     truc_su = door_ring[cg_idx]
     
-    can_tim_kiem = can_tuan if can_gio == "甲" else can_gio
-    target_star = [c for c, can in dia_ban.items() if can == can_tim_kiem][0]
+    # ----------------------------------------------------
+    # TÍNH TOÁN TRỰC PHÙ THEO PHÁI "THẬP GIA CHUYỂN BÀN"
+    # ----------------------------------------------------
+    if display_mode == "十家转盘":
+        yang_stems = ['甲', '乙', '丙', '丁', '戊']
+        yin_stems = ['己', '庚', '辛', '壬', '癸']
+        if can_gio in yang_stems:
+            steps = yang_stems.index(can_gio)
+            target_star = (so_cuc - steps) % 9 or 9 if loai == "阳" else (so_cuc + steps) % 9 or 9
+        else:
+            steps = yin_stems.index(can_gio)
+            target_star = (so_cuc + steps) % 9 or 9 if loai == "阳" else (so_cuc - steps) % 9 or 9
+    else:
+        # Truyền thống
+        can_tim_kiem = can_tuan if can_gio == "甲" else can_gio
+        target_star = [c for c, can in dia_ban.items() if can == can_tim_kiem][0]
+
+    # Cầm tinh luôn luôn ký Khôn 2
     if target_star == 5: target_star = 2
     ts_idx = ring_8.index(target_star)
 
@@ -208,7 +224,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc):
 # ==========================================
 # 3. ĐỊNH DẠNG TEXT GIAO DIỆN & BẢNG HOA GIÁP
 # ==========================================
-def get_colored_span(text, el_dict, cung):
+def get_colored_span(text, el_dict, cung=None):
     if not text: return ""
     el = el_dict.get(text, "")
     color = element_colors.get(el, "#1a1a1a")
@@ -218,25 +234,19 @@ def format_star_with_rules(star_str, cung):
     if not star_str: return ""
     if "/" in star_str:
         p1, p2 = star_str.split('/')
-        el1, el2 = star_elements.get(p1, ""), star_elements.get(p2, "")
-        c1, c2 = element_colors.get(el1, "#1a1a1a"), element_colors.get(el2, "#1a1a1a")
-        return f"<span style='color:{c1}; font-style:normal; font-weight:normal;'>{p1}</span>/<span style='color:{c2}; font-style:normal; font-weight:normal;'>{p2}</span>"
+        return f"{get_colored_span(p1, star_elements)}/{get_colored_span(p2, star_elements)}"
     else:
-        el = star_elements.get(star_str, "")
-        c = element_colors.get(el, "#1a1a1a")
-        return f"<span style='color:{c}; font-style:normal; font-weight:normal;'>{star_str}</span>"
+        return get_colored_span(star_str, star_elements)
 
 def format_stem_with_rules(stem_str, cung, can_gio_ban, can_ngay_ban, is_heaven=True):
     if not stem_str: return ""
     parts = stem_str.split('/')
     formatted = []
-    
     for p in parts:
         el = stem_elements.get(p, "")
         color = element_colors.get(el, "#1a1a1a")
         weight = "normal"
         text_decor = "none"
-        
         if p in stem_punish and stem_punish[p] == cung:
             color = "#800080"
             weight = "bold"
@@ -260,21 +270,23 @@ def format_stem_with_rules(stem_str, cung, can_gio_ban, can_ngay_ban, is_heaven=
         formatted.append(f"{wrapper_start}<span style='color:{color}; font-weight:{weight}; text-decoration:{text_decor}; text-underline-offset: 4px; {shape_style}'>{inner_text}</span>{wrapper_end}")
     return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(formatted)
 
+def format_stem_simple(stem_str):
+    if not stem_str: return ""
+    parts = stem_str.split('/')
+    formatted = []
+    for p in parts:
+        el = stem_elements.get(p, "")
+        color = element_colors.get(el, "#1a1a1a")
+        formatted.append(f"<span style='color:{color}; display: inline-block; width: 26px; text-align: center;'>{p}</span>")
+    return "<span style='color:#1a1a1a; font-weight:normal; margin: 0 1px;'>/</span>".join(formatted)
+
 def format_door_with_rules(door, cung, truc_su):
     if not door: return ""
     el = door_elements.get(door, "")
     color = element_colors.get(el, "#1a1a1a")
-    
-    if is_khac_cung(el, cung):
-        f_style = "italic"
-        f_weight = "bold"
-    else:
-        f_style = "normal"
-        f_weight = "normal"
-        
-    shape_style = ""
-    if door == truc_su:
-        shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;"
+    f_style = "italic" if is_khac_cung(el, cung) else "normal"
+    f_weight = "bold" if is_khac_cung(el, cung) else "normal"
+    shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
     return f"<span style='color:{color}; font-style:{f_style}; font-weight:{f_weight}; {shape_style}'>{door}</span>"
 
 def get_ancan_html(can):
@@ -290,28 +302,14 @@ def render_jiazi_table():
 
     html = """
     <style>
-        .jiazi-table {
-            border-collapse: collapse;
-            width: 480px; min-width: 480px;
-            height: 360px;
-            font-family: "Microsoft YaHei", sans-serif;
-            font-size: 15px;
-            text-align: center;
-            background-color: #fefefe;
-            color: #000;
-        }
-        .jiazi-table th, .jiazi-table td {
-            border: 1px solid #bfbfbf;
-            padding: 4px;
-        }
+        .jiazi-table { border-collapse: collapse; width: 480px; min-width: 480px; height: 360px; font-family: "Microsoft YaHei", sans-serif; font-size: 15px; text-align: center; background-color: #fefefe; color: #000; }
+        .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 4px; }
         .jz-header { font-weight: normal; }
         .jz-footer { font-weight: normal; line-height: 1.2;}
     </style>
-    <table class="jiazi-table">
-        <tr class="jz-header">
+    <table class="jiazi-table"><tr class="jz-header">
     """
-    for h in xun_headers:
-        html += f"<th>{h}</th>"
+    for h in xun_headers: html += f"<th>{h}</th>"
     html += "</tr>"
 
     for i in range(10):
@@ -324,8 +322,7 @@ def render_jiazi_table():
 
     kong_wangs = ["戌<br>亥", "申<br>酉", "午<br>未", "辰<br>巳", "寅<br>卯", "子<br>丑"]
     html += "<tr class='jz-footer'>"
-    for kw in kong_wangs:
-        html += f"<td>{kw}</td>"
+    for kw in kong_wangs: html += f"<td>{kw}</td>"
     html += "</tr></table>"
 
     return html
@@ -333,17 +330,13 @@ def render_jiazi_table():
 # ==========================================
 # 4. RENDER HTML BẢNG KỲ MÔN
 # ==========================================
-def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su):
+def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
-    
     cung_tk_ngay = [chi_to_cung[chi] for chi in tk_ngay]
     cung_tk_gio = [chi_to_cung[chi] for chi in tk_gio]
-    
     month_branch = bazi_dict['thang'][1]
-
     can_gio_thuc = hoa_giap_hien_tai[0]
     can_ngay_thuc = bazi_dict['ngay'][0]
-    
     can_gio_ban = get_board_stem(hoa_giap_hien_tai)
     can_ngay_ban = get_board_stem(bazi_dict['ngay'])
 
@@ -353,33 +346,25 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
     is_door_fanyin = "景门" in cung_data[1]['mon']
     is_wu_bu_yu_shi = is_ngu_bat_ngo_thoi(can_gio_thuc, can_ngay_thuc)
 
-    inner_numbers = {
-        4: "2, 3, 4, 5", 9: "2, 3, 7, 9", 2: "2, 5, 8, 10", 7: "2, 4, 7, 9",
-        6: "1, 4, 6, 9", 1: "1, 6", 8: "5, 7, 8, 10", 3: "3, 4, 8"
-    }
+    inner_numbers = {4: "2, 3, 4, 5", 9: "2, 3, 7, 9", 2: "2, 5, 8, 10", 7: "2, 4, 7, 9", 6: "1, 4, 6, 9", 1: "1, 6", 8: "5, 7, 8, 10", 3: "3, 4, 8"}
 
     html = f"""
     <style>
         .qmdj-table {{ border-collapse: collapse; width: 480px; min-width: 480px; height: 360px; table-layout: fixed; font-size: 15px; background-color: #fefefe; }}
         .qmdj-td {{ border: 1px solid #bfbfbf; width: 33.33%; padding: 10px 6px 20px 6px; position: relative; vertical-align: top; overflow: visible; transition: background-color 0.2s; }}
-
         .row-top, .row-mid, .row-bot {{ display: flex; align-items: center; justify-content: flex-start; }}
         .row-top {{ margin-bottom: 8px; }}
         .row-mid {{ margin-bottom: 6px; }}
         .item-left {{ width: 55px; text-align: left; margin-left: 5px; flex-shrink: 0; line-height: 1.2; }}
         .item-right {{ display: flex; align-items: center; flex-wrap: wrap; flex-grow: 1; gap: 2px 3px; line-height: 1.2; margin-left: 20px; }}
         .stem {{ font-size: 16px; margin-right: 2px; font-weight: normal; display: flex; align-items: center; }}
-
         .horse {{ position: absolute; top: 6px; right: 8px; color: #1a1a1a; font-weight: normal; font-size: 14px; cursor: default; }}
-        
         .bagua-mark {{ position: absolute; bottom: 2px; right: 8px; color: #1a1a1a; font-size: 14px; cursor: pointer; z-index: 20; }}
         .inner-numbers {{ position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #000; font-weight: normal; letter-spacing: 0.5px; white-space: nowrap; }}
-
         .center-fuyin {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 10; gap: 2px; }}
         .fuyin-badge {{ background-color: #FFD700; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 13px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
         .wubu-badge {{ background-color: #FF4500; color: #FFF; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 13px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
     </style>
-
     <table class="qmdj-table">
     """
 
@@ -388,55 +373,61 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
         for p in row:
             d = cung_data[p]
 
-            than_html = get_colored_span(d['than'], deity_elements, p)
-            sao_html = format_star_with_rules(d['sao'], p)
-            mon_html = format_door_with_rules(d['mon'], p, truc_su)
-            
-            thien_display = format_stem_with_rules(d['thien'], p, can_gio_ban, can_ngay_ban, is_heaven=True)
-            dia_display = format_stem_with_rules(d['dia'], p, can_gio_ban, can_ngay_ban, is_heaven=False)
-            ancan_html = get_ancan_html(d['ancan'])
-
-            horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
-
-            # Xử lý Không Vong bằng CSS Shape (Đồng nhất kích thước, khác viền)
-            void_html = ""
-            if p in cung_tk_ngay or p in cung_tk_gio:
-                right_pos = "26px" if d['ngua'] else "8px"
+            if display_mode == "十家转盘":
+                than_html = get_colored_span(d['than'], deity_elements)
+                sao_html = format_star_with_rules(d['sao'], p)
+                mon_html = get_colored_span(d['mon'], door_elements)
+                thien_display = format_stem_simple(d['thien'])
+                dia_display = format_stem_simple(d['dia'])
                 
-                if p in cung_tk_gio:
-                    # Giờ: Vòng tròn màu đen, nét đậm (2px)
-                    void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 2px solid #000; border-radius: 50%; box-sizing: border-box;"></div>'
-                else:
-                    # Ngày: Vòng tròn màu xám, nét siêu mỏng (1px)
-                    void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 1px solid #999; border-radius: 50%; box-sizing: border-box;"></div>'
+                horse_html = ""
+                void_html = ""
+                gua_html = ""
+                inner_nums_html = ""
+                center_alert_html = ""
+                ancan_html = ""
+            else:
+                than_html = get_colored_span(d['than'], deity_elements)
+                sao_html = format_star_with_rules(d['sao'], p)
+                mon_html = format_door_with_rules(d['mon'], p, truc_su)
+                thien_display = format_stem_with_rules(d['thien'], p, can_gio_ban, can_ngay_ban, is_heaven=True)
+                dia_display = format_stem_with_rules(d['dia'], p, can_gio_ban, can_ngay_ban, is_heaven=False)
+                ancan_html = get_ancan_html(d['ancan'])
+                horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
 
-            gua_char = cung_to_gua[p]
-            gua_html = ""
-            if gua_char:
-                w_style = "bold; font-size:16px;" if is_cung_vuong_tuong(p, month_branch) else "normal;"
-                gua_html = f"<div class='bagua-mark' style='font-weight:{w_style}' onclick='toggleHighlight({p})'>{gua_char}</div>"
+                void_html = ""
+                if p in cung_tk_ngay or p in cung_tk_gio:
+                    right_pos = "26px" if d['ngua'] else "8px"
+                    if p in cung_tk_gio:
+                        void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 2px solid #000; border-radius: 50%; box-sizing: border-box;"></div>'
+                    else:
+                        void_html = f'<div style="position: absolute; top: 8px; right: {right_pos}; width: 12px; height: 12px; border: 1px solid #999; border-radius: 50%; box-sizing: border-box;"></div>'
 
-            nums_str = inner_numbers.get(p, "")
-            inner_nums_html = f"<div class='inner-numbers'>{nums_str}</div>" if nums_str else ""
+                gua_char = cung_to_gua[p]
+                gua_html = ""
+                if gua_char:
+                    w_style = "bold; font-size:16px;" if is_cung_vuong_tuong(p, month_branch) else "normal;"
+                    gua_html = f"<div class='bagua-mark' style='font-weight:{w_style}' onclick='toggleHighlight({p})'>{gua_char}</div>"
 
-            center_alert_html = ""
+                nums_str = inner_numbers.get(p, "")
+                inner_nums_html = f"<div class='inner-numbers'>{nums_str}</div>" if nums_str else ""
+
+                center_alert_html = ""
+                if p == 5:
+                    badges = []
+                    if is_wu_bu_yu_shi: badges.append("<div class='wubu-badge'>五不遇时</div>")
+                    if is_star_fuyin and is_door_fuyin: badges.append("<div class='fuyin-badge'>星门全伏吟</div>")
+                    elif is_star_fanyin and is_door_fanyin: badges.append("<div class='fuyin-badge'>星门全反吟</div>")
+                    else:
+                        if is_star_fuyin: badges.append("<div class='fuyin-badge'>星伏吟</div>")
+                        elif is_star_fanyin: badges.append("<div class='fuyin-badge'>星反吟</div>")
+                        if is_door_fuyin: badges.append("<div class='fuyin-badge'>门伏吟</div>")
+                        elif is_door_fanyin: badges.append("<div class='fuyin-badge'>门反吟</div>")
+                    
+                    if badges:
+                        center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
+
             if p == 5:
-                badges = []
-                if is_wu_bu_yu_shi: badges.append("<div class='wubu-badge'>五不遇时</div>")
-                
-                if is_star_fuyin and is_door_fuyin:
-                    badges.append("<div class='fuyin-badge'>星门全伏吟</div>")
-                elif is_star_fanyin and is_door_fanyin:
-                    badges.append("<div class='fuyin-badge'>星门全反吟</div>")
-                else:
-                    if is_star_fuyin: badges.append("<div class='fuyin-badge'>星伏吟</div>")
-                    elif is_star_fanyin: badges.append("<div class='fuyin-badge'>星反吟</div>")
-                    if is_door_fuyin: badges.append("<div class='fuyin-badge'>门伏吟</div>")
-                    elif is_door_fanyin: badges.append("<div class='fuyin-badge'>门反吟</div>")
-                
-                if badges:
-                    center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
-
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
                     {center_alert_html}
@@ -465,9 +456,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 </td>"""
         html += "</tr>"
         
-    html += """
-        </table>
-    """
+    html += "</table>"
     return html
 
 # ==========================================
@@ -478,7 +467,7 @@ current_chi_idx = int((now_vn.hour + 1) / 2) % 12
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    display_mode = st.selectbox("Hiển thị", ["Mặc định", "六十花甲"])
+    display_mode = st.selectbox("Hiển thị", ["Mặc định", "六十花甲", "十家转盘"])
 with col2:
     selected_date = st.date_input("Ngày", now_vn.date())
 with col3:
@@ -510,37 +499,27 @@ if can_gio_str == "甲": hour_str = f"<b>{hour_str}</b>"
 tk_ngay = tinh_tuan_khong(bazi_dict['ngay'])
 tk_gio = tinh_tuan_khong(hoa_giap_hien_tai)
 
-data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc)
+data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc, display_mode)
 
 title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; user-select: none;'>{bazi_chuoi} {hour_str}</h3>"
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none;'>奇门遁甲 | {chuoi_cuc}</h4>"
 
-qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su)
+qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode)
 jiazi_board_html = render_jiazi_table()
 
 js_script = """
 <script>
     const relations = {
-        1: [9, 2, 7], // Khảm
-        2: [8, 4, 1], // Khôn
-        3: [7, 9, 8], // Chấn
-        4: [6, 7, 2], // Tốn
-        6: [4, 8, 9], // Càn
-        7: [3, 1, 4], // Đoài
-        8: [2, 3, 6], // Cấn
-        9: [1, 6, 3]  // Ly
+        1: [9, 2, 7], 2: [8, 4, 1], 3: [7, 9, 8], 4: [6, 7, 2],
+        6: [4, 8, 9], 7: [3, 1, 4], 8: [2, 3, 6], 9: [1, 6, 3]
     };
-    
     let currentActive = null;
-
     function toggleHighlight(palace) {
         if(palace === 5) return;
-        
         for(let i=1; i<=9; i++) {
             if(i===5) continue;
             document.getElementById('palace-' + i).style.backgroundColor = '#fefefe';
         }
-
         if (currentActive === palace) {
             currentActive = null;
         } else {
@@ -557,8 +536,7 @@ js_script = """
 </script>
 """
 
-# Điều hướng hiển thị 1 Bảng (Mặc định) hoặc 2 Bảng dựa trên lựa chọn Selectbox
-if display_mode == "Mặc định":
+if display_mode in ["Mặc định", "十家转盘"]:
     combined_html = f"""
         <div style="display: flex; justify-content: center; font-family: 'Microsoft YaHei', sans-serif;">
             <div>
@@ -575,14 +553,7 @@ else:
 
     combined_html = f"""
         <style>
-            .main-wrapper {{
-                display: flex;
-                flex-wrap: wrap;
-                gap: 60px;
-                align-items: flex-start;
-                justify-content: center;
-                font-family: "Microsoft YaHei", sans-serif;
-            }}
+            .main-wrapper {{ display: flex; flex-wrap: wrap; gap: 60px; align-items: flex-start; justify-content: center; font-family: "Microsoft YaHei", sans-serif; }}
         </style>
         <div class="main-wrapper">
             <div>
@@ -591,13 +562,8 @@ else:
                 {qimen_board_html}
             </div>
             <div>
-                <div style="visibility: hidden; pointer-events: none;">
-                    {title}
-                    {sub_title}
-                </div>
-                <div style="margin-top: 5px;">
-                    {jiazi_board_html}
-                </div>
+                <div style="visibility: hidden; pointer-events: none;">{title}{sub_title}</div>
+                <div style="margin-top: 5px;">{jiazi_board_html}</div>
             </div>
         </div>
         {js_script}
