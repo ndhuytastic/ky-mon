@@ -60,11 +60,10 @@ danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12
 # Tạo danh sách Âm Dương Cục (19 lựa chọn)
 dun_ju_list = ["Mặc định"] + [f"阳{i}" for i in range(1, 10)] + [f"阴{i}" for i in range(1, 10)]
 
-# Tạo danh sách 60 Hoa Giáp được gom nhóm theo Can (Giáp Tý, Giáp Dần... Ất Sửu, Ất Mão...)
+# Tạo danh sách 60 Hoa Giáp được gom nhóm theo Can
 jiazi_grouped_list = ["Mặc định"]
 for can in thien_can:
     for chi in dia_chi:
-        # Thiên can Dương đi với Địa chi Dương, Can Âm đi với Chi Âm
         if (thien_can.index(can) % 2) == (dia_chi.index(chi) % 2):
             jiazi_grouped_list.append(f"{can}{chi}")
 
@@ -152,22 +151,6 @@ def get_shijia_term_and_cuc(day_obj):
     so_cuc = solar_term_ju[active_term][yuan]
     return loai_don, so_cuc, active_term
 
-def tinh_don_cuc_va_bazi(year, month, day, hour_int, display_mode):
-    day_obj = sxtwl.fromSolar(year, month, day)
-    y_gz, m_gz, d_gz = day_obj.getYearGZ(), day_obj.getMonthGZ(), day_obj.getDayGZ()
-    bazi_dict = {
-        'nam': thien_can[y_gz.tg]+dia_chi[y_gz.dz],
-        'thang': thien_can[m_gz.tg]+dia_chi[m_gz.dz],
-        'ngay': thien_can[d_gz.tg]+dia_chi[d_gz.dz]
-    }
-    
-    if display_mode == "十家转盘":
-        loai_don, so_cuc, _ = get_shijia_term_and_cuc(day_obj)
-    else:
-        loai_don, so_cuc, _ = get_standard_term_and_cuc(day_obj)
-        
-    return loai_don, so_cuc, bazi_dict
-
 def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
     diem_xuat_phat = cung_truc_su
     if can_gio_goc == dia_ban_dict.get(cung_truc_su, ""):
@@ -203,6 +186,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     cg_idx = ring_8.index(cg_ring)
     truc_su = door_ring[cg_idx]
     
+    # --- TÍNH TOÁN TRỰC PHÙ TÙY THEO PHÁI ---
     if display_mode == "十家转盘":
         yang_stems = ['甲', '乙', '丙', '丁', '戊']
         yin_stems = ['己', '庚', '辛', '壬', '癸']
@@ -520,6 +504,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
+                # Cung 5 đặc biệt: Trong chế độ 拆补转盘 sẽ có nút Toggle Lục thập hoa giáp
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
                     {toggle_btn_html}
@@ -561,7 +546,7 @@ def get_current_vn_time():
 now_vn = get_current_vn_time()
 current_chi_idx = int((now_vn.hour + 1) / 2) % 12
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     display_mode = st.selectbox("Hiển thị", ["拆补转盘", "十家转盘"])
 with col2:
@@ -569,7 +554,9 @@ with col2:
 with col3:
     selected_branch_str = st.selectbox("Giờ", danh_sach_12_gio, index=current_chi_idx)
 with col4:
-    dropdown_ju = st.selectbox("Cục số", ["Mặc định", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
+    override_dun_ju = st.selectbox("Âm/Dương Cục", dun_ju_list)
+with col5:
+    override_jiazi = st.selectbox("Hoa Giáp", jiazi_grouped_list)
 
 chi_gio = selected_branch_str[0]
 chi_gio_idx = dia_chi.index(chi_gio)
@@ -582,9 +569,7 @@ can_gio_str = thien_can[can_gio_idx]
 
 hoa_giap_hien_tai = can_gio_str + chi_gio
 
-# Bắt đầu đoạn Logic xử lý tùy chọn cho 十家转盘
-don = "阳遁"
-cuc_calc = 1
+# Bắt đầu đoạn Logic xử lý tự động từ Ngày Giờ
 bazi_dict = {
     'nam': thien_can[day_obj.getYearGZ().tg]+dia_chi[day_obj.getYearGZ().dz],
     'thang': thien_can[day_obj.getMonthGZ().tg]+dia_chi[day_obj.getMonthGZ().dz],
@@ -592,31 +577,20 @@ bazi_dict = {
 }
 
 if display_mode == "十家转盘":
-    # Giao diện Tùy chọn Nhập tay
-    st.markdown("<div style='text-align: center; color: #666; font-size: 13px; margin-top: 10px; margin-bottom: -15px;'>-- Tùy chỉnh (Chỉ dùng cho Thập Gia Chuyển Bàn) --</div>", unsafe_allow_html=True)
-    col_ov1, col_ov2, col_ov3, col_ov4 = st.columns(4)
-    with col_ov2:
-        override_dun_ju = st.selectbox("Chọn Âm/Dương Cục", dun_ju_list)
-    with col_ov3:
-        override_jiazi = st.selectbox("Chọn Hoa Giáp Giờ", jiazi_grouped_list)
-
-    # Nếu người dùng không chọn gì, tự động tính bằng thuật toán chuẩn
-    if override_dun_ju == "Mặc định":
-        don, cuc_calc, _ = get_shijia_term_and_cuc(day_obj)
-    else:
-        don = "阳遁" if "阳" in override_dun_ju else "阴遁"
-        cuc_calc = int(override_dun_ju[-1])
-        
-    if override_jiazi != "Mặc định":
-        hoa_giap_hien_tai = override_jiazi
-
+    don_auto, cuc_auto, _ = get_shijia_term_and_cuc(day_obj)
 else:
-    # Nếu là 拆补转盘 thì tự động tính bình thường
-    don, cuc_calc, _ = get_standard_term_and_cuc(day_obj)
+    don_auto, cuc_auto, _ = get_standard_term_and_cuc(day_obj)
 
-# Override cuối cùng nếu người dùng xài menu góc phải
-if dropdown_ju != "Mặc định": cuc = int(dropdown_ju)
-else: cuc = cuc_calc
+# Xử lý Logic Ghi đè (Override) nếu người dùng chọn
+if override_dun_ju != "Mặc định":
+    don = "阳遁" if "阳" in override_dun_ju else "阴遁"
+    cuc = int(override_dun_ju[-1])
+else:
+    don = don_auto
+    cuc = cuc_auto
+
+if override_jiazi != "Mặc định":
+    hoa_giap_hien_tai = override_jiazi
     
 chuoi_cuc = f"{don}{cuc}局"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日"
