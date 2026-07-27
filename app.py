@@ -64,7 +64,6 @@ for can in thien_can:
         if (thien_can.index(can) % 2) == (dia_chi.index(chi) % 2):
             jiazi_grouped_list.append(f"{can}{chi}")
 
-# Dữ liệu Tiết khí và Mùa cho Thập Gia Chuyển Bàn
 term_to_season = {
     "立春": "Xuân", "雨水": "Xuân", "惊蛰": "Xuân", "春分": "Xuân", "清明": "Xuân", "谷雨": "Xuân",
     "立夏": "Hạ", "小满": "Hạ", "芒种": "Hạ", "夏至": "Hạ",
@@ -93,7 +92,6 @@ def get_yearly_terms(year):
     end_date = datetime(year + 1, 1, 31)
     all_terms = []
     
-    # Quét thêm Đông Chí của năm trước để tính ngày bắt đầu cho năm nay
     prev_dz = datetime(year - 1, 12, 1)
     while prev_dz.year == year - 1:
         day_obj = sxtwl.fromSolar(prev_dz.year, prev_dz.month, prev_dz.day)
@@ -359,7 +357,7 @@ def format_stem_simple_with_chi(stem_str, cung):
         el = stem_elements.get(p, "")
         color = element_colors.get(el, "#1a1a1a")
         chi_mo = shijia_earth_branch_map.get(p, "") if cung != 5 else ""
-        chi_html = f"<div style='position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999; line-height: 1; padding-top: 6px;'>{chi_mo}</div>" if chi_mo else ""
+        chi_html = f"<div style='position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999; line-height: 1; padding-top: 8px;'>{chi_mo}</div>" if chi_mo else ""
         
         formatted.append(f"""
             <span style='position: relative; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 20px; text-align: center;'>
@@ -499,12 +497,10 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
                 dia_display = format_stem_simple_with_chi(d['dia'], p)
                 
-                # Mã Tinh được dời sang chính giữa ở trên cùng để nhường chỗ góc phải cho Tiết khí
-                horse_html = f'<div class="horse" style="left: 50%; transform: translateX(-50%); right: auto;">{d["ngua"]}</div>' if d['ngua'] else ""
+                # Cắt hoàn toàn các thành phần dư thừa
+                horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = toggle_btn_html = ""
                 
-                void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = toggle_btn_html = ""
-                
-                # Hiển thị 3 Tiết khí ở góc trên bên phải
+                # --- PHẦN THÊM MỚI: HIỂN THỊ TIẾT KHÍ GÓC TRÊN BÊN PHẢI ---
                 if p in palace_to_terms and term_dates:
                     terms_list = palace_to_terms[p]
                     terms_html = "<div style='position: absolute; top: 3px; right: 3px; text-align: right; line-height: 1.25; font-size: 10px; color: #888;'>"
@@ -646,10 +642,7 @@ bazi_dict = {
     'ngay': thien_can[day_obj.getDayGZ().tg]+dia_chi[day_obj.getDayGZ().dz]
 }
 
-# Tính toán các Tiết khí trong năm
 term_dates = get_yearly_terms(selected_date.year)
-
-# Tính Cục số và Tiết khí chủ quản (shijia_term) chuẩn xác theo ngày thực tế để hiển thị
 _, _, shijia_term = get_shijia_term_and_cuc(day_obj)
 
 if display_mode == "十家转盘":
