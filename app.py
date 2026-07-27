@@ -53,9 +53,6 @@ jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分"
 
 cung_to_gua = {1: "坎", 2: "坤", 3: "震", 4: "巽", 5: "", 6: "乾", 7: "兑", 8: "艮", 9: "离"}
 chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
-chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
-hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
-danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
 
 dun_ju_list = ["Mặc định"] + [f"阳{i}" for i in range(1, 10)] + [f"阴{i}" for i in range(1, 10)]
 jiazi_grouped_list = ["Mặc định"]
@@ -84,7 +81,7 @@ palace_to_terms = {
 }
 
 # ==========================================
-# 2. LOGIC TÍNH ĐỘN CỤC CHUẨN XÁC
+# 2. LOGIC TÍNH THIÊN VĂN & ĐỘN CỤC CHUẨN XÁC
 # ==========================================
 def get_yearly_terms(year):
     term_dates = {}
@@ -114,55 +111,37 @@ def get_yearly_terms(year):
         term_dates[curr_name] = {"start": curr_start, "end": next_start}
     return term_dates
 
-def is_khac_cung(entity_el, cung):
-    cung_el = palace_elements.get(cung)
-    if not entity_el or not cung_el: return False
-    khac_map = {"木": "土", "土": "水", "水": "火", "火": "金", "金": "木"}
-    return khac_map.get(entity_el) == cung_el
-
-def is_cung_vuong_tuong(cung, month_branch):
-    cung_el = palace_elements.get(cung)
-    month_el = branch_elements.get(month_branch)
-    if not cung_el or not month_el: return False
-    sinh_map = {"水": "木", "木": "火", "火": "土", "土": "金", "金": "水"}
-    return (month_el == cung_el) or (sinh_map[month_el] == cung_el)
-
-def get_board_stem(hoa_giap):
-    can, chi = hoa_giap[0], hoa_giap[1]
-    if can != "甲": return can
-    idx_can, idx_chi = thien_can.index(can), dia_chi.index(chi)
-    chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
-    return {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
-
-def is_ngu_bat_ngo_thoi(can_gio, can_ngay):
-    if not can_gio or not can_ngay: return False
-    idx_gio, idx_ngay = thien_can.index(can_gio), thien_can.index(can_ngay)
-    if (idx_gio % 2) != (idx_ngay % 2): return False
-    el_gio, el_ngay = stem_elements.get(can_gio), stem_elements.get(can_ngay)
-    khac_map = {"木": "土", "土": "水", "水": "火", "火": "金", "金": "木"}
-    return khac_map.get(el_gio) == el_ngay
-
-def tinh_tuan_khong(hoa_giap):
-    idx_can, idx_chi = thien_can.index(hoa_giap[0]), dia_chi.index(hoa_giap[1])
-    idx_tuan_dau = (idx_chi - idx_can) % 12
-    return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
-
-def get_standard_term_and_cuc(day_obj):
-    d_gz = day_obj.getDayGZ()
-    current_jq_idx = -1
+def get_exact_jieqi(user_dt):
+    """Tính Tiết khí thiên văn chính xác đến từng phút"""
+    day_obj = sxtwl.fromSolar(user_dt.year, user_dt.month, user_dt.day)
     temp_day = day_obj
     while not temp_day.hasJieQi():
         temp_day = sxtwl.fromSolar(temp_day.getSolarYear(), temp_day.getSolarMonth(), temp_day.getSolarDay() - 1)
-    current_jq_idx = temp_day.getJieQi()
+    
+    jq_jd = temp_day.getJieQiJD()
+    t_obj = sxtwl.JD2DD(jq_jd)
+    jq_dt = datetime(int(t_obj.Y), int(t_obj.M), int(t_obj.D), int(t_obj.h), int(t_obj.m), int(t_obj.s))
+    
+    if user_dt >= jq_dt:
+        return jq_names[temp_day.getJieQi()]
+    else:
+        # Nếu giờ hiện tại chưa tới giờ giao tiết trong cùng 1 ngày, lấy tiết khí trước đó
+        prev_day = sxtwl.fromSolar(temp_day.getSolarYear(), temp_day.getSolarMonth(), temp_day.getSolarDay() - 1)
+        while not prev_day.hasJieQi():
+            prev_day = sxtwl.fromSolar(prev_day.getSolarYear(), prev_day.getSolarMonth(), prev_day.getSolarDay() - 1)
+        return jq_names[prev_day.getJieQi()]
 
-    tiet_khi = jq_names[current_jq_idx]
-    loai_don = "阳遁" if tiet_khi in yang_terms else "阴遁"
+def get_standard_term_and_cuc(day_obj, exact_term):
+    # Chiết bổ chuyển bàn lấy Tiết khí thiên văn chính xác đến Phút làm chuẩn
+    loai_don = "阳遁" if exact_term in yang_terms else "阴遁"
+    d_gz = day_obj.getDayGZ()
     offset = d_gz.tg % 5
     phu_tou_chi_idx = (d_gz.dz - offset) % 12
     yuan = 0 if phu_tou_chi_idx in [0, 6, 3, 9] else 1 if phu_tou_chi_idx in [2, 8, 5, 11] else 2
-    return loai_don, solar_term_ju[tiet_khi][yuan], tiet_khi
+    return loai_don, solar_term_ju[exact_term][yuan], exact_term
 
 def get_shijia_term_and_cuc(day_obj):
+    # Thập gia chuyển bàn lấy Phù Đầu làm chuẩn (Cắt theo ngày) để tính Cục số
     d_gz = day_obj.getDayGZ()
     offset = d_gz.tg % 5
     ft_d = sxtwl.fromSolar(day_obj.getSolarYear(), day_obj.getSolarMonth(), day_obj.getSolarDay())
@@ -195,18 +174,29 @@ def get_shijia_term_and_cuc(day_obj):
     so_cuc = solar_term_ju[active_term][yuan]
     return loai_don, so_cuc, active_term
 
+def is_ngu_bat_ngo_thoi(can_gio, can_ngay):
+    if not can_gio or not can_ngay: return False
+    idx_gio, idx_ngay = thien_can.index(can_gio), thien_can.index(can_ngay)
+    if (idx_gio % 2) != (idx_ngay % 2): return False
+    el_gio, el_ngay = stem_elements.get(can_gio), stem_elements.get(can_ngay)
+    khac_map = {"木": "土", "土": "水", "水": "火", "火": "金", "金": "木"}
+    return khac_map.get(el_gio) == el_ngay
+
+def tinh_tuan_khong(hoa_giap):
+    idx_can, idx_chi = thien_can.index(hoa_giap[0]), dia_chi.index(hoa_giap[1])
+    idx_tuan_dau = (idx_chi - idx_can) % 12
+    return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
+
 def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
     diem_xuat_phat = cung_truc_su
     if can_gio_goc == dia_ban_dict.get(cung_truc_su, ""):
         diem_xuat_phat = 2 if cung_truc_su == 5 else 5
-            
     an_can_dict = {}
     can_idx = luc_nghi.index(can_gio_goc)
     tien = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     lui =  [9, 8, 7, 6, 5, 4, 3, 2, 1]
     duong_bay = tien if loai_don == "阳遁" else lui
     start_idx_in_duong_bay = duong_bay.index(diem_xuat_phat)
-    
     for i in range(9):
         current_cung = duong_bay[(start_idx_in_duong_bay + i) % 9]
         current_can = luc_nghi[(can_idx + i) % 9]
@@ -283,7 +273,8 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
         else: deity_idx = (ts_idx - i) % 8
         cung_data[p]['than'] = shen_yang[deity_idx] if loai == "阳" else shen_yin[deity_idx]
 
-    can_gio_thuc_ban = get_board_stem(hoa_giap_gio)
+    # Tính án can cho 拆补转盘
+    can_gio_thuc_ban = can_gio if can_gio != "甲" else can_tuan
     an_can_dict = tinh_an_can(can_gio_thuc_ban, so_cuc, loai_don, dia_ban, cung_truc_su)
     for p in range(1, 10):
         cung_data[p]['ancan'] = an_can_dict[p]
@@ -371,8 +362,10 @@ def format_door_with_rules(door, cung, truc_su):
     if not door: return ""
     el = door_elements.get(door, "")
     color = element_colors.get(el, "#1a1a1a")
-    f_style = "italic" if is_khac_cung(el, cung) else "normal"
-    f_weight = "bold" if is_khac_cung(el, cung) else "normal"
+    khac_map = {"木": "土", "土": "水", "水": "火", "火": "金", "金": "木"}
+    is_khac = (khac_map.get(el) == palace_elements.get(cung))
+    f_style = "italic" if is_khac else "normal"
+    f_weight = "bold" if is_khac else "normal"
     shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
     return f"<span style='color:{color}; font-style:{f_style}; font-weight:{f_weight}; {shape_style}'>{door}</span>"
 
@@ -416,13 +409,14 @@ def render_jiazi_table():
     html += "</tr></table>"
     return html
 
-def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, shijia_term):
+def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, exact_term):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     cung_tk_ngay = [chi_to_cung[chi] for chi in tk_ngay]
     cung_tk_gio = [chi_to_cung[chi] for chi in tk_gio]
     month_branch = bazi_dict['thang'][1]
     can_gio_thuc = hoa_giap_hien_tai[0]
     can_ngay_thuc = bazi_dict['ngay'][0]
+    
     can_gio_ban = get_board_stem(hoa_giap_hien_tai)
     can_ngay_ban = get_board_stem(bazi_dict['ngay'])
 
@@ -497,10 +491,9 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
                 dia_display = format_stem_simple_with_chi(d['dia'], p)
                 
-                # Cắt hoàn toàn các thành phần dư thừa
                 horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = toggle_btn_html = ""
                 
-                # --- PHẦN THÊM MỚI: HIỂN THỊ TIẾT KHÍ GÓC TRÊN BÊN PHẢI ---
+                # Hiển thị 3 Tiết khí ở góc trên bên phải (Tô đậm tiết khí chính xác bằng phút)
                 if p in palace_to_terms and term_dates:
                     terms_list = palace_to_terms[p]
                     terms_html = "<div style='position: absolute; top: 3px; right: 3px; text-align: right; line-height: 1.25; font-size: 10px; color: #888;'>"
@@ -508,7 +501,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         if t in term_dates:
                             t_start = term_dates[t]['start']
                             t_end = term_dates[t]['end']
-                            is_active = (t == shijia_term)
+                            is_active = (t == exact_term)
                             fw = "bold; color: #000;" if is_active else "normal;"
                             terms_html += f"<div style='font-weight: {fw}'>{t} ({t_start}-{t_end})</div>"
                     terms_html += "</div>"
@@ -536,10 +529,15 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                     else:
                         void_html = f'<div style="position: absolute; top: 6px; right: {right_pos}; width: 10px; height: 10px; border: 1px solid #999; border-radius: 50%; box-sizing: border-box;"></div>'
 
+                cung_el = palace_elements.get(p)
+                month_el = branch_elements.get(month_branch)
+                sinh_map = {"水": "木", "木": "火", "火": "土", "土": "金", "金": "水"}
+                is_vuong_tuong = (month_el == cung_el) or (sinh_map.get(month_el) == cung_el)
+
                 gua_char = cung_to_gua[p]
                 gua_html = ""
                 if gua_char:
-                    w_style = "bold; font-size:14px;" if is_cung_vuong_tuong(p, month_branch) else "normal;"
+                    w_style = "bold; font-size:14px;" if is_vuong_tuong else "normal;"
                     gua_html = f"<div class='bagua-mark' style='font-weight:{w_style}' onclick='toggleHighlight({p})'>{gua_char}</div>"
 
                 nums_str = inner_numbers.get(p, "")
@@ -562,11 +560,12 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
-                if display_mode == "十家转盘" and term_dates and shijia_term:
-                    t_start = term_dates[shijia_term]['start']
-                    t_end = term_dates[shijia_term]['end']
-                    season = term_to_season.get(shijia_term, "")
-                    center_term_html = f"<div style='position: absolute; top: 12px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 13px; color: #444; white-space: nowrap; font-weight: bold;'>{shijia_term} ({t_start}-{t_end})<br><span style='font-weight:normal; font-size: 11px;'>- {season} -</span></div>"
+                # Hiển thị Tiết khí hiện tại và Mùa ở Trung cung (dùng exact_term chính xác phút)
+                if display_mode == "十家转盘" and term_dates and exact_term:
+                    t_start = term_dates[exact_term]['start']
+                    t_end = term_dates[exact_term]['end']
+                    season = term_to_season.get(exact_term, "")
+                    center_term_html = f"<div style='position: absolute; top: 12px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 13px; color: #444; white-space: nowrap; font-weight: bold;'>{exact_term} ({t_start}-{t_end})<br><span style='font-weight:normal; font-size: 11px;'>- {season} -</span></div>"
                 else:
                     center_term_html = ""
 
@@ -611,7 +610,6 @@ def get_current_vn_time():
     return datetime.now(timezone(timedelta(hours=7)))
 
 now_vn = get_current_vn_time()
-current_chi_idx = int((now_vn.hour + 1) / 2) % 12
 
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
@@ -619,17 +617,29 @@ with col1:
 with col2:
     selected_date = st.date_input("Ngày", now_vn.date())
 with col3:
-    selected_branch_str = st.selectbox("Giờ", danh_sach_12_gio, index=current_chi_idx)
+    # Đổi sang ô chọn Giờ Phút chính xác
+    selected_time = st.time_input("Giờ Phút", now_vn.time())
 with col4:
     override_dun_ju = st.selectbox("Âm/Dương Cục", dun_ju_list)
 with col5:
     override_jiazi = st.selectbox("Hoa Giáp", jiazi_grouped_list)
 
-chi_gio = selected_branch_str[0]
-chi_gio_idx = dia_chi.index(chi_gio)
-hour_int = chi_to_hour[chi_gio]
+# Kết hợp ngày giờ người dùng chọn
+user_dt = datetime.combine(selected_date, selected_time)
 
-day_obj = sxtwl.fromSolar(selected_date.year, selected_date.month, selected_date.day)
+# --- XỬ LÝ RANH GIỚI GIỜ TÝ (23:00 - 23:59) ---
+# Nếu giờ nhập vào >= 23:00, nó thuộc giờ Tý của NGÀY HÔM SAU
+if user_dt.hour >= 23:
+    actual_date = user_dt.date() + timedelta(days=1)
+    chi_gio_idx = 0  # Tý
+else:
+    actual_date = user_dt.date()
+    chi_gio_idx = (user_dt.hour + 1) // 2 % 12
+
+chi_gio = dia_chi[chi_gio_idx]
+
+# Lấy Bát Tự theo ngày thực tế (đã bù trừ giờ Tý)
+day_obj = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
 can_ngay_idx = day_obj.getDayGZ().tg
 can_gio_idx = (can_ngay_idx % 5 * 2 + chi_gio_idx) % 10
 can_gio_str = thien_can[can_gio_idx]
@@ -642,13 +652,16 @@ bazi_dict = {
     'ngay': thien_can[day_obj.getDayGZ().tg]+dia_chi[day_obj.getDayGZ().dz]
 }
 
-term_dates = get_yearly_terms(selected_date.year)
-_, _, shijia_term = get_shijia_term_and_cuc(day_obj)
+# --- TÍNH TIẾT KHÍ THIÊN VĂN CHÍNH XÁC ĐẾN PHÚT ---
+exact_term = get_exact_jieqi(user_dt)
+term_dates = get_yearly_terms(actual_date.year)
 
 if display_mode == "十家转盘":
-    don_auto, cuc_auto, _ = get_shijia_term_and_cuc(day_obj)
+    # Tính Cục số theo Phù Đầu
+    don_auto, cuc_auto, shijia_term = get_shijia_term_and_cuc(day_obj)
 else:
-    don_auto, cuc_auto, _ = get_standard_term_and_cuc(day_obj)
+    # Tính Cục số theo Giờ Phút chuẩn
+    don_auto, cuc_auto, _ = get_standard_term_and_cuc(day_obj, exact_term)
 
 if override_dun_ju != "Mặc định":
     don = "阳遁" if "阳" in override_dun_ju else "阴遁"
@@ -674,7 +687,8 @@ data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc, display_mode)
 title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; user-select: none; text-align: center;'>{bazi_chuoi} {hour_str}</h3>"
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none; text-align: center;'>奇门遁甲 | {chuoi_cuc}</h4>"
 
-qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, shijia_term)
+# Pass exact_term vào để tô đậm Tiết khí chuẩn thiên văn trên Cửu Cung
+qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, exact_term)
 jiazi_board_html = render_jiazi_table()
 
 js_script = """
