@@ -57,19 +57,65 @@ chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, 
 hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
 danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
 
-# Tạo danh sách Âm Dương Cục (19 lựa chọn)
 dun_ju_list = ["Mặc định"] + [f"阳{i}" for i in range(1, 10)] + [f"阴{i}" for i in range(1, 10)]
-
-# Tạo danh sách 60 Hoa Giáp được gom nhóm theo Can
 jiazi_grouped_list = ["Mặc định"]
 for can in thien_can:
     for chi in dia_chi:
         if (thien_can.index(can) % 2) == (dia_chi.index(chi) % 2):
             jiazi_grouped_list.append(f"{can}{chi}")
 
+# Dữ liệu Tiết khí và Mùa cho Thập Gia Chuyển Bàn
+term_to_season = {
+    "立春": "Xuân", "雨水": "Xuân", "惊蛰": "Xuân", "春分": "Xuân", "清明": "Xuân", "谷雨": "Xuân",
+    "立夏": "Hạ", "小满": "Hạ", "芒种": "Hạ", "夏至": "Hạ",
+    "小暑": "Trường Hạ", "大暑": "Trường Hạ",
+    "立秋": "Thu", "处暑": "Thu", "白露": "Thu", "秋分": "Thu", "寒露": "Thu", "霜降": "Thu",
+    "立冬": "Đông", "小雪": "Đông", "大雪": "Đông", "冬至": "Đông", "小寒": "Đông", "大寒": "Đông"
+}
+
+palace_to_terms = {
+    8: ["立春", "雨水", "惊蛰"],
+    3: ["春分", "清明", "谷雨"],
+    4: ["立夏", "小满", "芒种"],
+    9: ["夏至", "小暑", "大暑"],
+    2: ["立秋", "处暑", "白露"],
+    7: ["秋分", "寒露", "霜降"],
+    6: ["立冬", "小雪", "大雪"],
+    1: ["冬至", "小寒", "大寒"]
+}
+
 # ==========================================
 # 2. LOGIC TÍNH ĐỘN CỤC CHUẨN XÁC
 # ==========================================
+def get_yearly_terms(year):
+    term_dates = {}
+    curr_date = datetime(year, 1, 1)
+    end_date = datetime(year + 1, 1, 31)
+    all_terms = []
+    
+    # Quét thêm Đông Chí của năm trước để tính ngày bắt đầu cho năm nay
+    prev_dz = datetime(year - 1, 12, 1)
+    while prev_dz.year == year - 1:
+        day_obj = sxtwl.fromSolar(prev_dz.year, prev_dz.month, prev_dz.day)
+        if day_obj.hasJieQi() and jq_names[day_obj.getJieQi()] == "冬至":
+            all_terms.append(("冬至", f"{prev_dz.day}/{prev_dz.month}"))
+            break
+        prev_dz += timedelta(days=1)
+
+    while curr_date <= end_date:
+        day_obj = sxtwl.fromSolar(curr_date.year, curr_date.month, curr_date.day)
+        if day_obj.hasJieQi():
+            jq_idx = day_obj.getJieQi()
+            jq_name = jq_names[jq_idx]
+            all_terms.append((jq_name, f"{curr_date.day}/{curr_date.month}"))
+        curr_date += timedelta(days=1)
+        
+    for i in range(len(all_terms) - 1):
+        curr_name, curr_start = all_terms[i]
+        _, next_start = all_terms[i+1]
+        term_dates[curr_name] = {"start": curr_start, "end": next_start}
+    return term_dates
+
 def is_khac_cung(entity_el, cung):
     cung_el = palace_elements.get(cung)
     if not entity_el or not cung_el: return False
@@ -170,7 +216,7 @@ def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
     return an_can_dict
 
 # ==========================================
-# 3. HỆ THỐNG LẬP QUẺ THEO 2 TRƯỜNG PHÁI
+# 3. HỆ THỐNG LẬP QUẺ
 # ==========================================
 def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
@@ -186,7 +232,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     cg_idx = ring_8.index(cg_ring)
     truc_su = door_ring[cg_idx]
     
-    # --- TÍNH TOÁN TRỰC PHÙ TÙY THEO PHÁI ---
     if display_mode == "十家转盘":
         yang_stems = ['甲', '乙', '丙', '丁', '戊']
         yin_stems = ['己', '庚', '辛', '壬', '癸']
@@ -373,7 +418,7 @@ def render_jiazi_table():
     html += "</tr></table>"
     return html
 
-def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode):
+def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, shijia_term):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     cung_tk_ngay = [chi_to_cung[chi] for chi in tk_ngay]
     cung_tk_gio = [chi_to_cung[chi] for chi in tk_gio]
@@ -454,8 +499,25 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
                 dia_display = format_stem_simple_with_chi(d['dia'], p)
                 
-                horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = ""
-                toggle_btn_html = ""
+                # Mã Tinh được dời sang chính giữa ở trên cùng để nhường chỗ góc phải cho Tiết khí
+                horse_html = f'<div class="horse" style="left: 50%; transform: translateX(-50%); right: auto;">{d["ngua"]}</div>' if d['ngua'] else ""
+                
+                void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = toggle_btn_html = ""
+                
+                # Hiển thị 3 Tiết khí ở góc trên bên phải
+                if p in palace_to_terms and term_dates:
+                    terms_list = palace_to_terms[p]
+                    terms_html = "<div style='position: absolute; top: 3px; right: 3px; text-align: right; line-height: 1.25; font-size: 10px; color: #888;'>"
+                    for t in terms_list:
+                        if t in term_dates:
+                            t_start = term_dates[t]['start']
+                            t_end = term_dates[t]['end']
+                            is_active = (t == shijia_term)
+                            fw = "bold; color: #000;" if is_active else "normal;"
+                            terms_html += f"<div style='font-weight: {fw}'>{t} ({t_start}-{t_end})</div>"
+                    terms_html += "</div>"
+                else:
+                    terms_html = ""
             else:
                 class_top = "row-top default-top"
                 class_mid = "row-mid default-mid"
@@ -468,6 +530,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 dia_display = format_stem_with_rules(d['dia'], p, can_gio_ban, can_ngay_ban, is_heaven=False)
                 ancan_html = get_ancan_html(d['ancan'])
                 horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
+                terms_html = ""
 
                 void_html = ""
                 if p in cung_tk_ngay or p in cung_tk_gio:
@@ -486,8 +549,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 nums_str = inner_numbers.get(p, "")
                 inner_nums_html = f"<div class='inner-numbers'>{nums_str}</div>" if nums_str else ""
 
-                center_alert_html = ""
-                toggle_btn_html = ""
+                center_alert_html = toggle_btn_html = ""
                 if p == 5:
                     toggle_btn_html = "<div class='toggle-btn' onclick='toggleJiazi()'>六十</div>"
                     badges = []
@@ -504,10 +566,18 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
-                # Cung 5 đặc biệt: Trong chế độ 拆补转盘 sẽ có nút Toggle Lục thập hoa giáp
+                if display_mode == "十家转盘" and term_dates and shijia_term:
+                    t_start = term_dates[shijia_term]['start']
+                    t_end = term_dates[shijia_term]['end']
+                    season = term_to_season.get(shijia_term, "")
+                    center_term_html = f"<div style='position: absolute; top: 12px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 13px; color: #444; white-space: nowrap; font-weight: bold;'>{shijia_term} ({t_start}-{t_end})<br><span style='font-weight:normal; font-size: 11px;'>- {season} -</span></div>"
+                else:
+                    center_term_html = ""
+
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
                     {toggle_btn_html}
+                    {center_term_html}
                     {center_alert_html}
                     <div style="position: absolute; bottom: 6px; right: 10px; font-size: 16px;">{dia_display}</div>
                     {ancan_html}
@@ -520,6 +590,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                     {gua_html}
                     {inner_nums_html}
                     {ancan_html}
+                    {terms_html}
                     <div class="{class_top}">
                         <div class="item-left">{than_html}</div><div class="item-right"></div>
                     </div>
@@ -569,19 +640,23 @@ can_gio_str = thien_can[can_gio_idx]
 
 hoa_giap_hien_tai = can_gio_str + chi_gio
 
-# Bắt đầu đoạn Logic xử lý tự động từ Ngày Giờ
 bazi_dict = {
     'nam': thien_can[day_obj.getYearGZ().tg]+dia_chi[day_obj.getYearGZ().dz],
     'thang': thien_can[day_obj.getMonthGZ().tg]+dia_chi[day_obj.getMonthGZ().dz],
     'ngay': thien_can[day_obj.getDayGZ().tg]+dia_chi[day_obj.getDayGZ().dz]
 }
 
+# Tính toán các Tiết khí trong năm
+term_dates = get_yearly_terms(selected_date.year)
+
+# Tính Cục số và Tiết khí chủ quản (shijia_term) chuẩn xác theo ngày thực tế để hiển thị
+_, _, shijia_term = get_shijia_term_and_cuc(day_obj)
+
 if display_mode == "十家转盘":
     don_auto, cuc_auto, _ = get_shijia_term_and_cuc(day_obj)
 else:
     don_auto, cuc_auto, _ = get_standard_term_and_cuc(day_obj)
 
-# Xử lý Logic Ghi đè (Override) nếu người dùng chọn
 if override_dun_ju != "Mặc định":
     don = "阳遁" if "阳" in override_dun_ju else "阴遁"
     cuc = int(override_dun_ju[-1])
@@ -606,7 +681,7 @@ data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc, display_mode)
 title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; user-select: none; text-align: center;'>{bazi_chuoi} {hour_str}</h3>"
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none; text-align: center;'>奇门遁甲 | {chuoi_cuc}</h4>"
 
-qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode)
+qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, shijia_term)
 jiazi_board_html = render_jiazi_table()
 
 js_script = """
