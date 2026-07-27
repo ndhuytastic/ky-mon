@@ -53,9 +53,6 @@ jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分"
 
 cung_to_gua = {1: "坎", 2: "坤", 3: "震", 4: "巽", 5: "", 6: "乾", 7: "兑", 8: "艮", 9: "离"}
 chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
-chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
-hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
-danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
 
 dun_ju_list = ["Mặc định"] + [f"阳{i}" for i in range(1, 10)] + [f"阴{i}" for i in range(1, 10)]
 jiazi_grouped_list = ["Mặc định"]
@@ -441,12 +438,12 @@ def render_jiazi_table():
 
     html = """
     <style>
-        .jiazi-table { border-collapse: collapse; width: 480px !important; max-width: 480px !important; min-width: 480px !important; height: 360px !important; max-height: 360px !important; font-family: "Microsoft YaHei", sans-serif; font-size: 13px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; table-layout: fixed; box-sizing: border-box; }
-        .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 2px; overflow: hidden; }
+        .jiazi-table { border-collapse: collapse; width: 480px !important; max-width: 480px !important; min-width: 480px !important; height: 360px !important; max-height: 360px !important; font-family: "Microsoft YaHei", sans-serif; font-size: 15px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; table-layout: fixed; box-sizing: border-box; }
+        .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 2px; overflow: hidden; white-space: nowrap; }
         .jz-header { font-weight: normal; }
         .jz-footer { font-weight: normal; line-height: 1.2;}
         @media (max-width: 1000px) {
-            .jiazi-table { width: 100% !important; min-width: 320px !important; height: auto !important; }
+            .jiazi-table { width: 100% !important; min-width: 320px !important; height: auto !important; font-size: 13px; }
         }
     </style>
     <table class="jiazi-table"><tr class="jz-header">
@@ -456,10 +453,10 @@ def render_jiazi_table():
     for i in range(10):
         html += "<tr>"
         for j in range(6):
-            html += f"<td>{stems[i]}<br>{branches[(12 - j * 2 + i) % 12]}</td>"
+            html += f"<td>{stems[i]}{branches[(12 - j * 2 + i) % 12]}</td>"
         html += "</tr>"
     html += "<tr class='jz-footer'>"
-    for kw in ["戌<br>亥", "申<br>酉", "午<br>未", "辰<br>巳", "寅<br>卯", "子<br>丑"]: html += f"<td>{kw}</td>"
+    for kw in ["戌 亥", "申 酉", "午 未", "辰 巳", "寅 卯", "子 丑"]: html += f"<td>{kw}</td>"
     html += "</tr></table>"
     return html
 
@@ -661,15 +658,16 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 def get_current_vn_time():
     return datetime.now(timezone(timedelta(hours=7)))
 
-now_vn = get_current_vn_time()
+if "init_dt" not in st.session_state:
+    st.session_state.init_dt = get_current_vn_time()
 
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     display_mode = st.selectbox("Hiển thị", ["拆补转盘", "十家转盘"])
 with col2:
-    selected_date = st.date_input("Ngày", now_vn.date())
+    selected_date = st.date_input("Ngày", st.session_state.init_dt.date())
 with col3:
-    selected_time = st.time_input("Giờ Phút", now_vn.time(), step=60)
+    selected_time = st.time_input("Giờ Phút", st.session_state.init_dt.time(), step=60)
 with col4:
     override_dun_ju = st.selectbox("Âm/Dương Cục", dun_ju_list)
 with col5:
@@ -691,9 +689,8 @@ can_ngay_idx = day_obj.getDayGZ().tg
 can_gio_idx = (can_ngay_idx % 5 * 2 + chi_gio_idx) % 10
 can_gio_str = thien_can[can_gio_idx]
 
-# Nếu user nhập Hoa Giáp, lấy hoa giáp user nhập. Nếu không thì tính toán tự động.
 if override_jiazi != "Mặc định":
-    hoa_giap_hien_tai = override_jiazi
+    hoa_giap_hien_tai = override_jiazi[:2]
 else:
     hoa_giap_hien_tai = can_gio_str + chi_gio
 
@@ -704,11 +701,7 @@ bazi_dict = {
 }
 
 term_dates = get_yearly_terms(actual_date.year)
-
-# Đối với 十家转盘, tính toán shijia_term (chốt theo ngày Phù Đầu) để đưa vào quy luật hiển thị và vượng/suy
 _, _, shijia_term = get_shijia_term_and_cuc(day_obj)
-
-# Chiết bổ vẫn tính theo exact_term (chốt theo phút)
 exact_term = get_exact_jieqi(user_dt)
 
 if display_mode == "十家转盘":
@@ -769,7 +762,7 @@ js_script = """
     
     function toggleJiazi() {
         var jz = document.getElementById('jiazi-container');
-        if (jz.style.display === "none") {
+        if (jz.style.display === "none" || jz.style.display === "") {
             jz.style.display = "flex";
         } else {
             jz.style.display = "none";
@@ -794,7 +787,7 @@ combined_html = f"""
             {sub_title}
             {qimen_board_html}
         </div>
-        <div id="jiazi-container" style="display: none;">
+        <div id="jiazi-container">
             <div style="visibility: hidden; pointer-events: none;">
                 {title}
                 {sub_title}
