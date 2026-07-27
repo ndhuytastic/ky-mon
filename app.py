@@ -112,7 +112,6 @@ def get_yearly_terms(year):
     return term_dates
 
 def get_exact_jieqi(user_dt):
-    """Tính Tiết khí thiên văn chính xác đến từng phút"""
     day_obj = sxtwl.fromSolar(user_dt.year, user_dt.month, user_dt.day)
     temp_day = day_obj
     while not temp_day.hasJieQi():
@@ -125,14 +124,12 @@ def get_exact_jieqi(user_dt):
     if user_dt >= jq_dt:
         return jq_names[temp_day.getJieQi()]
     else:
-        # Nếu giờ hiện tại chưa tới giờ giao tiết trong cùng 1 ngày, lấy tiết khí trước đó
         prev_day = sxtwl.fromSolar(temp_day.getSolarYear(), temp_day.getSolarMonth(), temp_day.getSolarDay() - 1)
         while not prev_day.hasJieQi():
             prev_day = sxtwl.fromSolar(prev_day.getSolarYear(), prev_day.getSolarMonth(), prev_day.getSolarDay() - 1)
         return jq_names[prev_day.getJieQi()]
 
 def get_standard_term_and_cuc(day_obj, exact_term):
-    # Chiết bổ chuyển bàn lấy Tiết khí thiên văn chính xác đến Phút làm chuẩn
     loai_don = "阳遁" if exact_term in yang_terms else "阴遁"
     d_gz = day_obj.getDayGZ()
     offset = d_gz.tg % 5
@@ -141,7 +138,6 @@ def get_standard_term_and_cuc(day_obj, exact_term):
     return loai_don, solar_term_ju[exact_term][yuan], exact_term
 
 def get_shijia_term_and_cuc(day_obj):
-    # Thập gia chuyển bàn lấy Phù Đầu làm chuẩn (Cắt theo ngày) để tính Cục số
     d_gz = day_obj.getDayGZ()
     offset = d_gz.tg % 5
     ft_d = sxtwl.fromSolar(day_obj.getSolarYear(), day_obj.getSolarMonth(), day_obj.getSolarDay())
@@ -186,6 +182,15 @@ def tinh_tuan_khong(hoa_giap):
     idx_can, idx_chi = thien_can.index(hoa_giap[0]), dia_chi.index(hoa_giap[1])
     idx_tuan_dau = (idx_chi - idx_can) % 12
     return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
+
+def get_board_stem(hoa_giap):
+    if not hoa_giap or len(hoa_giap) < 2:
+        return ""
+    can, chi = hoa_giap[0], hoa_giap[1]
+    if can != "甲": return can
+    idx_can, idx_chi = thien_can.index(can), dia_chi.index(chi)
+    chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
+    return {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
 def tinh_an_can(can_gio_goc, cuc_so, loai_don, dia_ban_dict, cung_truc_su):
     diem_xuat_phat = cung_truc_su
@@ -273,8 +278,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
         else: deity_idx = (ts_idx - i) % 8
         cung_data[p]['than'] = shen_yang[deity_idx] if loai == "阳" else shen_yin[deity_idx]
 
-    # Tính án can cho 拆补转盘
-    can_gio_thuc_ban = can_gio if can_gio != "甲" else can_tuan
+    can_gio_thuc_ban = get_board_stem(hoa_giap_gio)
     an_can_dict = tinh_an_can(can_gio_thuc_ban, so_cuc, loai_don, dia_ban, cung_truc_su)
     for p in range(1, 10):
         cung_data[p]['ancan'] = an_can_dict[p]
@@ -493,7 +497,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                 
                 horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = toggle_btn_html = ""
                 
-                # Hiển thị 3 Tiết khí ở góc trên bên phải (Tô đậm tiết khí chính xác bằng phút)
                 if p in palace_to_terms and term_dates:
                     terms_list = palace_to_terms[p]
                     terms_html = "<div style='position: absolute; top: 3px; right: 3px; text-align: right; line-height: 1.25; font-size: 10px; color: #888;'>"
@@ -560,7 +563,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
-                # Hiển thị Tiết khí hiện tại và Mùa ở Trung cung (dùng exact_term chính xác phút)
                 if display_mode == "十家转盘" and term_dates and exact_term:
                     t_start = term_dates[exact_term]['start']
                     t_end = term_dates[exact_term]['end']
@@ -617,33 +619,31 @@ with col1:
 with col2:
     selected_date = st.date_input("Ngày", now_vn.date())
 with col3:
-    # Đổi sang ô chọn Giờ Phút chính xác
-    selected_time = st.time_input("Giờ Phút", now_vn.time())
+    # Set step to 60s (1 phút) để có thể chọn chính xác
+    selected_time = st.time_input("Giờ Phút", now_vn.time(), step=60)
 with col4:
     override_dun_ju = st.selectbox("Âm/Dương Cục", dun_ju_list)
 with col5:
     override_jiazi = st.selectbox("Hoa Giáp", jiazi_grouped_list)
 
-# Kết hợp ngày giờ người dùng chọn
 user_dt = datetime.combine(selected_date, selected_time)
 
-# --- XỬ LÝ RANH GIỚI GIỜ TÝ (23:00 - 23:59) ---
-# Nếu giờ nhập vào >= 23:00, nó thuộc giờ Tý của NGÀY HÔM SAU
 if user_dt.hour >= 23:
     actual_date = user_dt.date() + timedelta(days=1)
-    chi_gio_idx = 0  # Tý
+    chi_gio_idx = 0 
 else:
     actual_date = user_dt.date()
     chi_gio_idx = (user_dt.hour + 1) // 2 % 12
 
 chi_gio = dia_chi[chi_gio_idx]
 
-# Lấy Bát Tự theo ngày thực tế (đã bù trừ giờ Tý)
+# Để gọi API của sxtwl chính xác, nếu sang ngày hôm sau thì phải dùng actual_date
 day_obj = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
 can_ngay_idx = day_obj.getDayGZ().tg
 can_gio_idx = (can_ngay_idx % 5 * 2 + chi_gio_idx) % 10
 can_gio_str = thien_can[can_gio_idx]
 
+# Tuy nhiên, nếu user đã nhập Hoa Giáp tay, thì nó là hoa giáp tay
 hoa_giap_hien_tai = can_gio_str + chi_gio
 
 bazi_dict = {
@@ -652,15 +652,13 @@ bazi_dict = {
     'ngay': thien_can[day_obj.getDayGZ().tg]+dia_chi[day_obj.getDayGZ().dz]
 }
 
-# --- TÍNH TIẾT KHÍ THIÊN VĂN CHÍNH XÁC ĐẾN PHÚT ---
+# Tính Tiết khí thiên văn chính xác đến Phút dựa trên thời gian THỰC TẾ user nhập (user_dt)
 exact_term = get_exact_jieqi(user_dt)
 term_dates = get_yearly_terms(actual_date.year)
 
 if display_mode == "十家转盘":
-    # Tính Cục số theo Phù Đầu
     don_auto, cuc_auto, shijia_term = get_shijia_term_and_cuc(day_obj)
 else:
-    # Tính Cục số theo Giờ Phút chuẩn
     don_auto, cuc_auto, _ = get_standard_term_and_cuc(day_obj, exact_term)
 
 if override_dun_ju != "Mặc định":
@@ -687,7 +685,6 @@ data, can_gio, truc_su = lap_que(hoa_giap_hien_tai, don, cuc, display_mode)
 title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; user-select: none; text-align: center;'>{bazi_chuoi} {hour_str}</h3>"
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none; text-align: center;'>奇门遁甲 | {chuoi_cuc}</h4>"
 
-# Pass exact_term vào để tô đậm Tiết khí chuẩn thiên văn trên Cửu Cung
 qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, exact_term)
 jiazi_board_html = render_jiazi_table()
 
