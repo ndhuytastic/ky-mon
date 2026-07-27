@@ -37,7 +37,6 @@ branch_elements = {"亥": "水", "子": "水", "寅": "木", "卯": "木", "巳"
 stem_punish = {"戊": 3, "己": 2, "庚": 8, "辛": 9, "壬": 4, "癸": 4}
 stem_tomb = {"辛": [4], "壬": [4], "丁": [8], "己": [8], "庚": [8], "癸": [2], "乙": [2, 6], "丙": [6], "戊": [6]}
 
-# Mapping Địa chi nhỏ cho Thập Gia Chuyển Bàn
 shijia_earth_branch_map = {
     "戊": "子", "己": "戌", "庚": "申", "辛": "午", "壬": "辰", 
     "癸": "寅", "丁": "卯", "丙": "寅", "乙": "丑"
@@ -57,6 +56,17 @@ chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "�
 chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
 hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
 danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
+
+# Tạo danh sách Âm Dương Cục (19 lựa chọn)
+dun_ju_list = ["Mặc định"] + [f"阳{i}" for i in range(1, 10)] + [f"阴{i}" for i in range(1, 10)]
+
+# Tạo danh sách 60 Hoa Giáp được gom nhóm theo Can (Giáp Tý, Giáp Dần... Ất Sửu, Ất Mão...)
+jiazi_grouped_list = ["Mặc định"]
+for can in thien_can:
+    for chi in dia_chi:
+        # Thiên can Dương đi với Địa chi Dương, Can Âm đi với Chi Âm
+        if (thien_can.index(can) % 2) == (dia_chi.index(chi) % 2):
+            jiazi_grouped_list.append(f"{can}{chi}")
 
 # ==========================================
 # 2. LOGIC TÍNH ĐỘN CỤC CHUẨN XÁC
@@ -94,7 +104,6 @@ def tinh_tuan_khong(hoa_giap):
     idx_tuan_dau = (idx_chi - idx_can) % 12
     return f"{dia_chi[(idx_tuan_dau - 2) % 12]}{dia_chi[(idx_tuan_dau - 1) % 12]}"
 
-# --- THUẬT TOÁN ĐỊNH CỤC CHO 拆补转盘 ---
 def get_standard_term_and_cuc(day_obj):
     d_gz = day_obj.getDayGZ()
     current_jq_idx = -1
@@ -110,7 +119,6 @@ def get_standard_term_and_cuc(day_obj):
     yuan = 0 if phu_tou_chi_idx in [0, 6, 3, 9] else 1 if phu_tou_chi_idx in [2, 8, 5, 11] else 2
     return loai_don, solar_term_ju[tiet_khi][yuan], tiet_khi
 
-# --- THUẬT TOÁN ĐỊNH CỤC ĐỘC QUYỀN: 十家转盘 ---
 def get_shijia_term_and_cuc(day_obj):
     d_gz = day_obj.getDayGZ()
     offset = d_gz.tg % 5
@@ -195,7 +203,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, display_mode):
     cg_idx = ring_8.index(cg_ring)
     truc_su = door_ring[cg_idx]
     
-    # --- TÍNH TOÁN TRỰC PHÙ THEO PHÁI "THẬP GIA CHUYỂN BÀN" ---
     if display_mode == "十家转盘":
         yang_stems = ['甲', '乙', '丙', '丁', '戊']
         yin_stems = ['己', '庚', '辛', '壬', '癸']
@@ -362,7 +369,7 @@ def render_jiazi_table():
 
     html = """
     <style>
-        .jiazi-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 320px; height: 360px; font-family: "Microsoft YaHei", sans-serif; font-size: 14px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; }
+        .jiazi-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 300px; height: 360px; font-family: "Microsoft YaHei", sans-serif; font-size: 14px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; }
         .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 3px; }
         .jz-header { font-weight: normal; }
         .jz-footer { font-weight: normal; line-height: 1.2;}
@@ -575,8 +582,39 @@ can_gio_str = thien_can[can_gio_idx]
 
 hoa_giap_hien_tai = can_gio_str + chi_gio
 
-don, cuc_calc, bazi_dict = tinh_don_cuc_va_bazi(selected_date.year, selected_date.month, selected_date.day, hour_int, display_mode)
+# Bắt đầu đoạn Logic xử lý tùy chọn cho 十家转盘
+don = "阳遁"
+cuc_calc = 1
+bazi_dict = {
+    'nam': thien_can[day_obj.getYearGZ().tg]+dia_chi[day_obj.getYearGZ().dz],
+    'thang': thien_can[day_obj.getMonthGZ().tg]+dia_chi[day_obj.getMonthGZ().dz],
+    'ngay': thien_can[day_obj.getDayGZ().tg]+dia_chi[day_obj.getDayGZ().dz]
+}
 
+if display_mode == "十家转盘":
+    # Giao diện Tùy chọn Nhập tay
+    st.markdown("<div style='text-align: center; color: #666; font-size: 13px; margin-top: 10px; margin-bottom: -15px;'>-- Tùy chỉnh (Chỉ dùng cho Thập Gia Chuyển Bàn) --</div>", unsafe_allow_html=True)
+    col_ov1, col_ov2, col_ov3, col_ov4 = st.columns(4)
+    with col_ov2:
+        override_dun_ju = st.selectbox("Chọn Âm/Dương Cục", dun_ju_list)
+    with col_ov3:
+        override_jiazi = st.selectbox("Chọn Hoa Giáp Giờ", jiazi_grouped_list)
+
+    # Nếu người dùng không chọn gì, tự động tính bằng thuật toán chuẩn
+    if override_dun_ju == "Mặc định":
+        don, cuc_calc, _ = get_shijia_term_and_cuc(day_obj)
+    else:
+        don = "阳遁" if "阳" in override_dun_ju else "阴遁"
+        cuc_calc = int(override_dun_ju[-1])
+        
+    if override_jiazi != "Mặc định":
+        hoa_giap_hien_tai = override_jiazi
+
+else:
+    # Nếu là 拆补转盘 thì tự động tính bình thường
+    don, cuc_calc, _ = get_standard_term_and_cuc(day_obj)
+
+# Override cuối cùng nếu người dùng xài menu góc phải
 if dropdown_ju != "Mặc định": cuc = int(dropdown_ju)
 else: cuc = cuc_calc
     
@@ -584,7 +622,7 @@ chuoi_cuc = f"{don}{cuc}局"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日"
 
 hour_str = f"{hoa_giap_hien_tai}时"
-if can_gio_str == "甲": hour_str = f"<b>{hour_str}</b>"
+if hoa_giap_hien_tai[0] == "甲": hour_str = f"<b>{hour_str}</b>"
 
 tk_ngay = tinh_tuan_khong(bazi_dict['ngay'])
 tk_gio = tinh_tuan_khong(hoa_giap_hien_tai)
