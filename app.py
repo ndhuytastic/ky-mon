@@ -53,6 +53,9 @@ jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分"
 
 cung_to_gua = {1: "坎", 2: "坤", 3: "震", 4: "巽", 5: "", 6: "乾", 7: "兑", 8: "艮", 9: "离"}
 chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
+chi_to_hour = {"子":0, "丑":2, "寅":4, "卯":6, "辰":8, "巳":10, "午":12, "未":14, "申":16, "酉":18, "戌":20, "亥":22}
+hour_ranges = ["23-1", "1-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-15", "15-17", "17-19", "19-21", "21-23"]
+danh_sach_12_gio = [f"{dia_chi[i]} - {i+1} ({hour_ranges[i]})" for i in range(12)]
 
 dun_ju_list = ["Mặc định"] + [f"阳{i}" for i in range(1, 10)] + [f"阴{i}" for i in range(1, 10)]
 jiazi_grouped_list = ["Mặc định"]
@@ -425,6 +428,13 @@ def format_door_with_rules(door, cung, truc_su):
     shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
     return f"<span style='color:{color}; font-style:{f_style}; font-weight:{f_weight}; {shape_style}'>{door}</span>"
 
+def format_door_simple_with_circle(door, truc_su):
+    if not door: return ""
+    el = door_elements.get(door, "")
+    color = element_colors.get(el, "#1a1a1a")
+    shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
+    return f"<span style='color:{color}; font-style:normal; font-weight:normal; {shape_style}'>{door}</span>"
+
 def get_ancan_html(can):
     if not can: return ""
     el = stem_elements.get(can, "")
@@ -438,7 +448,7 @@ def render_jiazi_table():
 
     html = """
     <style>
-        .jiazi-table { border-collapse: collapse; width: 480px !important; max-width: 480px !important; min-width: 480px !important; height: 360px !important; max-height: 360px !important; font-family: "Microsoft YaHei", sans-serif; font-size: 15px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; table-layout: fixed; box-sizing: border-box; }
+        .jiazi-table { border-collapse: collapse; width: 480px !important; max-width: 480px !important; min-width: 480px !important; height: 360px !important; max-height: 360px !important; font-family: "Microsoft YaHei", sans-serif; font-size: 13px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; table-layout: fixed; box-sizing: border-box; }
         .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 2px; overflow: hidden; white-space: nowrap; }
         .jz-header { font-weight: normal; }
         .jz-footer { font-weight: normal; line-height: 1.2;}
@@ -610,13 +620,8 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
-                if display_mode == "十家转盘" and term_dates and shijia_term:
-                    t_start = term_dates[shijia_term]['start']
-                    t_end = term_dates[shijia_term]['end']
-                    season = term_to_season.get(shijia_term, "")
-                    center_term_html = f"<div style='position: absolute; top: 12px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 13px; color: #444; white-space: nowrap; font-weight: bold;'>{shijia_term} ({t_start}-{t_end})<br><span style='font-weight:normal; font-size: 11px;'>- {season} -</span></div>"
-                else:
-                    center_term_html = ""
+                # XÓA HOÀN TOÀN TÊN TIẾT KHÍ VÀ MÙA TẠI TRUNG CUNG THEO YÊU CẦU MỚI
+                center_term_html = ""
 
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
