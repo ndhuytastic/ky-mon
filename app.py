@@ -72,9 +72,6 @@ term_to_season = {
     "立冬": "Đông", "小雪": "Đông", "大雪": "Đông", "冬至": "Đông", "小寒": "Đông", "大寒": "Đông"
 }
 
-season_elements = {"Xuân": "木", "Hạ": "火", "Trường Hạ": "土", "Thu": "金", "Đông": "水"}
-khac_map = {"木": "土", "火": "金", "土": "水", "金": "木", "水": "火"}
-
 palace_to_terms = {
     8: ["立春", "雨水", "惊蛰"],
     3: ["春分", "清明", "谷雨"],
@@ -312,18 +309,12 @@ def get_colored_span(text, el_dict):
 
 def format_shijia_star(star_str, current_term):
     if not star_str: return ""
-    season = term_to_season.get(current_term, "")
-    s_el = season_elements.get(season, "")
-    
     def _fmt(s):
         el = star_elements.get(s, "")
         color = element_colors.get(el, "#1a1a1a")
         is_vuong = current_term in entity_to_terms.get(s, [])
-        is_tuky = khac_map.get(s_el) == el
-        
         fw = "bold" if is_vuong else "normal"
-        fs = "italic" if is_tuky else "normal"
-        return f"<span style='color:{color}; font-weight:{fw}; font-style:{fs};'>{s}</span>"
+        return f"<span style='color:{color}; font-weight:{fw}; font-style:normal;'>{s}</span>"
 
     if "/" in star_str:
         p1, p2 = star_str.split('/')
@@ -332,22 +323,12 @@ def format_shijia_star(star_str, current_term):
 
 def format_shijia_door(door, cung, truc_su, current_term):
     if not door: return ""
-    season = term_to_season.get(current_term, "")
-    s_el = season_elements.get(season, "")
     el = door_elements.get(door, "")
     color = element_colors.get(el, "#1a1a1a")
-    
     is_vuong = current_term in entity_to_terms.get(door, [])
-    is_tuky = khac_map.get(s_el) == el
-    
     fw = "bold" if is_vuong else "normal"
-    fs = "italic" if is_tuky else "normal"
-    td = "underline" if door == "开门" and cung in [2, 8] else "none"
-    uo = "4px" if td == "underline" else "auto"
-    
     shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
-    
-    return f"<span style='color:{color}; font-weight:{fw}; font-style:{fs}; text-decoration:{td}; text-underline-offset:{uo}; {shape_style}'>{door}</span>"
+    return f"<span style='color:{color}; font-weight:{fw}; font-style:normal; text-decoration:none; {shape_style}'>{door}</span>"
 
 def format_star_with_rules(star_str):
     if not star_str: return ""
@@ -428,53 +409,16 @@ def format_door_with_rules(door, cung, truc_su):
     shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
     return f"<span style='color:{color}; font-style:{f_style}; font-weight:{f_weight}; {shape_style}'>{door}</span>"
 
-def format_door_simple_with_circle(door, truc_su):
-    if not door: return ""
-    el = door_elements.get(door, "")
-    color = element_colors.get(el, "#1a1a1a")
-    shape_style = "display: inline-block; border: 1px solid rgba(0,0,0,0.25); border-radius: 12px; padding: 1px 4px; margin-left: -5px; line-height: 1.1;" if door == truc_su else ""
-    return f"<span style='color:{color}; font-style:normal; font-weight:normal; {shape_style}'>{door}</span>"
-
 def get_ancan_html(can):
     if not can: return ""
     el = stem_elements.get(can, "")
     color = element_colors.get(el, "#1a1a1a")
     return f"<div style='position: absolute; bottom: 2px; left: 6px; font-size: 14px; color:{color}; font-weight: normal;'>{can}</div>"
 
-def render_jiazi_table():
-    xun_headers = ["甲子", "甲戌", "甲申", "甲午", "甲辰", "甲寅"]
-    stems = "甲乙丙丁戊己庚辛壬癸"
-    branches = "子丑寅卯辰巳午未申酉戌亥"
-
-    html = """
-    <style>
-        .jiazi-table { border-collapse: collapse; width: 480px !important; max-width: 480px !important; min-width: 480px !important; height: 360px !important; max-height: 360px !important; font-family: "Microsoft YaHei", sans-serif; font-size: 13px; text-align: center; background-color: #fefefe; color: #000; margin: 0 auto; table-layout: fixed; box-sizing: border-box; }
-        .jiazi-table th, .jiazi-table td { border: 1px solid #bfbfbf; padding: 2px; overflow: hidden; white-space: nowrap; }
-        .jz-header { font-weight: normal; }
-        .jz-footer { font-weight: normal; line-height: 1.2;}
-        @media (max-width: 1000px) {
-            .jiazi-table { width: 100% !important; min-width: 320px !important; height: auto !important; font-size: 13px; }
-        }
-    </style>
-    <table class="jiazi-table"><tr class="jz-header">
-    """
-    for h in xun_headers: html += f"<th>{h}</th>"
-    html += "</tr>"
-    for i in range(10):
-        html += "<tr>"
-        for j in range(6):
-            html += f"<td>{stems[i]}{branches[(12 - j * 2 + i) % 12]}</td>"
-        html += "</tr>"
-    html += "<tr class='jz-footer'>"
-    for kw in ["戌 亥", "申 酉", "午 未", "辰 巳", "寅 卯", "子 丑"]: html += f"<td>{kw}</td>"
-    html += "</tr></table>"
-    return html
-
 def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, shijia_term):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     cung_tk_ngay = [chi_to_cung[chi] for chi in tk_ngay]
     cung_tk_gio = [chi_to_cung[chi] for chi in tk_gio]
-    month_branch = bazi_dict['thang'][1]
     can_gio_thuc = hoa_giap_hien_tai[0]
     can_ngay_thuc = bazi_dict['ngay'][0]
     
@@ -516,9 +460,6 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
         .fuyin-badge {{ background-color: #FFD700; color: #000; padding: 2px 4px; border-radius: 3px; font-weight: bold; font-size: 12px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
         .wubu-badge {{ background-color: #FF4500; color: #FFF; padding: 2px 4px; border-radius: 3px; font-weight: bold; font-size: 12px; white-space: nowrap; box-shadow: 1px 1px 3px rgba(0,0,0,0.3); }}
         
-        .toggle-btn {{ position: absolute; top: 2px; left: 2px; font-size: 10px; color: #999; cursor: pointer; user-select: none; border: 1px solid #ccc; padding: 1px 3px; border-radius: 2px; background: #fafafa; z-index: 30; }}
-        .toggle-btn:hover {{ background: #eee; }}
-        
         @media (max-width: 400px) {{
             .item-left {{ width: 45px; font-size: 13px; }}
             .item-right {{ margin-left: 5px; }}
@@ -552,7 +493,7 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
 
                 dia_display = format_stem_simple_with_chi(d['dia'], p)
                 
-                horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = toggle_btn_html = ""
+                horse_html = void_html = gua_html = inner_nums_html = center_alert_html = ancan_html = ""
                 
                 if p in palace_to_terms and term_dates:
                     terms_list = palace_to_terms[p]
@@ -589,23 +530,14 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                     else:
                         void_html = f'<div style="position: absolute; top: 6px; right: {right_pos}; width: 10px; height: 10px; border: 1px solid #999; border-radius: 50%; box-sizing: border-box;"></div>'
 
-                cung_el = palace_elements.get(p)
-                month_el = branch_elements.get(month_branch)
-                sinh_map_std = {"水": "木", "木": "火", "火": "土", "土": "金", "金": "水"}
-                is_vuong_tuong = (month_el == cung_el) or (sinh_map_std.get(month_el) == cung_el)
-
                 gua_char = cung_to_gua[p]
-                gua_html = ""
-                if gua_char:
-                    w_style = "bold; font-size:14px;" if is_vuong_tuong else "normal;"
-                    gua_html = f"<div class='bagua-mark' style='font-weight:{w_style}' onclick='toggleHighlight({p})'>{gua_char}</div>"
+                gua_html = f"<div class='bagua-mark' style='font-weight:normal; font-size:14px;' onclick='toggleHighlight({p})'>{gua_char}</div>" if gua_char else ""
 
                 nums_str = inner_numbers.get(p, "")
                 inner_nums_html = f"<div class='inner-numbers'>{nums_str}</div>" if nums_str else ""
 
-                center_alert_html = toggle_btn_html = ""
+                center_alert_html = ""
                 if p == 5:
-                    toggle_btn_html = "<div class='toggle-btn' onclick='toggleJiazi()'>六十</div>"
                     badges = []
                     if is_wu_bu_yu_shi: badges.append("<div class='wubu-badge'>五不遇时</div>")
                     if is_star_fuyin and is_door_fuyin: badges.append("<div class='fuyin-badge'>星门全伏吟</div>")
@@ -620,13 +552,8 @@ def render_html_table(cung_data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, 
                         center_alert_html = f"<div class='center-fuyin'>{''.join(badges)}</div>"
 
             if p == 5:
-                # XÓA HOÀN TOÀN TÊN TIẾT KHÍ VÀ MÙA TẠI TRUNG CUNG THEO YÊU CẦU MỚI
-                center_term_html = ""
-
                 html += f"""
                 <td id="palace-{p}" class="qmdj-td">
-                    {toggle_btn_html}
-                    {center_term_html}
                     {center_alert_html}
                     <div style="position: absolute; bottom: 6px; right: 10px; font-size: 16px;">{dia_display}</div>
                     {ancan_html}
@@ -736,7 +663,6 @@ title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; 
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:8px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; user-select: none; text-align: center;'>奇门遁甲 | {chuoi_cuc}</h4>"
 
 qimen_board_html = render_html_table(data, tk_ngay, tk_gio, bazi_dict, hoa_giap_hien_tai, truc_su, display_mode, term_dates, shijia_term)
-jiazi_board_html = render_jiazi_table()
 
 js_script = """
 <script>
@@ -764,40 +690,15 @@ js_script = """
             currentActive = palace;
         }
     }
-    
-    function toggleJiazi() {
-        var jz = document.getElementById('jiazi-container');
-        if (jz.style.display === "none" || jz.style.display === "") {
-            jz.style.display = "flex";
-        } else {
-            jz.style.display = "none";
-        }
-    }
 </script>
 """
 
 combined_html = f"""
-    <style>
-        .main-wrapper {{ display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 40px; width: 100%; padding-top: 10px; }}
-        .board-container {{ display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 480px; }}
-        #jiazi-container {{ display: none; flex-direction: column; align-items: center; width: 100%; max-width: 480px; }}
-        
-        @media (max-width: 1000px) {{
-            .main-wrapper {{ flex-direction: column; align-items: center; gap: 20px; }}
-        }}
-    </style>
-    <div class="main-wrapper">
-        <div class="board-container">
+    <div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 480px;">
             {title}
             {sub_title}
             {qimen_board_html}
-        </div>
-        <div id="jiazi-container">
-            <div style="visibility: hidden; pointer-events: none;">
-                {title}
-                {sub_title}
-            </div>
-            {jiazi_board_html}
         </div>
     </div>
     {js_script}
