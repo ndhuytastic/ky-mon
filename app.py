@@ -17,7 +17,9 @@ luc_nghi = ["戊", "己", "庚", "辛", "壬", "癸", "丁", "丙", "乙"]
 ring_8 = [1, 8, 3, 4, 9, 2, 7, 6]
 star_ring = ["天蓬", "天任", "天冲", "天辅", "天英", "天芮", "天柱", "天心"]
 door_ring = ["休门", "生门", "伤门", "杜门", "景门", "死门", "惊门", "开门"]
-shen_yang = ["值符", "螣蛇", "太阴", "六合", "勾陈", "朱雀", "九地", "九天"]
+
+# BÁT THẦN: Phân chia nghiêm ngặt theo truyền thừa của tác giả Tiết Đặng Lâm
+shen_yang = ["值符", "勾陈", "太阴", "六合", "青龙", "朱雀", "九地", "九天"]
 shen_yin = ["值符", "螣蛇", "太阴", "六合", "白虎", "玄武", "九地", "九天"]
 
 jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种", 
@@ -52,18 +54,11 @@ stem_punish = {"戊": 3, "己": 2, "庚": 8, "辛": 9, "壬": 4, "癸": 4}
 # 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC
 # ==========================================
 def get_zhirun_ju(actual_date):
-    """
-    Quét ngược về Đông Chí của năm trước để mô phỏng và ánh xạ vòng lặp Phù Đầu.
-    Tự động tính diff_days, áp dụng Trí Nhuận 30 ngày (lặp lại Tiết Khí) 
-    CHỈ tại Mang Chủng hoặc Đại Tuyết nếu diff_days >= 9.
-    """
-    # BẢN VÁ LỖI: Đồng bộ hóa actual_date (kiểu date) về actual_dt (kiểu datetime)
     actual_dt = datetime.combine(actual_date, datetime.min.time())
     start_date = datetime(actual_date.year - 1, 11, 1)
     
     jieqis = []
     curr = start_date
-    # Dùng actual_dt thay vì actual_date để tránh ValueError/TypeError
     while curr <= actual_dt + timedelta(days=40):
         d = sxtwl.fromSolar(curr.year, curr.month, curr.day)
         if d.hasJieQi():
@@ -76,7 +71,6 @@ def get_zhirun_ju(actual_date):
     dz_idx = next(i for i, jq in enumerate(jieqis) if jq['name'] == '冬至')
     dz_dt = jieqis[dz_idx]['dt']
     
-    # Tìm Phù Đầu Thượng Nguyên gần Đông Chí nhất
     best_tn_ft = None
     min_diff = 999
     for i in range(-20, 20):
@@ -89,7 +83,6 @@ def get_zhirun_ju(actual_date):
                 min_diff = diff
                 best_tn_ft = check_date.replace(hour=0, minute=0, second=0)
                 
-    # Duyệt tiến theo chu kỳ 15 ngày để gán Tiết Khí
     current_tn_ft = best_tn_ft
     jq_idx = dz_idx
     periods = []
@@ -106,7 +99,6 @@ def get_zhirun_ju(actual_date):
             'jq': jq_name
         })
         
-        # LOGIC TRÍ NHUẬN CHUẨN: Chỉ Nhuận ở Mang Chủng / Đại Tuyết nếu Siêu Thần >= 9 ngày
         if diff_days >= 9 and jq_name in ["芒种", "大雪"]:
             current_tn_ft += timedelta(days=15)
             periods.append({
@@ -120,7 +112,6 @@ def get_zhirun_ju(actual_date):
             jq_idx += 1
             current_tn_ft += timedelta(days=15)
             
-    # Tra cứu ngày hiện tại nằm trong chu kỳ nào
     active_period = None
     for p in periods:
         if p['start'] <= actual_dt < p['end']:
@@ -129,7 +120,6 @@ def get_zhirun_ju(actual_date):
             
     active_jq = active_period['jq'].replace(" (Nhuận)", "")
     
-    # Tính Nguyên (Thượng/Trung/Hạ) cho ngày hiện tại
     d = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
     offset = d.getDayGZ().tg % 5
     ft_date = actual_date - timedelta(days=offset)
@@ -142,10 +132,7 @@ def get_zhirun_ju(actual_date):
     loai_don = "阳遁" if active_jq in yang_terms else "阴遁"
     so_cuc = solar_term_ju[active_jq][yuan]
     
-    # Cung Ký Gửi theo Tiết Khí
     ji_palace = JIEQI_PALACE_MAP[active_jq]
-    
-    # Trả về cả cờ Nhuận để hiển thị UI nếu cần
     is_nhuan = " (Nhuận)" in active_period['jq']
     
     return loai_don, so_cuc, active_jq, ji_palace, is_nhuan
@@ -165,18 +152,15 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     dia_ban = {((so_cuc + i) % 9 or 9 if loai == "阳" else (so_cuc - i) % 9 or 9): can for i, can in enumerate(luc_nghi)}
     cung_goc_xun = [c for c, can in dia_ban.items() if can == can_tuan][0]
     
-    # Xử lý Cung Khởi Trị Phù / Trị Sứ
     eff_base = ji_palace if cung_goc_xun == 5 else cung_goc_xun
     idx_base = ring_8.index(eff_base)
 
-    # Nơi Trị Phù bay tới
     target_palace = [c for c, can in dia_ban.items() if can == (can_tuan if can_gio == "甲" else can_gio)][0]
     if target_palace == 5:
         target_palace = ji_palace
         
     idx_target = ring_8.index(target_palace)
     
-    # Mã 
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     vi_tri_ngua = {"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]
 
@@ -200,7 +184,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         sao = star_ring[orig_idx]
         thien = dia_ban[orig_p]
         
-        # Nếu đây là sao gốc của Ji_Palace, nó mang theo Thiên Cầm và Can Cung 5
         if orig_p == ji_palace:
             sao = f"{sao}/天禽"
             thien = f"{thien}/{dia_ban[5]}"
@@ -212,7 +195,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     steps = (dia_chi.index(chi_gio) - dia_chi.index(chi_tuan)) % 12
     door_target = (eff_base + steps) % 9 or 9 if loai == "阳" else (eff_base - steps) % 9 or 9
     
-    # Thuật toán chuyển hướng nếu Môn rơi vào Cung 5
     if door_target == 5:
         door_target = ji_palace
         
@@ -224,7 +206,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         orig_idx = (i - door_shift) % 8
         cung_data[p]['mon'] = door_ring[orig_idx]
 
-    # --- 4. THẦN BÀN ---
+    # --- 4. THẦN BÀN (THIÊN BÀN) ---
     for i in range(8):
         p = ring_8[i]
         if loai == "阳": deity_idx = (i - idx_target) % 8
@@ -270,13 +252,17 @@ def render_html_table(cung_data, tk_gio):
     <style>
         .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 320px; height: 380px; table-layout: fixed; font-size: 16px; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #ddd; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
-        .cell-content { display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 95px; }
-        .top-row { display: flex; justify-content: space-between; align-items: flex-start; }
-        .bot-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        .cell-content { display: flex; flex-direction: row; justify-content: space-between; height: 100%; min-height: 95px; }
+        
+        /* Cột trái: Thần - Tinh - Môn */
+        .col-left { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; white-space: nowrap; }
+        
+        /* Cột phải: Khoảng trống (để nhường chỗ cho Mã/KhôngVong) - Thiên Can - Địa Can */
+        .col-right { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; white-space: nowrap; text-align: right; }
+        
         .light-text { color: #666; font-weight: 300; }
-        .right-align { text-align: right; line-height: 1.3; }
-        .horse { position: absolute; top: 3px; right: 40px; font-size: 12px; color: #666; }
-        .void { position: absolute; top: 3px; right: 26px; font-size: 12px; font-weight: bold; color: #666;}
+        .horse { position: absolute; top: 4px; right: 28px; font-size: 12px; color: #666; }
+        .void { position: absolute; top: 4px; right: 8px; font-size: 12px; font-weight: bold; color: #666;}
         .center-palace { position: absolute; bottom: 6px; right: 6px; font-size: 16px; }
     </style>
     <table class="qmdj-table">
@@ -293,18 +279,18 @@ def render_html_table(cung_data, tk_gio):
             horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
             void_html = '<div class="void">○</div>' if p in tk_gio else ""
             
-            sao_thien_html = f"{d['sao']}<br>{format_stem(d['thien'], p)}" if d['sao'] else ""
-
             html += f"""
             <td class="qmdj-td">
                 {horse_html}{void_html}
                 <div class="cell-content">
-                    <div class="top-row">
+                    <div class="col-left">
                         <span class="light-text">{d['than']}</span>
-                        <span class="light-text right-align">{sao_thien_html}</span>
-                    </div>
-                    <div class="bot-row">
+                        <span class="light-text">{d['sao']}</span>
                         <span>{format_door(d['mon'], p)}</span>
+                    </div>
+                    <div class="col-right">
+                        <span style="min-height: 18px;"></span> <!-- Đẩy Thiên Can xuống cân bằng với Sao -->
+                        <span class="light-text">{format_stem(d['thien'], p)}</span>
                         <span>{format_stem(d['dia'], p)}</span>
                     </div>
                 </div>
@@ -355,7 +341,8 @@ bazi_dict = {
 don, cuc, jq_name, ji_palace, is_nhuan = get_zhirun_ju(actual_date)
 
 nhuan_str = " - 闰奇" if is_nhuan else ""
-chuoi_cuc = f"置闰 | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
+# Xoá chữ "置闰 | " ở đầu
+chuoi_cuc = f"{jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
 tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
