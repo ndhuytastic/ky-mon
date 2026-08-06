@@ -234,7 +234,8 @@ def format_stem(stem_str, p):
         if p in stem_tomb.get(can, []): color = "#b8860b" # Nhập mộ - Vàng Nâu
         elif p == stem_punish.get(can, -1): color = "#800080" # Kích hình - Tím
         res.append(f"<span style='color: {color}; font-weight: {fw};'>{can}</span>")
-    return "<span style='color:#ccc; font-weight: 300;'>/</span>".join(res)
+    # Thay đổi thanh '/' để to rõ ràng hơn
+    return "<strong style='color:#333; font-weight: bold; margin: 0 3px;'>/</strong>".join(res)
 
 def format_door(door_str, p):
     if not door_str: return ""
@@ -261,8 +262,11 @@ def render_html_table(cung_data, tk_gio):
         .col-right { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; white-space: nowrap; text-align: right; }
         
         .light-text { color: #666; font-weight: 300; }
-        .horse { position: absolute; top: 4px; right: 28px; font-size: 12px; color: #666; }
-        .void { position: absolute; top: 4px; right: 8px; font-size: 12px; font-weight: bold; color: #666;}
+        
+        /* Chỉnh Mã và Không Vong */
+        .horse { position: absolute; top: 2px; right: 4px; font-size: 14px; font-weight: 600; color: #555; }
+        .void { position: absolute; top: -3px; right: 26px; font-size: 22px; font-weight: normal; color: #555;}
+        
         .center-palace { position: absolute; bottom: 6px; right: 6px; font-size: 16px; }
     </style>
     <table class="qmdj-table">
@@ -279,13 +283,16 @@ def render_html_table(cung_data, tk_gio):
             horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
             void_html = '<div class="void">○</div>' if p in tk_gio else ""
             
+            # Đổi dấu '/' của sao cho đồng nhất nét rõ ràng
+            sao_display = d['sao'].replace('/', "<strong style='color:#333; margin:0 3px;'>/</strong>")
+            
             html += f"""
             <td class="qmdj-td">
                 {horse_html}{void_html}
                 <div class="cell-content">
                     <div class="col-left">
                         <span class="light-text">{d['than']}</span>
-                        <span class="light-text">{d['sao']}</span>
+                        <span class="light-text">{sao_display}</span>
                         <span>{format_door(d['mon'], p)}</span>
                     </div>
                     <div class="col-right">
@@ -337,11 +344,9 @@ bazi_dict = {
     'ngay': thien_can[day_obj.getDayGZ().tg] + dia_chi[day_obj.getDayGZ().dz]
 }
 
-# Lấy thông số từ Thuật toán Trí Nhuận & Ký Cung
 don, cuc, jq_name, ji_palace, is_nhuan = get_zhirun_ju(actual_date)
 
 nhuan_str = " - 闰奇" if is_nhuan else ""
-# Xoá chữ "置闰 | " ở đầu
 chuoi_cuc = f"{jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
