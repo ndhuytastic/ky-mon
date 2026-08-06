@@ -57,11 +57,14 @@ def get_zhirun_ju(actual_date):
     Tự động tính diff_days, áp dụng Trí Nhuận 30 ngày (lặp lại Tiết Khí) 
     CHỈ tại Mang Chủng hoặc Đại Tuyết nếu diff_days >= 9.
     """
+    # BẢN VÁ LỖI: Đồng bộ hóa actual_date (kiểu date) về actual_dt (kiểu datetime)
+    actual_dt = datetime.combine(actual_date, datetime.min.time())
     start_date = datetime(actual_date.year - 1, 11, 1)
     
     jieqis = []
     curr = start_date
-    while curr <= actual_date + timedelta(days=40):
+    # Dùng actual_dt thay vì actual_date để tránh ValueError/TypeError
+    while curr <= actual_dt + timedelta(days=40):
         d = sxtwl.fromSolar(curr.year, curr.month, curr.day)
         if d.hasJieQi():
             jq_name = jq_names[d.getJieQi()]
@@ -91,7 +94,7 @@ def get_zhirun_ju(actual_date):
     jq_idx = dz_idx
     periods = []
     
-    while current_tn_ft <= datetime.combine(actual_date, datetime.min.time()) + timedelta(days=15):
+    while current_tn_ft <= actual_dt + timedelta(days=15):
         jq_name = jieqis[jq_idx]['name']
         jq_dt = jieqis[jq_idx]['dt']
         
@@ -118,10 +121,9 @@ def get_zhirun_ju(actual_date):
             current_tn_ft += timedelta(days=15)
             
     # Tra cứu ngày hiện tại nằm trong chu kỳ nào
-    target_dt = datetime.combine(actual_date, datetime.min.time())
     active_period = None
     for p in periods:
-        if p['start'] <= target_dt < p['end']:
+        if p['start'] <= actual_dt < p['end']:
             active_period = p
             break
             
