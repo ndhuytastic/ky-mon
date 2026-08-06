@@ -231,11 +231,11 @@ def format_stem(stem_str, p):
     for can in parts:
         color = "#666"
         fw = "300"
-        if p in stem_tomb.get(can, []): color = "#b8860b" # Nhập mộ - Vàng Nâu
-        elif p == stem_punish.get(can, -1): color = "#800080" # Kích hình - Tím
+        if p in stem_tomb.get(can, []): color = "#c26e00" # Nhập mộ - Vàng Nâu cháy đậm rõ
+        elif p == stem_punish.get(can, -1): color = "#9C27B0" # Kích hình - Tím đậm rõ
         res.append(f"<span style='color: {color}; font-weight: {fw};'>{can}</span>")
-    # Thay đổi thanh '/' để to rõ ràng hơn
-    return "<strong style='color:#333; font-weight: bold; margin: 0 3px;'>/</strong>".join(res)
+    # Thay đổi thanh '/' để cùng màu và nét mảnh như của Thiên Cầm
+    return "<span style='color: #666; font-weight: 300; margin: 0 2px;'>/</span>".join(res)
 
 def format_door(door_str, p):
     if not door_str: return ""
@@ -263,9 +263,10 @@ def render_html_table(cung_data, tk_gio):
         
         .light-text { color: #666; font-weight: 300; }
         
-        /* Chỉnh Mã và Không Vong */
-        .horse { position: absolute; top: 2px; right: 4px; font-size: 14px; font-weight: 600; color: #555; }
-        .void { position: absolute; top: -3px; right: 26px; font-size: 22px; font-weight: normal; color: #555;}
+        /* Chỉnh Mã và Không Vong dồn về 1 cụm sát góc phải trên */
+        .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #555; }
+        .horse-icon { font-size: 14px; font-weight: 600; }
+        .void-icon { font-size: 22px; font-weight: normal; line-height: 0.8; margin-top: -2px; }
         
         .center-palace { position: absolute; bottom: 6px; right: 6px; font-size: 16px; }
     </style>
@@ -280,15 +281,18 @@ def render_html_table(cung_data, tk_gio):
                 html += f"""<td class="qmdj-td"><div class="center-palace">{format_stem(d['dia'], p)}</div></td>"""
                 continue
                 
-            horse_html = f'<div class="horse">{d["ngua"]}</div>' if d['ngua'] else ""
-            void_html = '<div class="void">○</div>' if p in tk_gio else ""
+            indicators = []
+            if d['ngua']: indicators.append("<span class='horse-icon'>马</span>")
+            if p in tk_gio: indicators.append("<span class='void-icon'>○</span>")
             
-            # Đổi dấu '/' của sao cho đồng nhất nét rõ ràng
-            sao_display = d['sao'].replace('/', "<strong style='color:#333; margin:0 3px;'>/</strong>")
+            indicator_html = f"<div class='top-right-indicators'>{''.join(indicators)}</div>" if indicators else ""
+            
+            # Đổi dấu '/' của sao cho mảnh, nhạt và đồng bộ với can 
+            sao_display = d['sao'].replace('/', "<span style='color: #666; font-weight: 300; margin: 0 2px;'>/</span>")
             
             html += f"""
             <td class="qmdj-td">
-                {horse_html}{void_html}
+                {indicator_html}
                 <div class="cell-content">
                     <div class="col-left">
                         <span class="light-text">{d['than']}</span>
