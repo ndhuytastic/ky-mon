@@ -172,7 +172,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         cung_data[p]['thien'] = dia_ban[orig_p]
 
     # --- 3. MÔN BÀN (Bát Môn Phi Cung - Nhảy số 5) ---
-    # NGUYÊN TẮC: Mượn Cửa của Tiết Khí nếu Tuần Thủ ở 5
     eff_base_door = ji_palace if base_star_p == 5 else base_star_p
     
     steps = (dia_chi.index(chi_gio) - dia_chi.index(chi_tuan)) % 12
@@ -182,7 +181,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     idx_door_target = (idx_eff_base + steps) % 9
     door_target_p = path_9_door[idx_door_target]
     
-    # NGUYÊN TẮC: Bẻ lái Ký cung theo Tiết khí nếu Trực Sử rơi vào 5
     if door_target_p == 5:
         door_target_p = ji_palace
 
@@ -196,7 +194,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         orig_gate_idx = (idx_truc_su_mon + offset) % 8 if loai == "阳" else (idx_truc_su_mon - offset) % 8
         cung_data[p]['mon'] = gate_native[orig_gate_idx]
 
-    # --- 4. CỬU THẦN BÀN (9 Thần Phi Cung) ---
+    # --- 4. CỬU THẦN BÀN (9 Thần Phi Cung Tiến/Lùi) ---
     for i in range(9):
         p = path_9[i]
         deity_idx = (i - idx_target) % 9
@@ -211,16 +209,18 @@ def tinh_tuan_khong_gio(hoa_giap):
     return [chi_to_cung[dia_chi[(idx_tuan_dau - 2) % 12]], chi_to_cung[dia_chi[(idx_tuan_dau - 1) % 12]]]
 
 # ==========================================
-# 4. GIAO DIỆN & FORMAT SẠCH, CĂN LỀ THẲNG
+# 4. GIAO DIỆN & FORMAT SẠCH, CHỪA ĐẤT CHO CÁCH CỤC
 # ==========================================
 def format_stem(stem_str, p):
     if not stem_str: return ""
     parts = stem_str.split('/')
     res = []
     for can in parts:
-        # Giữ logic ẩn (is_tomb, is_punish) nhưng in ra text thuần màu đen/xám
+        # Giữ logic ngầm, tắt màu sắc
+        is_tomb = p in stem_tomb.get(can, [])
+        is_punish = p == stem_punish.get(can, -1)
         res.append(f"<span style='color: #222;'>{can}</span>")
-    return "<span style='color: #222; margin: 0 4px;'>/</span>".join(res)
+    return "<span style='color: #666; font-weight: 300; margin: 0 4px;'>/</span>".join(res)
 
 def format_door(door_str, p):
     if not door_str: return ""
@@ -235,28 +235,36 @@ def render_html_table(cung_data, tk_gio):
 
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 320px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
-        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 10px; }
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 520px; min-width: 320px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 8px 6px; }
         
-        /* Flexbox bọc toàn bộ nội dung, kéo 2 khối xích lại gần nhau ở giữa */
+        /* Flexbox ép sát nội dung sang trái, chừa đất bên phải */
         .cell-content { 
             display: flex; 
             flex-direction: row; 
-            justify-content: center; /* Căn toàn bộ ra giữa */
-            gap: 15px; /* Khoảng cách vừa phải giữa 2 cột */
+            justify-content: flex-start; /* ÉP TOÀN BỘ SANG TRÁI */
+            gap: 12px; /* Khoảng cách lùi vào giữa Tinh/Môn và Can */
             height: 100%; 
             min-height: 85px;
-            margin-top: 5px;
+            margin-top: 4px;
         }
         
-        /* Cột trái (Thần, Tinh, Môn) căn trái chuẩn xác */
-        .col-left { display: flex; flex-direction: column; justify-content: space-between; text-align: left; font-size: 16px; font-weight: normal; color: #222; }
+        .col-left { display: flex; flex-direction: column; justify-content: space-between; text-align: left; font-size: 15px; font-weight: normal; color: #222; }
+        .col-right { display: flex; flex-direction: column; justify-content: space-between; text-align: left; font-size: 15px; font-weight: normal; color: #222; }
         
-        /* Cột phải (Khoảng trống, Can Thiên, Can Địa) căn trái để thẳng hàng chữ */
-        .col-right { display: flex; flex-direction: column; justify-content: space-between; text-align: left; font-size: 16px; font-weight: normal; color: #222; }
-        
-        /* Ký hiệu Mã và Không Vong dồn về 1 cụm sát góc phải trên */
-        .top-right-indicators { position: absolute; top: 4px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
+        /* Khu vực hiển thị riêng cho Cung 5 */
+        .center-palace {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            min-height: 85px;
+            font-size: 16px;
+            gap: 5px;
+        }
+
+        .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
         .horse-icon { font-size: 14px; font-weight: bold; }
         .void-icon { font-size: 20px; font-weight: normal; line-height: 0.8; margin-top: -2px; }
     </style>
@@ -268,13 +276,21 @@ def render_html_table(cung_data, tk_gio):
         for p in row:
             d = cung_data[p]
             
+            # Trung Cung 5 chỉ hiển thị Thiên bàn can và Địa bàn can
+            if p == 5:
+                html += f"""
+                <td class="qmdj-td">
+                    <div class="center-palace">
+                        <span>{format_stem(d['thien'], p)}</span>
+                        <span>{format_stem(d['dia'], p)}</span>
+                    </div>
+                </td>"""
+                continue
+                
             indicators = []
             if d.get('ngua'): indicators.append("<span class='horse-icon'>马</span>")
             if p in tk_gio: indicators.append("<span class='void-icon'>○</span>")
             indicator_html = f"<div class='top-right-indicators'>{''.join(indicators)}</div>" if indicators else ""
-            
-            # Cung 5 có Thần, Tinh, Can, NHƯNG KHÔNG CÓ CỬA (Để text rỗng)
-            mon_html = format_door(d['mon'], p) if p != 5 else ""
             
             html += f"""
             <td class="qmdj-td">
@@ -283,10 +299,10 @@ def render_html_table(cung_data, tk_gio):
                     <div class="col-left">
                         <span>{d['than']}</span>
                         <span>{format_sao(d['sao'])}</span>
-                        <span>{mon_html}</span>
+                        <span>{format_door(d['mon'], p)}</span>
                     </div>
                     <div class="col-right">
-                        <span style="visibility: hidden;">_</span> <!-- Kéo Can xuống ngang với Tinh -->
+                        <span style="visibility: hidden; font-size: 12px;">_</span> <!-- Khoảng đệm để hạ Can xuống -->
                         <span>{format_stem(d['thien'], p)}</span>
                         <span>{format_stem(d['dia'], p)}</span>
                     </div>
@@ -308,7 +324,8 @@ if "init_dt" not in st.session_state:
 
 col1, col2 = st.columns(2)
 with col1:
-    selected_date = st.date_input("Ngày", st.session_state.init_dt.date())
+    # Mở rộng giới hạn lùi ngày về năm 1900 để Test tẹt ga
+    selected_date = st.date_input("Ngày", value=st.session_state.init_dt.date(), min_value=datetime(1900, 1, 1).date(), max_value=datetime(2100, 12, 31).date())
 with col2:
     selected_time = st.time_input("Giờ Phút", st.session_state.init_dt.time(), step=60)
 
@@ -350,7 +367,7 @@ qimen_board_html = render_html_table(data, tk_gio)
 
 combined_html = f"""
     <div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;">
-        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 480px;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 520px;">
             {title}
             {sub_title}
             {qimen_board_html}
