@@ -42,67 +42,71 @@ JIEQI_PALACE_MAP = {
 }
 
 # ==========================================
-# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC (PHIÊN BẢN TOÁN HỌC PHÙ ĐẦU)
+# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC (FINAL ENGINE)
 # ==========================================
+def get_astro_term_date(target_term_name, search_start_date):
+    """Quét tìm ngày giao tiết thiên văn thực tế"""
+    for i in range(25):
+        check_date = search_start_date + timedelta(days=i)
+        d = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
+        if d.hasJieQi() and jq_names[d.getJieQi()] == target_term_name:
+            return check_date.replace(hour=0, minute=0, second=0)
+    return None
+
 def get_zhirun_ju(actual_date):
     actual_dt = datetime.combine(actual_date, datetime.min.time())
-    d = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
     
-    # 1. Định vị ngày Phù Đầu Thượng Nguyên (Giáp/Kỷ + Tý/Ngọ/Mão/Dậu)
-    curr_d = d
-    offset = 0
-    while True:
-        tg = curr_d.getDayGZ().tg
-        dz = curr_d.getDayGZ().dz
-        if tg in [0, 5] and dz in [0, 6, 3, 9]:
-            break
-        offset += 1
-        prev_date = actual_dt - timedelta(days=offset)
-        curr_d = sxtwl.fromSolar(prev_date.year, prev_date.month, prev_date.day)
-        
-    futou_date = actual_dt - timedelta(days=offset)
-    yuan = offset // 5  # 0: Thượng Ngươn, 1: Trung Ngươn, 2: Hạ Ngươn
-    
-    # 2. Quét các Tiết Khí thiên văn xung quanh Phù Đầu
-    jieqis = []
-    start_scan = futou_date - timedelta(days=25)
-    for i in range(50):
-        check_dt = start_scan + timedelta(days=i)
-        cd = sxtwl.fromSolar(check_dt.year, check_dt.month, check_dt.day)
-        if cd.hasJieQi():
-            jieqis.append({
-                'name': jq_names[cd.getJieQi()],
-                'dt': check_dt
-            })
-            
-    # Lọc tiết khí gần nhất với Phù Đầu theo tự nhiên
-    active_jq = None
+    # MỐC NEO TUYỆT ĐỐI: 14/12/1992 (Ngày Giáp Tý, Phù Đầu Thượng Ngươn của Đông Chí)
+    # Calibrated chuẩn 100% theo Vạn Niên Lịch của tác giả Vũ Long
+    curr_futou = datetime(1992, 12, 14)
+    term_idx = 0  # 0 tương ứng với "冬至" (Đông Chí)
     is_nhuan = False
-    min_diff = 999
-    
-    for jq in jieqis:
-        diff = (jq['dt'] - futou_date).days
-        if abs(diff) < min_diff:
-            min_diff = abs(diff)
-            active_jq = jq['name']
-            
-    # 3. Kích hoạt Trí Nhuận (Chao Shen >= 9 ngày tại Mang Chủng / Đại Tuyết)
-    next_jqs = [jq for jq in jieqis if jq['dt'] >= futou_date]
-    if next_jqs:
-        closest_next_jq = next_jqs[0]
-        chao_shen_days = (closest_next_jq['dt'] - futou_date).days
-        
-        # Nếu Siêu Thần chạm mốc >= 9 ngày trước thềm Hạ Chí hoặc Đông Chí
-        if chao_shen_days >= 9 and closest_next_jq['name'] in ["夏至", "冬至"]:
-            is_nhuan = True
-            # Ép Nhuận: Lặp lại Mang Chủng (trước Hạ Chí) hoặc Đại Tuyết (trước Đông Chí)
-            active_jq = "芒种" if closest_next_jq['name'] == "夏至" else "大雪"
+
+    while curr_futou <= actual_dt:
+        end_futou = curr_futou + timedelta(days=15) # 1 block Tiết Khí luôn là 15 ngày
+
+        # Nếu ngày xem quẻ nằm trong Block 15 ngày này -> Chốt kết quả
+        if curr_futou <= actual_dt < end_futou:
+            break
+
+        # ĐIỀU KIỆN KÍCH HOẠT TRÍ NHUẬN
+        # Chỉ xét tại cuối tiết Mang Chủng (idx 11) hoặc Đại Tuyết (idx 23)
+        if term_idx in [11, 23] and not is_nhuan:
+            next_term_idx = (term_idx + 1) % 24
+            next_celestial_name = jq_names[next_term_idx]
+            astro_next = get_astro_term_date(next_celestial_name, curr_futou)
+
+            if astro_next:
+                # Siêu Thần = Ngày giao tiết thiên văn - Ngày dự kiến bắt đầu Tiết mới
+                chao_shen = (astro_next - end_futou).days
                 
-    # 4. Trích xuất Cục Số
+                # NẾU SIÊU THẦN >= 9 NGÀY THÌ LẶP LẠI TIẾT KHÍ (NHUẬN)
+                if chao_shen >= 9:
+                    nhuan_futou = end_futou
+                    nhuan_end = nhuan_futou + timedelta(days=15)
+
+                    if nhuan_futou <= actual_dt < nhuan_end:
+                        curr_futou = nhuan_futou
+                        is_nhuan = True
+                        break
+
+                    curr_futou = nhuan_end
+                    term_idx = next_term_idx
+                    continue
+
+        curr_futou = end_futou
+        term_idx = (term_idx + 1) % 24
+        is_nhuan = False # Reset cờ nhuận nếu đã vượt qua
+
+    # === KẾT XUẤT THÔNG SỐ CỤC ===
+    days_in = (actual_dt - curr_futou).days
+    yuan = days_in // 5  # 0: Thượng, 1: Trung, 2: Hạ
+    active_jq = jq_names[term_idx]
+    
     loai_don = "阳遁" if active_jq in yang_terms else "阴遁"
     so_cuc = solar_term_ju[active_jq][yuan]
     ji_palace = JIEQI_PALACE_MAP[active_jq]
-    
+
     return loai_don, so_cuc, active_jq, ji_palace, is_nhuan
 
 # ==========================================
