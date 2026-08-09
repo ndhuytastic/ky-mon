@@ -42,94 +42,63 @@ JIEQI_PALACE_MAP = {
 }
 
 # ==========================================
-# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC (PHIÊN BẢN GIẢ LẬP LỊCH SỬ)
+# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC (PHIÊN BẢN TOÁN HỌC PHÙ ĐẦU)
 # ==========================================
-
-def get_astro_term_date(target_term_name, approx_date):
-    """
-    Hàm phụ trợ: Tìm ngày giao tiết thiên văn thực tế của một tiết khí
-    Gióng quanh một ngày dự đoán (approx_date)
-    """
-    # Quét trong phạm vi trước/sau 20 ngày để tìm ngày giao tiết chuẩn
-    start_scan = approx_date - timedelta(days=20)
-    for i in range(40):
-        check_date = start_scan + timedelta(days=i)
-        d = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
-        if d.hasJieQi() and jq_names[d.getJieQi()] == target_term_name:
-            return check_date.replace(hour=0, minute=0, second=0)
-    return None
-
 def get_zhirun_ju(actual_date):
-    """
-    Hàm chính: Tính Cục số và Tiết khí Kỳ Môn theo hệ Trí Nhuận 
-    Bắt đầu neo từ Đông Chí 1984 (Giáp Tý - Chính Thụ hoàn hảo)
-    """
     actual_dt = datetime.combine(actual_date, datetime.min.time())
+    d = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
     
-    # MỐC NEO LỊCH SỬ: 21/12/1984 (Ngày Giáp Tý, Tiết Đông Chí)
-    anchor_date = datetime(1984, 12, 21)
-    
-    if actual_dt < anchor_date:
-        # Nếu người dùng xem quẻ trước năm 1984, trả về lỗi hoặc cảnh báo
-        st.error("Hệ thống Trí Nhuận trong tool được tối ưu tính từ mốc Giáp Tý 1984 trở đi.")
-        return "阳遁", 1, "冬至", 1, False
-
-    qimen_date = anchor_date  # Ngày bắt đầu (Phù Đầu) của block Kỳ Môn hiện tại
-    term_idx = 0              # Index của tiết "冬至" (Đông Chí)
-
-    # VÒNG LẶP THỜI GIAN: Chảy từ năm 1984 đến ngày xem quẻ
+    # 1. Định vị ngày Phù Đầu Thượng Nguyên (Giáp/Kỷ + Tý/Ngọ/Mão/Dậu)
+    curr_d = d
+    offset = 0
     while True:
-        current_term_name = jq_names[term_idx]
-        block_end_date = qimen_date + timedelta(days=15) # 1 tiết = 3 ngươn = 15 ngày
+        tg = curr_d.getDayGZ().tg
+        dz = curr_d.getDayGZ().dz
+        if tg in [0, 5] and dz in [0, 6, 3, 9]:
+            break
+        offset += 1
+        prev_date = actual_dt - timedelta(days=offset)
+        curr_d = sxtwl.fromSolar(prev_date.year, prev_date.month, prev_date.day)
         
-        # 1. KIỂM TRA ĐÍCH ĐẾN: Ngày xem quẻ có nằm trong Block 15 ngày này không?
-        if qimen_date <= actual_dt < block_end_date:
-            is_nhuan = False
-            active_jq = current_term_name
-            break # Tìm thấy rồi, thoát vòng lặp!
+    futou_date = actual_dt - timedelta(days=offset)
+    yuan = offset // 5  # 0: Thượng Ngươn, 1: Trung Ngươn, 2: Hạ Ngươn
+    
+    # 2. Quét các Tiết Khí thiên văn xung quanh Phù Đầu
+    jieqis = []
+    start_scan = futou_date - timedelta(days=25)
+    for i in range(50):
+        check_dt = start_scan + timedelta(days=i)
+        cd = sxtwl.fromSolar(check_dt.year, check_dt.month, check_dt.day)
+        if cd.hasJieQi():
+            jieqis.append({
+                'name': jq_names[cd.getJieQi()],
+                'dt': check_dt
+            })
             
-        # 2. KIỂM TRA TRÍ NHUẬN: Chỉ kích hoạt khi sắp rời khỏi Mang Chủng hoặc Đại Tuyết
-        if current_term_name in ["芒种", "大雪"]:
-            next_term_idx = (term_idx + 1) % 24
-            next_term_name = jq_names[next_term_idx]
+    # Lọc tiết khí gần nhất với Phù Đầu theo tự nhiên
+    active_jq = None
+    is_nhuan = False
+    min_diff = 999
+    
+    for jq in jieqis:
+        diff = (jq['dt'] - futou_date).days
+        if abs(diff) < min_diff:
+            min_diff = abs(diff)
+            active_jq = jq['name']
             
-            # Tìm ngày giao tiết thiên văn của tiết tiếp theo (Hạ Chí / Đông Chí)
-            astro_next_date = get_astro_term_date(next_term_name, block_end_date)
-            
-            if astro_next_date:
-                # Tính độ lệch Siêu Thần 
-                # (Ngày giao tiết thiên văn) - (Ngày Phù Đầu dự kiến của Kỳ Môn)
-                diff_days = (astro_next_date - block_end_date).days
+    # 3. Kích hoạt Trí Nhuận (Chao Shen >= 9 ngày tại Mang Chủng / Đại Tuyết)
+    next_jqs = [jq for jq in jieqis if jq['dt'] >= futou_date]
+    if next_jqs:
+        closest_next_jq = next_jqs[0]
+        chao_shen_days = (closest_next_jq['dt'] - futou_date).days
+        
+        # Nếu Siêu Thần chạm mốc >= 9 ngày trước thềm Hạ Chí hoặc Đông Chí
+        if chao_shen_days >= 9 and closest_next_jq['name'] in ["夏至", "冬至"]:
+            is_nhuan = True
+            # Ép Nhuận: Lặp lại Mang Chủng (trước Hạ Chí) hoặc Đại Tuyết (trước Đông Chí)
+            active_jq = "芒种" if closest_next_jq['name'] == "夏至" else "大雪"
                 
-                # NẾU SIÊU THẦN >= 9 NGÀY: KÍCH HOẠT NHUẬN NGAY LẬP TỨC!
-                if diff_days >= 9:
-                    run_end_date = block_end_date + timedelta(days=15)
-                    
-                    # Kiểm tra xem ngày xem quẻ có rơi vào đúng 15 ngày Nhuận này không?
-                    if block_end_date <= actual_dt < run_end_date:
-                        qimen_date = block_end_date
-                        is_nhuan = True
-                        active_jq = current_term_name
-                        break # Nằm trong chu kỳ Nhuận, chốt quẻ!
-                    else:
-                        # Đi qua khỏi kỳ Nhuận, đẩy lịch Kỳ Môn tiến thêm 15 ngày
-                        # Tiếp tục vòng lặp để sang Tiết kế tiếp (Hạ Chí / Đông Chí)
-                        qimen_date = run_end_date
-                        term_idx = next_term_idx
-                        continue 
-
-        # 3. BƯỚC TIẾN BÌNH THƯỜNG: Không nhuận, đi tới tiết khí tiếp theo
-        qimen_date = block_end_date
-        term_idx = (term_idx + 1) % 24
-
-    # === TÍNH TOÁN KẾT QUẢ CUỐI CÙNG (CỤC SỐ & NGƯƠN) ===
-    # Số ngày đã trôi qua trong block 15 ngày hiện tại
-    days_into_block = (actual_dt - qimen_date).days
-    
-    # Chia cho 5 để ra Ngươn (0: Thượng, 1: Trung, 2: Hạ)
-    yuan = days_into_block // 5
-    
-    # Lấy thông tin m/Dương độn và Cục số
+    # 4. Trích xuất Cục Số
     loai_don = "阳遁" if active_jq in yang_terms else "阴遁"
     so_cuc = solar_term_ju[active_jq][yuan]
     ji_palace = JIEQI_PALACE_MAP[active_jq]
