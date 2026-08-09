@@ -14,14 +14,10 @@ thien_can = "甲乙丙丁戊己庚辛壬癸"
 dia_chi = "子丑寅卯辰巳午未申酉戌亥"
 luc_nghi = ["戊", "己", "庚", "辛", "壬", "癸", "丁", "丙", "乙"]
 
-# Quỹ đạo Lạc Thư (Phi Bàn)
 luoshu_9 = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-luoshu_8 = [1, 2, 3, 4, 6, 7, 8, 9] # Quỹ đạo Bát Môn (Bỏ 5)
 
-# Dữ liệu Gốc theo Lạc Thư (1 đến 9)
 star_native = ["天蓬", "天芮", "天冲", "天辅", "天禽", "天心", "天柱", "天任", "天英"]
-gate_native = ["休门", "死门", "伤门", "杜门", "开门", "惊门", "生门", "景门"] # Bỏ 5
-deity_9 = ["值符", "螣蛇", "太阴", "六合", "勾陈", "太常", "朱雀", "九地", "九天"] # Cửu Thần Phi Bàn
+deity_9 = ["值符", "螣蛇", "太阴", "六合", "勾陈", "太常", "朱雀", "九地", "九天"]
 
 jq_names = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种", 
             "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪"]
@@ -45,7 +41,7 @@ JIEQI_PALACE_MAP = {
     "立冬": 6, "小雪": 6, "大雪": 6
 }
 
-# Lưu logic ẩn
+# Lưu logic ẩn cho cách cục sau này
 door_elements = {"休门": "水", "生门": "土", "伤门": "木", "杜门": "木", "景门": "火", "死门": "土", "惊门": "金", "开门": "金"}
 palace_elements = {1: "水", 2: "土", 3: "木", 4: "木", 5: "土", 6: "金", 7: "金", 8: "土", 9: "火"}
 stem_tomb = {"辛": [4], "壬": [4], "丁": [8], "己": [8], "庚": [8], "癸": [2], "乙": [2, 6], "丙": [6], "戊": [6]}
@@ -123,14 +119,13 @@ def get_zhirun_ju(actual_date):
     
     loai_don = "阳遁" if active_jq in yang_terms else "阴遁"
     so_cuc = solar_term_ju[active_jq][yuan]
-    
     ji_palace = JIEQI_PALACE_MAP[active_jq]
     is_nhuan = " (Nhuận)" in active_period['jq']
     
     return loai_don, so_cuc, active_jq, ji_palace, is_nhuan
 
 # ==========================================
-# 3. THUẬT TOÁN PHI BÀN (TINH - MÔN - THẦN)
+# 3. THUẬT TOÁN PHI BÀN (VŨ LONG)
 # ==========================================
 def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
@@ -142,7 +137,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
 
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': ''} for i in range(1, 10)}
 
-    # --- 1. ĐỊA BÀN (Phi Lạc Thư 9 cung) ---
+    # --- 1. ĐỊA BÀN ---
     dia_ban = {}
     for i, can in enumerate(luc_nghi):
         p = (so_cuc + i - 1) % 9 + 1 if loai == "阳" else (so_cuc - i - 1) % 9 + 1
@@ -154,7 +149,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     cung_data[{"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]]['ngua'] = "马"
 
-    # --- 2. THIÊN BÀN TÌNH & CAN (Phi Cung Lạc Thư Tiến/Lùi theo Âm Dương) ---
+    # --- 2. THIÊN BÀN TÌNH & CAN (Bay 9 cung) ---
     base_star_p = [k for k, v in dia_ban.items() if v == can_tuan][0]
     target_star_p = [k for k, v in dia_ban.items() if v == (can_tuan if can_gio == "甲" else can_gio)][0]
     
@@ -171,30 +166,40 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         cung_data[p]['sao'] = star_native[orig_p - 1]
         cung_data[p]['thien'] = dia_ban[orig_p]
 
-    # --- 3. MÔN BÀN (Bát Môn Phi Cung - Nhảy số 5) ---
-    eff_base_door = ji_palace if base_star_p == 5 else base_star_p
-    
+    # --- 3. BÁT MÔN PHI BÀN (Thuật toán Lạc Thư của Vũ Long) ---
+    door_native_luoshu = [1, 2, 3, 4, 6, 7, 8, 9]
+    doors_cycle = ["休门", "死门", "伤门", "杜门", "开门", "惊门", "生门", "景门"]
+
+    # Tìm Cửa Trực Sử gốc
+    if base_star_p == 5:
+        orig_door_p = ji_palace
+    else:
+        orig_door_p = base_star_p
+        
+    idx_door_native = door_native_luoshu.index(orig_door_p)
+    truc_su_door = doors_cycle[idx_door_native]
+
+    # Tìm Target Palace (Vị trí hạ cánh của Trực Sử dựa vào Cục số)
     steps = (dia_chi.index(chi_gio) - dia_chi.index(chi_tuan)) % 12
-    path_9_door = luoshu_9 if loai == "阳" else list(reversed(luoshu_9))
+    if loai == "阳": target_door_p = (so_cuc + steps - 1) % 9 + 1
+    else: target_door_p = (so_cuc - steps - 1) % 9 + 1
+        
+    if target_door_p == 5: target_door_p = ji_palace
+        
+    # Tạo dải 8 cung (Tiến/Lùi) xuất phát từ target_door_p
+    outer_palaces = [1, 2, 3, 4, 6, 7, 8, 9] if loai == "阳" else [9, 8, 7, 6, 4, 3, 2, 1]
+    idx_target_outer = outer_palaces.index(target_door_p)
+    shifted_palaces = outer_palaces[idx_target_outer:] + outer_palaces[:idx_target_outer]
     
-    idx_eff_base = path_9_door.index(eff_base_door)
-    idx_door_target = (idx_eff_base + steps) % 9
-    door_target_p = path_9_door[idx_door_target]
+    # Tạo dải 8 cửa xuất phát từ Trực Sử
+    idx_truc_su = doors_cycle.index(truc_su_door)
+    shifted_doors = doors_cycle[idx_truc_su:] + doors_cycle[:idx_truc_su]
     
-    if door_target_p == 5:
-        door_target_p = ji_palace
+    # Rải 8 cửa vào 8 cung
+    for p, door in zip(shifted_palaces, shifted_doors):
+        cung_data[p]['mon'] = door
 
-    idx_truc_su_mon = luoshu_8.index(eff_base_door)
-    path_8 = luoshu_8 if loai == "阳" else list(reversed(luoshu_8))
-    idx_target_in_path8 = path_8.index(door_target_p)
-    
-    for i in range(8):
-        p = path_8[i]
-        offset = (i - idx_target_in_path8) % 8
-        orig_gate_idx = (idx_truc_su_mon + offset) % 8 if loai == "阳" else (idx_truc_su_mon - offset) % 8
-        cung_data[p]['mon'] = gate_native[orig_gate_idx]
-
-    # --- 4. CỬU THẦN BÀN (9 Thần Phi Cung Tiến/Lùi) ---
+    # --- 4. CỬU THẦN (9 Thần Phi Cung) ---
     for i in range(9):
         p = path_9[i]
         deity_idx = (i - idx_target) % 9
@@ -209,22 +214,15 @@ def tinh_tuan_khong_gio(hoa_giap):
     return [chi_to_cung[dia_chi[(idx_tuan_dau - 2) % 12]], chi_to_cung[dia_chi[(idx_tuan_dau - 1) % 12]]]
 
 # ==========================================
-# 4. GIAO DIỆN & FORMAT SẠCH, CHỪA ĐẤT CHO CÁCH CỤC
+# 4. GIAO DIỆN LƯỚI CSS SẠCH SẼ
 # ==========================================
 def format_stem(stem_str, p):
     if not stem_str: return ""
     parts = stem_str.split('/')
     res = []
     for can in parts:
-        # Giữ logic ngầm, tắt màu sắc
-        is_tomb = p in stem_tomb.get(can, [])
-        is_punish = p == stem_punish.get(can, -1)
         res.append(f"<span style='color: #222;'>{can}</span>")
     return "<span style='color: #666; font-weight: 300; margin: 0 4px;'>/</span>".join(res)
-
-def format_door(door_str, p):
-    if not door_str: return ""
-    return f"<span style='color: #222;'>{door_str}</span>"
 
 def format_sao(sao_str):
     if not sao_str: return ""
@@ -235,33 +233,42 @@ def render_html_table(cung_data, tk_gio):
 
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 520px; min-width: 320px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 550px; min-width: 320px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 8px 6px; }
         
-        /* Flexbox ép sát nội dung sang trái, chừa đất bên phải */
-        .cell-content { 
-            display: flex; 
-            flex-direction: row; 
-            justify-content: flex-start; /* ÉP TOÀN BỘ SANG TRÁI */
-            gap: 12px; /* Khoảng cách lùi vào giữa Tinh/Môn và Can */
-            height: 100%; 
+        /* Layout Grid cho các cung vòng ngoài */
+        .cell-main {
+            display: grid;
+            grid-template-columns: auto auto 1fr; /* 3 Cột: Tinh/Môn | Can | Trống */
+            grid-template-rows: auto auto auto;   /* 3 Dòng */
+            column-gap: 15px;
+            row-gap: 5px;
+            height: 100%;
             min-height: 85px;
-            margin-top: 4px;
+            align-content: start;
+            margin-top: 5px;
+            margin-left: 5px; /* Đẩy hơi lùi vào một chút */
         }
         
-        .col-left { display: flex; flex-direction: column; justify-content: space-between; text-align: left; font-size: 15px; font-weight: normal; color: #222; }
-        .col-right { display: flex; flex-direction: column; justify-content: space-between; text-align: left; font-size: 15px; font-weight: normal; color: #222; }
+        /* Căn ngang hàng chính xác */
+        .item-than  { grid-column: 1 / span 2; grid-row: 1; font-size: 15px; color: #222; text-align: left; }
+        .item-tinh  { grid-column: 1; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
+        .item-mon   { grid-column: 1; grid-row: 3; font-size: 15px; color: #222; text-align: left; }
         
-        /* Khu vực hiển thị riêng cho Cung 5 */
-        .center-palace {
+        .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
+        .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; }
+
+        /* Trung Cung 5 chỉ hiển thị 2 Can */
+        .center-5 {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100%;
             min-height: 85px;
-            font-size: 16px;
-            gap: 5px;
+            font-size: 15px;
+            color: #222;
+            gap: 6px;
         }
 
         .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
@@ -276,11 +283,10 @@ def render_html_table(cung_data, tk_gio):
         for p in row:
             d = cung_data[p]
             
-            # Trung Cung 5 chỉ hiển thị Thiên bàn can và Địa bàn can
             if p == 5:
                 html += f"""
                 <td class="qmdj-td">
-                    <div class="center-palace">
+                    <div class="center-5">
                         <span>{format_stem(d['thien'], p)}</span>
                         <span>{format_stem(d['dia'], p)}</span>
                     </div>
@@ -295,17 +301,13 @@ def render_html_table(cung_data, tk_gio):
             html += f"""
             <td class="qmdj-td">
                 {indicator_html}
-                <div class="cell-content">
-                    <div class="col-left">
-                        <span>{d['than']}</span>
-                        <span>{format_sao(d['sao'])}</span>
-                        <span>{format_door(d['mon'], p)}</span>
-                    </div>
-                    <div class="col-right">
-                        <span style="visibility: hidden; font-size: 12px;">_</span> <!-- Khoảng đệm để hạ Can xuống -->
-                        <span>{format_stem(d['thien'], p)}</span>
-                        <span>{format_stem(d['dia'], p)}</span>
-                    </div>
+                <div class="cell-main">
+                    <div class="item-than">{d['than']}</div>
+                    <div class="item-tinh">{format_sao(d['sao'])}</div>
+                    <div class="item-mon"><span>{d['mon']}</span></div>
+                    
+                    <div class="item-thien">{format_stem(d['thien'], p)}</div>
+                    <div class="item-dia">{format_stem(d['dia'], p)}</div>
                 </div>
             </td>"""
         html += "</tr>"
@@ -324,7 +326,6 @@ if "init_dt" not in st.session_state:
 
 col1, col2 = st.columns(2)
 with col1:
-    # Mở rộng giới hạn lùi ngày về năm 1900 để Test tẹt ga
     selected_date = st.date_input("Ngày", value=st.session_state.init_dt.date(), min_value=datetime(1900, 1, 1).date(), max_value=datetime(2100, 12, 31).date())
 with col2:
     selected_time = st.time_input("Giờ Phút", st.session_state.init_dt.time(), step=60)
