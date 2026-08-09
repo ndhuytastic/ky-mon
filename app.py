@@ -5,7 +5,7 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Kỳ Môn Phi Bàn - Vũ Long", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Kỳ Môn Phi Bàn", layout="wide", initial_sidebar_state="collapsed")
 
 # ==========================================
 # 1. HỆ THỐNG DỮ LIỆU CƠ BẢN (PHI BÀN)
@@ -331,7 +331,7 @@ bazi_dict = {
 don, cuc, jq_name, ji_palace, is_nhuan = get_zhirun_ju(actual_date)
 
 nhuan_str = " - 闰奇" if is_nhuan else ""
-chuoi_cuc = f"飞盘 (Phi Bàn) | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
+chuoi_cuc = f"飞盘 | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
 tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
