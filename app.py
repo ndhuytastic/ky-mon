@@ -134,10 +134,25 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     cung_data[{"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]]['ngua'] = "马"
 
-    # --- 2. THIÊN BÀN TÌNH & CAN (Bay 9 cung) ---
+# --- 2. THIÊN BÀN TINH & CAN (Bay 9 cung) ---
     base_star_p = [k for k, v in dia_ban.items() if v == can_tuan][0]
     target_star_p = [k for k, v in dia_ban.items() if v == (can_tuan if can_gio == "甲" else can_gio)][0]
     
+    # ----------------------------------------------------------------------
+    # A. CHỈ RIÊNG CỬU TINH (Luôn Phi Thuận 1->9)
+    star_path_forward = luoshu_9  
+    idx_base_star_fwd = star_path_forward.index(base_star_p)
+    idx_target_star_fwd = star_path_forward.index(target_star_p)
+    shift_for_star = (idx_target_star_fwd - idx_base_star_fwd) % 9
+    
+    for i in range(9):
+        p_star = star_path_forward[i]
+        orig_idx_star = (i - shift_for_star) % 9
+        orig_p_star = star_path_forward[orig_idx_star]
+        cung_data[p_star]['sao'] = star_native[orig_p_star - 1]
+    # ----------------------------------------------------------------------
+
+    # B. GIỮ NGUYÊN TOÀN BỘ LOGIC CŨ CHO THIÊN CAN VÀ CÁC PHẦN SAU (CỬU THẦN)
     path_9 = luoshu_9 if loai == "阳" else list(reversed(luoshu_9))
     idx_base = path_9.index(base_star_p)
     idx_target = path_9.index(target_star_p)
@@ -148,7 +163,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         orig_idx = (i - star_shift) % 9
         orig_p = path_9[orig_idx]
         
-        cung_data[p]['sao'] = star_native[orig_p - 1]
+        # (Đã gỡ bỏ dòng gán 'sao' ở đây để nhường cho khối A phía trên)
         cung_data[p]['thien'] = dia_ban[orig_p]
 
     # --- 3. BÁT MÔN PHI BÀN  ---
