@@ -58,7 +58,7 @@ def get_zhirun_ju(actual_date):
     actual_dt = datetime.combine(actual_date, datetime.min.time())
     
     # MỐC NEO CỐ ĐỊNH 100%: 14/12/1992 (Giáp Tý - Đông Chí)
-    curr_futou = datetime(1992, 12, 14)
+    curr_futou = datetime(1984, 12, 22)
     term_idx = 0  
     is_nhuan = False
 
