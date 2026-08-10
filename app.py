@@ -42,61 +42,71 @@ JIEQI_PALACE_MAP = {
 }
 
 # ==========================================
-# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC (PHIÊN BẢN LOCAL ANCHOR - KHÔNG SAI SỐ)
+# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC (TRUE CHRONOLOGICAL ENGINE)
 # ==========================================
+
+def get_astro_term_date(target_term_name, search_start_date):
+    # RANGE(60): Tầm quét cực rộng, đảm bảo không bao giờ trượt Tiết khí thiên văn
+    for i in range(60):
+        check_date = search_start_date + timedelta(days=i)
+        d = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
+        if d.hasJieQi() and jq_names[d.getJieQi()] == target_term_name:
+            return check_date.replace(hour=0, minute=0, second=0)
+    return None
+
 def get_zhirun_ju(actual_date):
     actual_dt = datetime.combine(actual_date, datetime.min.time())
     
-    # 1. LÙI TÌM PHÙ ĐẦU (Thượng Ngươn)
-    # Giáp/Kỷ (tg in [0,5]) và Tý/Ngọ/Mão/Dậu (dz in [0,6,3,9])
-    offset = 0
-    while True:
-        check_d = actual_dt - timedelta(days=offset)
-        sx_d = sxtwl.fromSolar(check_d.year, check_d.month, check_d.day)
-        gz = sx_d.getDayGZ()
-        if gz.tg in [0, 5] and gz.dz in [0, 6, 3, 9]:
-            futou_date = check_d
-            break
-        offset += 1
-        
-    yuan = offset // 5  # 0: Thượng Ngươn, 1: Trung Ngươn, 2: Hạ Ngươn
-    
-    # 2. LẤY CÁC TIẾT KHÍ THIÊN VĂN XUNG QUANH PHÙ ĐẦU
-    # Quét trước/sau để tìm xem Phù Đầu đang neo vào Tiết khí nào
-    scan_start = futou_date - timedelta(days=20)
-    terms = []
-    for i in range(40):
-        cd = scan_start + timedelta(days=i)
-        sx_cd = sxtwl.fromSolar(cd.year, cd.month, cd.day)
-        if sx_cd.hasJieQi():
-            terms.append({
-                "name": jq_names[sx_cd.getJieQi()], 
-                "dt": cd
-            })
-            
-    # Tìm Tiết khí thiên văn học có khoảng cách gần Phù Đầu nhất
-    closest_term = min(terms, key=lambda x: abs((x["dt"] - futou_date).days))
-    active_jq = closest_term["name"]
+    # MỐC NEO CỐ ĐỊNH 100%: 14/12/1992 (Giáp Tý - Đông Chí)
+    curr_futou = datetime(1992, 12, 14)
+    term_idx = 0  
     is_nhuan = False
 
-    # 3. KÍCH HOẠT LỆNH TRÍ NHUẬN (SIÊU THẦN >= 9)
-    # Tìm Tiết khí thiên văn *tiếp theo* tính từ ngày Phù Đầu
-    next_terms = [t for t in terms if t["dt"] >= futou_date]
-    if next_terms:
-        next_t = next_terms[0]
-        # Kích hoạt khi chuẩn bị chạm mốc Hạ Chí hoặc Đông Chí
-        if next_t["name"] in ["夏至", "冬至"]:
-            chao_shen = (next_t["dt"] - futou_date).days
-            if chao_shen >= 9:
-                is_nhuan = True
-                # Bẻ lái: Ép Tiết khí hiện tại thành Mang Chủng (trước Hạ Chí) hoặc Đại Tuyết (trước Đông Chí)
-                active_jq = "芒种" if next_t["name"] == "夏至" else "大雪"
+    # VÒNG LẶP THỜI GIAN KỲ MÔN
+    while curr_futou <= actual_dt:
+        end_futou = curr_futou + timedelta(days=15) 
 
-    # 4. CHỐT KẾT QUẢ ĐẦU RA
+        # Đã chạm tới Block 15 ngày chứa ngày xem quẻ
+        if curr_futou <= actual_dt < end_futou:
+            break
+
+        # Kích hoạt Radar quét Thiên Văn tại cuối Mang Chủng (11) và Đại Tuyết (23)
+        if term_idx in [11, 23] and not is_nhuan:
+            next_term_idx = (term_idx + 1) % 24
+            next_celestial_name = jq_names[next_term_idx]
+            astro_next = get_astro_term_date(next_celestial_name, curr_futou)
+
+            if astro_next:
+                # Tính Siêu Thần (Chao Shen)
+                chao_shen = (astro_next - end_futou).days
+                
+                # NẾU SIÊU THẦN >= 9 -> KÍCH HOẠT NHUẬN LẶP LẠI 15 NGÀY
+                if chao_shen >= 9:
+                    nhuan_futou = end_futou
+                    nhuan_end = nhuan_futou + timedelta(days=15)
+
+                    if nhuan_futou <= actual_dt < nhuan_end:
+                        curr_futou = nhuan_futou
+                        is_nhuan = True
+                        break
+
+                    curr_futou = nhuan_end
+                    term_idx = next_term_idx
+                    continue
+
+        curr_futou = end_futou
+        term_idx = (term_idx + 1) % 24
+        is_nhuan = False 
+
+    # === XUẤT KẾT QUẢ CỤC SỐ ===
+    days_in = (actual_dt - curr_futou).days
+    yuan = days_in // 5 
+    active_jq = jq_names[term_idx]
+    
     loai_don = "阳遁" if active_jq in yang_terms else "阴遁"
     so_cuc = solar_term_ju[active_jq][yuan]
     ji_palace = JIEQI_PALACE_MAP[active_jq]
-    
+
     return loai_don, so_cuc, active_jq, ji_palace, is_nhuan
 
 # ==========================================
