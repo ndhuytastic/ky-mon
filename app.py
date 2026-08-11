@@ -42,72 +42,105 @@ JIEQI_PALACE_MAP = {
 }
 
 # ==========================================
-# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN CHUẨN XÁC (TRUE CHRONOLOGICAL ENGINE)
+# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN MỚI (DỰA TRÊN KHÁM TRẠM)
 # ==========================================
 
-def get_astro_term_date(target_term_name, search_start_date):
-    # RANGE(60): Tầm quét cực rộng, đảm bảo không bao giờ trượt Tiết khí thiên văn
-    for i in range(60):
-        check_date = search_start_date + timedelta(days=i)
-        d = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
-        if d.hasJieQi() and jq_names[d.getJieQi()] == target_term_name:
-            return check_date.replace(hour=0, minute=0, second=0)
-    return None
+def get_phu_dau(d_date):
+    """ Tìm Phù Đầu (Giáp/Kỷ + Tý/Ngọ/Mão/Dậu) lùi về trước hoặc tại ngày d_date """
+    for i in range(20):
+        check_date = d_date - timedelta(days=i)
+        day_obj = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
+        tg = day_obj.getDayGZ().tg  # 0:甲, 5:己
+        dz = day_obj.getDayGZ().dz  # 0:子, 3:卯, 6:午, 9:酉
+        if (tg == 0 or tg == 5) and (dz in [0, 3, 6, 9]):
+            return check_date
+    return d_date
+
+def get_station(start_date, include_start=False):
+    """ Quét lùi tìm Trạm (Mang Chủng hoặc Đại Tuyết) """
+    start_offset = 0 if include_start else 1
+    # Quét lùi tối đa 250 ngày để chắc chắn bắt được Trạm gần nhất (~ 180 ngày)
+    for i in range(start_offset, 250): 
+        check_date = start_date - timedelta(days=i)
+        day_obj = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
+        if day_obj.hasJieQi():
+            jq_idx = day_obj.getJieQi()
+            if jq_names[jq_idx] in ["芒种", "大雪"]:
+                return check_date, jq_names[jq_idx]
+    return None, None
+
+def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
+    # Bước 2: KHÁM TRẠM
+    F_past = get_phu_dau(T_tram_date)
+    chao_shen = (T_tram_date - F_past).days
+    
+    is_leap = False
+    is_fake_tie_qi = False
+
+    if chao_shen >= 9:
+        F_prev_past = get_phu_dau(T_prev_tram_date)
+        chao_shen_prev = (T_prev_tram_date - F_prev_past).days
+        
+        if chao_shen_prev >= 9:
+            is_fake_tie_qi = True # Trạm trước đã nhuận -> Hiện tại là Tiếp Khí ảo
+        else:
+            is_leap = True # Thực sự Nhuận tại Trạm này
+
+    # Bước 3: XÁC ĐỊNH MỐC KHỞI ĐIỂM
+    if is_fake_tie_qi:
+        Start_Line = F_past + timedelta(days=15)
+    else:
+        Start_Line = F_past
+
+    # Bước 3.5: CƠ CHẾ FALLBACK (Xử lý ranh giới Tiếp Khí)
+    if D < Start_Line:
+        T_prev2_tram_date, _ = get_station(T_prev_tram_date, include_start=False)
+        day_prev_obj = sxtwl.fromSolar(T_prev_tram_date.year, T_prev_tram_date.month, T_prev_tram_date.day)
+        T_prev_tram_name = jq_names[day_prev_obj.getJieQi()]
+        
+        return run_trinhuan_algorithm(D, T_prev_tram_date, T_prev_tram_name, T_prev2_tram_date)
+
+    # Bước 4: TÍNH TOÁN KẾT QUẢ CUỐI CÙNG
+    delta_days = (D - Start_Line).days
+    block_index = delta_days // 15
+    nguyen_index = (delta_days % 15) // 5  # 0: Thượng, 1: Trung, 2: Hạ
+
+    station_idx = jq_names.index(T_tram_name)
+    
+    if is_leap:
+        if block_index == 0:
+            final_idx = station_idx
+        elif block_index == 1:
+            final_idx = station_idx # Nhuận Trạm dùng chung Cục với Trạm
+        else:
+            final_idx = (station_idx + block_index - 1) % 24 # Lùi lại 1 nấc do bị chèn 1 khối Nhuận
+    else:
+        final_idx = (station_idx + block_index) % 24
+
+    final_term = jq_names[final_idx]
+    
+    # Đánh dấu "閏奇" chỉ hiển thị khi ngày xem đang nằm chính xác trong khối 15 ngày Nhuận
+    is_nhuan_hien_tai = (is_leap and block_index == 1)
+
+    return final_term, nguyen_index, is_nhuan_hien_tai
 
 def get_zhirun_ju(actual_date):
-    actual_dt = datetime.combine(actual_date, datetime.min.time())
+    D = actual_date
     
-    # MỐC NEO CỐ ĐỊNH 100%: 14/12/1992 (Giáp Tý - Đông Chí)
-    curr_futou = datetime(2025, 12, 21)
-    term_idx = 0  
-    is_nhuan = False
-
-    # VÒNG LẶP THỜI GIAN KỲ MÔN
-    while curr_futou <= actual_dt:
-        end_futou = curr_futou + timedelta(days=15) 
-
-        # Đã chạm tới Block 15 ngày chứa ngày xem quẻ
-        if curr_futou <= actual_dt < end_futou:
-            break
-
-        # Kích hoạt Radar quét Thiên Văn tại cuối Mang Chủng (11) và Đại Tuyết (23)
-        if term_idx in [11, 23] and not is_nhuan:
-            next_term_idx = (term_idx + 1) % 24
-            next_celestial_name = jq_names[next_term_idx]
-            astro_next = get_astro_term_date(next_celestial_name, curr_futou)
-
-            if astro_next:
-                # Tính Siêu Thần (Chao Shen)
-                chao_shen = (astro_next - end_futou).days
-                
-                # NẾU SIÊU THẦN >= 9 -> KÍCH HOẠT NHUẬN LẶP LẠI 15 NGÀY
-                if chao_shen >= 9:
-                    nhuan_futou = end_futou
-                    nhuan_end = nhuan_futou + timedelta(days=15)
-
-                    if nhuan_futou <= actual_dt < nhuan_end:
-                        curr_futou = nhuan_futou
-                        is_nhuan = True
-                        break
-
-                    curr_futou = nhuan_end
-                    term_idx = next_term_idx
-                    continue
-
-        curr_futou = end_futou
-        term_idx = (term_idx + 1) % 24
-        is_nhuan = False 
-
-    # === XUẤT KẾT QUẢ CỤC SỐ ===
-    days_in = (actual_dt - curr_futou).days
-    yuan = days_in // 5 
-    active_jq = jq_names[term_idx]
+    # 1. Tìm Trạm gần nhất
+    T_tram_date, T_tram_name = get_station(D, include_start=True)
+    # 2. Tìm Trạm liền trước đó
+    T_prev_tram_date, _ = get_station(T_tram_date, include_start=False)
     
-    loai_don = "阳遁" if active_jq in yang_terms else "阴遁"
-    so_cuc = solar_term_ju[active_jq][yuan]
-    ji_palace = JIEQI_PALACE_MAP[active_jq]
+    # 3. Chạy thuật toán định vị
+    final_term, nguyen_index, is_nhuan = run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date)
+    
+    # 4. Trích xuất thông tin Cục
+    loai_don = "阳遁" if final_term in yang_terms else "阴遁"
+    so_cuc = solar_term_ju[final_term][nguyen_index]
+    ji_palace = JIEQI_PALACE_MAP[final_term]
 
-    return loai_don, so_cuc, active_jq, ji_palace, is_nhuan
+    return loai_don, so_cuc, final_term, ji_palace, is_nhuan
 
 # ==========================================
 # 3. THUẬT TOÁN PHI BÀN (TINH - MÔN - THẦN)
@@ -134,11 +167,10 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     cung_data[{"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]]['ngua'] = "马"
 
-# --- 2. THIÊN BÀN TINH & CAN (Bay 9 cung) ---
+    # --- 2. THIÊN BÀN TINH & CAN (Bay 9 cung) ---
     base_star_p = [k for k, v in dia_ban.items() if v == can_tuan][0]
     target_star_p = [k for k, v in dia_ban.items() if v == (can_tuan if can_gio == "甲" else can_gio)][0]
     
-    # ----------------------------------------------------------------------
     # A. CHỈ RIÊNG CỬU TINH (Luôn Phi Thuận 1->9)
     star_path_forward = luoshu_9  
     idx_base_star_fwd = star_path_forward.index(base_star_p)
@@ -150,9 +182,8 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         orig_idx_star = (i - shift_for_star) % 9
         orig_p_star = star_path_forward[orig_idx_star]
         cung_data[p_star]['sao'] = star_native[orig_p_star - 1]
-    # ----------------------------------------------------------------------
 
-    # B. GIỮ NGUYÊN TOÀN BỘ LOGIC CŨ CHO THIÊN CAN VÀ CÁC PHẦN SAU (CỬU THẦN)
+    # B. THIÊN CAN BÁM LẠC THƯ (Bay Thuận/Nghịch)
     path_9 = luoshu_9 if loai == "阳" else list(reversed(luoshu_9))
     idx_base = path_9.index(base_star_p)
     idx_target = path_9.index(target_star_p)
@@ -163,7 +194,6 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         orig_idx = (i - star_shift) % 9
         orig_p = path_9[orig_idx]
         
-        # (Đã gỡ bỏ dòng gán 'sao' ở đây để nhường cho khối A phía trên)
         cung_data[p]['thien'] = dia_ban[orig_p]
 
     # --- 3. BÁT MÔN PHI BÀN  ---
@@ -171,24 +201,20 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     doors_cycle = ["休门", "死门", "伤门", "杜门", "开门", "惊门", "生门", "景门"]
     luoshu_8 = [1, 2, 3, 4, 6, 7, 8, 9]
 
-    # Tìm Cửa Trực Sử gốc
     if base_star_p == 5:
         truc_su_door = door_native_dict[ji_palace]
     else:
         truc_su_door = door_native_dict[base_star_p]
 
-    # Tính cung đích của Trực Sử (Bắt đầu từ Cục số)
     steps = (dia_chi.index(chi_gio) - dia_chi.index(chi_tuan)) % 12
     if loai == "阳":
         target_door_p = (so_cuc + steps - 1) % 9 + 1
     else:
         target_door_p = (so_cuc - steps - 1) % 9 + 1
         
-    # Ngoại lệ: Nếu bay đụng 5 -> Hạ cánh xuống Cung Ký Gửi
     if target_door_p == 5:
         target_door_p = ji_palace
         
-    # Rải 8 cửa bám theo Lạc Thư
     idx_target_in_path8 = luoshu_8.index(target_door_p)
     shifted_palaces = luoshu_8[idx_target_in_path8:] + luoshu_8[:idx_target_in_path8]
     
@@ -213,7 +239,7 @@ def tinh_tuan_khong_gio(hoa_giap):
     return [chi_to_cung[dia_chi[(idx_tuan_dau - 2) % 12]], chi_to_cung[dia_chi[(idx_tuan_dau - 1) % 12]]]
 
 # ==========================================
-# 4. GIAO DIỆN LƯỚI CSS SẠCH SẼ (CHỪA KHOẢNG TRỐNG)
+# 4. GIAO DIỆN LƯỚI CSS SẠCH SẼ 
 # ==========================================
 def format_stem(stem_str):
     if not stem_str: return ""
@@ -231,21 +257,19 @@ def render_html_table(cung_data, tk_gio):
         .qmdj-table { border-collapse: collapse; width: 100%; max-width: 550px; min-width: 320px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 10px; }
         
-        /* Cấu trúc Grid 2 cột: Cột trái chứa nội dung, Cột phải để trống cho Cát Hung Cách */
         .cell-main {
             display: grid;
-            grid-template-columns: auto auto 1fr; /* 3 Cột: Tinh/Môn | Can | Trống */
-            grid-template-rows: 22px 22px 22px;   /* 3 Dòng cố định chiều cao */
-            column-gap: 15px; /* Cột Can lùi ra một chút để phân biệt */
+            grid-template-columns: auto auto 1fr;
+            grid-template-rows: 22px 22px 22px;   
+            column-gap: 15px; 
             row-gap: 6px;
             height: 100%;
             min-height: 85px;
             align-content: start;
             margin-top: 5px;
-            margin-left: 5px; /* Đẩy hơi lùi vào một chút */
+            margin-left: 5px; 
         }
         
-        /* Căn ngang hàng chính xác */
         .item-than  { grid-column: 1 / span 2; grid-row: 1; font-size: 15px; color: #222; text-align: left; }
         .item-tinh  { grid-column: 1; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
         .item-mon   { grid-column: 1; grid-row: 3; font-size: 15px; color: #222; text-align: left; }
@@ -253,7 +277,6 @@ def render_html_table(cung_data, tk_gio):
         .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
         .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; }
 
-        /* Trung Cung 5 chỉ hiển thị 2 Can */
         .center-5 {
             display: flex;
             flex-direction: column;
