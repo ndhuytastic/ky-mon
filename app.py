@@ -43,7 +43,6 @@ JIEQI_PALACE_MAP = {
 
 # ==========================================
 # 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN KHÁM TRẠM
-# (GIỮ NGUYÊN 100% NHƯ YÊU CẦU CỦA BẠN)
 # ==========================================
 def get_phu_dau(d_date):
     for i in range(20):
@@ -149,22 +148,20 @@ def get_cung_phi_tinh(nhat_chi, thoi_chi, loai_don):
     return vals[0] if loai_don == "阳遁" else vals[1]
 
 def get_luc_than(can_gio, can_cung):
-    """ Đã chuyển sang 10 Hán tự Bát Tự chuẩn """
     if not can_cung: return ""
+    # Ngũ Hành: 0-Mộc, 1-Hỏa, 2-Thổ, 3-Kim, 4-Thủy
     element_map = {"甲":0, "乙":0, "丙":1, "丁":1, "戊":2, "己":2, "庚":3, "辛":3, "壬":4, "癸":4}
-    yy_map = {"甲":1, "乙":0, "丙":1, "丁":0, "戊":1, "己":0, "庚":1, "辛":0, "壬":1, "癸":0}
 
     b_e = element_map[can_gio]
     t_e = element_map[can_cung]
     
-    same_yy = (yy_map[can_gio] == yy_map[can_cung])
     diff_e = (t_e - b_e) % 5 
 
-    if diff_e == 0: return "比" if same_yy else "劫"      # Tỷ / Kiếp
-    elif diff_e == 1: return "食" if same_yy else "伤"    # Thực / Thương
-    elif diff_e == 2: return "才" if same_yy else "财"    # Thiên Tài / Chính Tài
-    elif diff_e == 3: return "杀" if same_yy else "官"    # Thất Sát / Chính Quan
-    elif diff_e == 4: return "枭" if same_yy else "印"    # Kiêu / Ấn
+    if diff_e == 0: return "兄"    # Huynh đệ
+    elif diff_e == 1: return "孙"   # Tử tôn (Tử tức)
+    elif diff_e == 2: return "财"   # Thê tài
+    elif diff_e == 3: return "官"   # Quan quỷ
+    elif diff_e == 4: return "父"   # Phụ mẫu
     
     return ""
 
@@ -179,10 +176,8 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
     can_tuan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
-    # [ĐÃ THÊM] 'phi_tinh', 'lt_thien', 'lt_dia' vào cấu trúc gốc để chứa dữ liệu
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 'phi_tinh': 0, 'lt_thien': '', 'lt_dia': ''} for i in range(1, 10)}
 
-    # [ĐÃ THÊM] Vòng lặp Phi Tinh chạy độc lập, không dính líu đến Cửu tinh/Cửu thần/Thiên bàn
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
     quydo_luoshu = [5, 6, 7, 8, 9, 1, 2, 3, 4]
     
@@ -194,7 +189,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
         else:
             curr_num = 9 if curr_num == 1 else curr_num - 1 
 
-    # --- 1. ĐỊA BÀN (LOGIC BẢO LƯU 100%) ---
+    # --- 1. ĐỊA BÀN ---
     dia_ban = {}
     for i, can in enumerate(luc_nghi):
         p = (so_cuc + i - 1) % 9 + 1 if loai == "阳" else (so_cuc - i - 1) % 9 + 1
@@ -202,13 +197,13 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     
     for i in range(1, 10): 
         cung_data[i]['dia'] = dia_ban[i]
-        cung_data[i]['lt_dia'] = get_luc_than(can_gio, dia_ban[i]) # ĐỌC Lục Thân
+        cung_data[i]['lt_dia'] = get_luc_than(can_gio, dia_ban[i]) 
 
-    # --- TÌM MÃ (LOGIC BẢO LƯU 100%) ---
+    # --- TÌM MÃ ---
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     cung_data[{"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]]['ngua'] = "马"
 
-    # --- 2. THIÊN BÀN TINH & CAN (LOGIC BẢO LƯU 100%) ---
+    # --- 2. THIÊN BÀN TINH & CAN ---
     base_star_p = [k for k, v in dia_ban.items() if v == can_tuan][0]
     target_star_p = [k for k, v in dia_ban.items() if v == (can_tuan if can_gio == "甲" else can_gio)][0]
     
@@ -235,9 +230,9 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
         
         can_thien_bay_toi = dia_ban[orig_p]
         cung_data[p]['thien'] = can_thien_bay_toi
-        cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) # ĐỌC Lục Thân
+        cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) 
 
-    # --- 3. BÁT MÔN PHI BÀN (LOGIC BẢO LƯU 100%) ---
+    # --- 3. BÁT MÔN PHI BÀN ---
     door_native_dict = {1: "休门", 2: "死门", 3: "伤门", 4: "杜门", 6: "开门", 7: "惊门", 8: "生门", 9: "景门"}
     doors_cycle = ["休门", "死门", "伤门", "杜门", "开门", "惊门", "生门", "景门"]
     luoshu_8 = [1, 2, 3, 4, 6, 7, 8, 9]
@@ -265,7 +260,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     for p, door in zip(shifted_palaces, shifted_doors):
         cung_data[p]['mon'] = door
 
-    # --- 4. CỬU THẦN (LOGIC BẢO LƯU 100%) ---
+    # --- 4. CỬU THẦN ---
     for i in range(9):
         p = path_9[i]
         deity_idx = (i - idx_target) % 9
