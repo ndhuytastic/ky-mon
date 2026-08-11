@@ -42,7 +42,8 @@ JIEQI_PALACE_MAP = {
 }
 
 # ==========================================
-# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN (GIỮ NGUYÊN HOÀN TOÀN)
+# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN KHÁM TRẠM
+# (GIỮ NGUYÊN 100% NHƯ YÊU CẦU CỦA BẠN)
 # ==========================================
 def get_phu_dau(d_date):
     for i in range(20):
@@ -126,57 +127,44 @@ def get_zhirun_ju(actual_date):
 
     return loai_don, so_cuc, final_term, ji_palace, is_nhuan
 
+
 # ==========================================
-# 2B. CÁC HÀM BỔ SUNG: CỬU CUNG PHI TINH & LỤC THÂN
+# 2B. CÁC HÀM TÍNH TOÁN BỔ SUNG ĐỘC LẬP 
 # ==========================================
 def get_cung_phi_tinh(nhat_chi, thoi_chi, loai_don):
-    # Bước 1: Mapping Cột (0, 1, 2)
     col_map = {
         "子": 0, "午": 0, "卯": 0, "酉": 0,
         "丑": 1, "未": 1, "辰": 1, "戌": 1,
         "寅": 2, "申": 2, "巳": 2, "亥": 2
     }
-    
-    # Bước 3: Ma trận Cửu Cung Phi Tinh [Dương, Âm]
     matrix = [
-        [[1, 9], [4, 6], [7, 3]], # Giờ Tý
-        [[2, 8], [5, 5], [8, 2]], # Giờ Sửu
-        [[3, 7], [6, 4], [9, 1]], # Giờ Dần
-        [[4, 6], [7, 3], [1, 9]], # Giờ Mão
-        [[5, 5], [8, 2], [2, 8]], # Giờ Thìn
-        [[6, 4], [9, 1], [3, 7]], # Giờ Tỵ
-        [[7, 3], [1, 9], [4, 6]], # Giờ Ngọ
-        [[8, 2], [2, 8], [5, 5]], # Giờ Mùi
-        [[9, 1], [3, 7], [6, 4]], # Giờ Thân
-        [[1, 9], [4, 6], [7, 3]], # Giờ Dậu
-        [[2, 8], [5, 5], [8, 2]], # Giờ Tuất
-        [[3, 7], [6, 4], [9, 1]]  # Giờ Hợi
+        [[1, 9], [4, 6], [7, 3]], [[2, 8], [5, 5], [8, 2]], [[3, 7], [6, 4], [9, 1]], 
+        [[4, 6], [7, 3], [1, 9]], [[5, 5], [8, 2], [2, 8]], [[6, 4], [9, 1], [3, 7]], 
+        [[7, 3], [1, 9], [4, 6]], [[8, 2], [2, 8], [5, 5]], [[9, 1], [3, 7], [6, 4]], 
+        [[1, 9], [4, 6], [7, 3]], [[2, 8], [5, 5], [8, 2]], [[3, 7], [6, 4], [9, 1]]  
     ]
-    
     c_idx = col_map[nhat_chi]
     r_idx = dia_chi.index(thoi_chi)
-    
     vals = matrix[r_idx][c_idx]
     return vals[0] if loai_don == "阳遁" else vals[1]
 
 def get_luc_than(can_gio, can_cung):
+    """ Đã chuyển sang 10 Hán tự Bát Tự chuẩn """
     if not can_cung: return ""
-    # Ngũ Hành: 0-Mộc, 1-Hỏa, 2-Thổ, 3-Kim, 4-Thủy
     element_map = {"甲":0, "乙":0, "丙":1, "丁":1, "戊":2, "己":2, "庚":3, "辛":3, "壬":4, "癸":4}
-    # Âm Dương: 1-Dương, 0-Âm
     yy_map = {"甲":1, "乙":0, "丙":1, "丁":0, "戊":1, "己":0, "庚":1, "辛":0, "壬":1, "癸":0}
 
     b_e = element_map[can_gio]
     t_e = element_map[can_cung]
     
     same_yy = (yy_map[can_gio] == yy_map[can_cung])
-    diff_e = (t_e - b_e) % 5 # Tính khoảng cách sinh khắc
+    diff_e = (t_e - b_e) % 5 
 
-    if diff_e == 0: return "Tỷ" if same_yy else "Kiếp"
-    elif diff_e == 1: return "Thực" if same_yy else "Thương"
-    elif diff_e == 2: return "TTài" if same_yy else "CTài"
-    elif diff_e == 3: return "Sát" if same_yy else "Quan"
-    elif diff_e == 4: return "Kiêu" if same_yy else "Ấn"
+    if diff_e == 0: return "比" if same_yy else "劫"      # Tỷ / Kiếp
+    elif diff_e == 1: return "食" if same_yy else "伤"    # Thực / Thương
+    elif diff_e == 2: return "才" if same_yy else "财"    # Thiên Tài / Chính Tài
+    elif diff_e == 3: return "杀" if same_yy else "官"    # Thất Sát / Chính Quan
+    elif diff_e == 4: return "枭" if same_yy else "印"    # Kiêu / Ấn
     
     return ""
 
@@ -191,9 +179,10 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
     can_tuan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
+    # [ĐÃ THÊM] 'phi_tinh', 'lt_thien', 'lt_dia' vào cấu trúc gốc để chứa dữ liệu
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 'phi_tinh': 0, 'lt_thien': '', 'lt_dia': ''} for i in range(1, 10)}
 
-    # --- TÍNH CỬU CUNG PHI TINH GHI SỐ GÓC DƯỚI ---
+    # [ĐÃ THÊM] Vòng lặp Phi Tinh chạy độc lập, không dính líu đến Cửu tinh/Cửu thần/Thiên bàn
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
     quydo_luoshu = [5, 6, 7, 8, 9, 1, 2, 3, 4]
     
@@ -201,11 +190,11 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     for p in quydo_luoshu:
         cung_data[p]['phi_tinh'] = curr_num
         if loai == "阳":
-            curr_num = (curr_num % 9) + 1 # Phi Thuận (+1)
+            curr_num = (curr_num % 9) + 1 
         else:
-            curr_num = 9 if curr_num == 1 else curr_num - 1 # Phi Nghịch (-1)
+            curr_num = 9 if curr_num == 1 else curr_num - 1 
 
-    # --- 1. ĐỊA BÀN ---
+    # --- 1. ĐỊA BÀN (LOGIC BẢO LƯU 100%) ---
     dia_ban = {}
     for i, can in enumerate(luc_nghi):
         p = (so_cuc + i - 1) % 9 + 1 if loai == "阳" else (so_cuc - i - 1) % 9 + 1
@@ -213,17 +202,16 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     
     for i in range(1, 10): 
         cung_data[i]['dia'] = dia_ban[i]
-        cung_data[i]['lt_dia'] = get_luc_than(can_gio, dia_ban[i]) # Tính Lục Thân Địa Bàn
+        cung_data[i]['lt_dia'] = get_luc_than(can_gio, dia_ban[i]) # ĐỌC Lục Thân
 
-    # --- TÌM MÃ ---
+    # --- TÌM MÃ (LOGIC BẢO LƯU 100%) ---
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     cung_data[{"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]]['ngua'] = "马"
 
-    # --- 2. THIÊN BÀN TINH & CAN ---
+    # --- 2. THIÊN BÀN TINH & CAN (LOGIC BẢO LƯU 100%) ---
     base_star_p = [k for k, v in dia_ban.items() if v == can_tuan][0]
     target_star_p = [k for k, v in dia_ban.items() if v == (can_tuan if can_gio == "甲" else can_gio)][0]
     
-    # Cửu Tinh
     star_path_forward = luoshu_9  
     idx_base_star_fwd = star_path_forward.index(base_star_p)
     idx_target_star_fwd = star_path_forward.index(target_star_p)
@@ -235,7 +223,6 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
         orig_p_star = star_path_forward[orig_idx_star]
         cung_data[p_star]['sao'] = star_native[orig_p_star - 1]
 
-    # Thiên Can
     path_9 = luoshu_9 if loai == "阳" else list(reversed(luoshu_9))
     idx_base = path_9.index(base_star_p)
     idx_target = path_9.index(target_star_p)
@@ -248,9 +235,9 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
         
         can_thien_bay_toi = dia_ban[orig_p]
         cung_data[p]['thien'] = can_thien_bay_toi
-        cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) # Tính Lục Thân Thiên Bàn
+        cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) # ĐỌC Lục Thân
 
-    # --- 3. BÁT MÔN PHI BÀN ---
+    # --- 3. BÁT MÔN PHI BÀN (LOGIC BẢO LƯU 100%) ---
     door_native_dict = {1: "休门", 2: "死门", 3: "伤门", 4: "杜门", 6: "开门", 7: "惊门", 8: "生门", 9: "景门"}
     doors_cycle = ["休门", "死门", "伤门", "杜门", "开门", "惊门", "生门", "景门"]
     luoshu_8 = [1, 2, 3, 4, 6, 7, 8, 9]
@@ -278,7 +265,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     for p, door in zip(shifted_palaces, shifted_doors):
         cung_data[p]['mon'] = door
 
-    # --- 4. CỬU THẦN ---
+    # --- 4. CỬU THẦN (LOGIC BẢO LƯU 100%) ---
     for i in range(9):
         p = path_9[i]
         deity_idx = (i - idx_target) % 9
@@ -293,7 +280,7 @@ def tinh_tuan_khong_gio(hoa_giap):
     return [chi_to_cung[dia_chi[(idx_tuan_dau - 2) % 12]], chi_to_cung[dia_chi[(idx_tuan_dau - 1) % 12]]]
 
 # ==========================================
-# 4. GIAO DIỆN LƯỚI CSS 
+# 4. GIAO DIỆN LƯỚI CSS SẠCH SẼ
 # ==========================================
 def format_stem(stem_str):
     if not stem_str: return ""
@@ -331,7 +318,7 @@ def render_html_table(cung_data, tk_gio):
         .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; display: flex; align-items: baseline;}
         .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: baseline;}
 
-        .luc-than { font-size: 11px; color: #999; margin-left: 6px; font-weight: normal; }
+        .luc-than { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
         
         .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
         .horse-icon { font-size: 14px; font-weight: bold; }
@@ -347,7 +334,7 @@ def render_html_table(cung_data, tk_gio):
         for p in row:
             d = cung_data[p]
             
-            # --- Xử lý Lục Thân HTML ---
+            # --- Render Lục Thân ---
             lt_thien_html = f"<span class='luc-than'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
             lt_dia_html = f"<span class='luc-than'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
             
@@ -356,15 +343,15 @@ def render_html_table(cung_data, tk_gio):
             
             phi_tinh_html = f"<div class='bottom-left-phitinh'>{d['phi_tinh']}</div>"
             
-            # --- CUNG 5: Ẩn Tinh/Môn/Thần nhưng giữ nguyên Grid Layout để thẳng hàng cung Khảm/Ly ---
+            # --- XỬ LÝ TRUNG CUNG 5 THẲNG HÀNG BẰNG CSS VISIBILITY ---
             if p == 5:
                 html += f"""
                 <td class="qmdj-td">
                     {phi_tinh_html}
                     <div class="cell-main">
-                        <div class="item-than"></div>
-                        <div class="item-tinh"></div>
-                        <div class="item-mon"></div>
+                        <div class="item-than" style="visibility:hidden;">值符</div>
+                        <div class="item-tinh" style="visibility:hidden;">天蓬</div>
+                        <div class="item-mon" style="visibility:hidden;">休门</div>
                         
                         <div class="item-thien">{thien_full}</div>
                         <div class="item-dia">{dia_full}</div>
@@ -425,7 +412,7 @@ day_obj = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
 can_ngay_idx = day_obj.getDayGZ().tg
 can_gio_idx = (can_ngay_idx % 5 * 2 + chi_gio_idx) % 10
 hoa_giap_hien_tai = thien_can[can_gio_idx] + chi_gio
-nhat_chi_hien_tai = dia_chi[day_obj.getDayGZ().dz] # Trích xuất Nhật Chi truyền vào hàm
+nhat_chi_hien_tai = dia_chi[day_obj.getDayGZ().dz] 
 
 bazi_dict = {
     'nam': thien_can[day_obj.getYearGZ().tg] + dia_chi[day_obj.getYearGZ().dz],
@@ -440,8 +427,6 @@ chuoi_cuc = f"飞盘 | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
 tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
-
-# THỰC THI CHÍNH KÈM NHẬT CHI
 data = lap_que(hoa_giap_hien_tai, nhat_chi_hien_tai, don, cuc, ji_palace)
 
 title = f"<h3 style='margin-bottom:6px; font-family:sans-serif; color: #111; font-weight: 400; font-size: 18px; text-align: center;'>{bazi_chuoi}</h3>"
