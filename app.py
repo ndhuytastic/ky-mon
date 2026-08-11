@@ -42,24 +42,20 @@ JIEQI_PALACE_MAP = {
 }
 
 # ==========================================
-# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN MỚI (DỰA TRÊN KHÁM TRẠM)
+# 2. THUẬT TOÁN ĐỊNH CỤC TRÍ NHUẬN (GIỮ NGUYÊN HOÀN TOÀN)
 # ==========================================
-
 def get_phu_dau(d_date):
-    """ Tìm Phù Đầu (Giáp/Kỷ + Tý/Ngọ/Mão/Dậu) lùi về trước hoặc tại ngày d_date """
     for i in range(20):
         check_date = d_date - timedelta(days=i)
         day_obj = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
-        tg = day_obj.getDayGZ().tg  # 0:甲, 5:己
-        dz = day_obj.getDayGZ().dz  # 0:子, 3:卯, 6:午, 9:酉
+        tg = day_obj.getDayGZ().tg  
+        dz = day_obj.getDayGZ().dz  
         if (tg == 0 or tg == 5) and (dz in [0, 3, 6, 9]):
             return check_date
     return d_date
 
 def get_station(start_date, include_start=False):
-    """ Quét lùi tìm Trạm (Mang Chủng hoặc Đại Tuyết) """
     start_offset = 0 if include_start else 1
-    # Quét lùi tối đa 250 ngày để chắc chắn bắt được Trạm gần nhất (~ 180 ngày)
     for i in range(start_offset, 250): 
         check_date = start_date - timedelta(days=i)
         day_obj = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
@@ -70,7 +66,6 @@ def get_station(start_date, include_start=False):
     return None, None
 
 def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
-    # Bước 2: KHÁM TRẠM
     F_past = get_phu_dau(T_tram_date)
     chao_shen = (T_tram_date - F_past).days
     
@@ -82,17 +77,15 @@ def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
         chao_shen_prev = (T_prev_tram_date - F_prev_past).days
         
         if chao_shen_prev >= 9:
-            is_fake_tie_qi = True # Trạm trước đã nhuận -> Hiện tại là Tiếp Khí ảo
+            is_fake_tie_qi = True
         else:
-            is_leap = True # Thực sự Nhuận tại Trạm này
+            is_leap = True 
 
-    # Bước 3: XÁC ĐỊNH MỐC KHỞI ĐIỂM
     if is_fake_tie_qi:
         Start_Line = F_past + timedelta(days=15)
     else:
         Start_Line = F_past
 
-    # Bước 3.5: CƠ CHẾ FALLBACK (Xử lý ranh giới Tiếp Khí)
     if D < Start_Line:
         T_prev2_tram_date, _ = get_station(T_prev_tram_date, include_start=False)
         day_prev_obj = sxtwl.fromSolar(T_prev_tram_date.year, T_prev_tram_date.month, T_prev_tram_date.day)
@@ -100,10 +93,9 @@ def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
         
         return run_trinhuan_algorithm(D, T_prev_tram_date, T_prev_tram_name, T_prev2_tram_date)
 
-    # Bước 4: TÍNH TOÁN KẾT QUẢ CUỐI CÙNG
     delta_days = (D - Start_Line).days
     block_index = delta_days // 15
-    nguyen_index = (delta_days % 15) // 5  # 0: Thượng, 1: Trung, 2: Hạ
+    nguyen_index = (delta_days % 15) // 5 
 
     station_idx = jq_names.index(T_tram_name)
     
@@ -111,31 +103,23 @@ def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
         if block_index == 0:
             final_idx = station_idx
         elif block_index == 1:
-            final_idx = station_idx # Nhuận Trạm dùng chung Cục với Trạm
+            final_idx = station_idx
         else:
-            final_idx = (station_idx + block_index - 1) % 24 # Lùi lại 1 nấc do bị chèn 1 khối Nhuận
+            final_idx = (station_idx + block_index - 1) % 24 
     else:
         final_idx = (station_idx + block_index) % 24
 
     final_term = jq_names[final_idx]
-    
-    # Đánh dấu "閏奇" chỉ hiển thị khi ngày xem đang nằm chính xác trong khối 15 ngày Nhuận
     is_nhuan_hien_tai = (is_leap and block_index == 1)
 
     return final_term, nguyen_index, is_nhuan_hien_tai
 
 def get_zhirun_ju(actual_date):
     D = actual_date
-    
-    # 1. Tìm Trạm gần nhất
     T_tram_date, T_tram_name = get_station(D, include_start=True)
-    # 2. Tìm Trạm liền trước đó
     T_prev_tram_date, _ = get_station(T_tram_date, include_start=False)
-    
-    # 3. Chạy thuật toán định vị
     final_term, nguyen_index, is_nhuan = run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date)
     
-    # 4. Trích xuất thông tin Cục
     loai_don = "阳遁" if final_term in yang_terms else "阴遁"
     so_cuc = solar_term_ju[final_term][nguyen_index]
     ji_palace = JIEQI_PALACE_MAP[final_term]
@@ -143,9 +127,63 @@ def get_zhirun_ju(actual_date):
     return loai_don, so_cuc, final_term, ji_palace, is_nhuan
 
 # ==========================================
+# 2B. CÁC HÀM BỔ SUNG: CỬU CUNG PHI TINH & LỤC THÂN
+# ==========================================
+def get_cung_phi_tinh(nhat_chi, thoi_chi, loai_don):
+    # Bước 1: Mapping Cột (0, 1, 2)
+    col_map = {
+        "子": 0, "午": 0, "卯": 0, "酉": 0,
+        "丑": 1, "未": 1, "辰": 1, "戌": 1,
+        "寅": 2, "申": 2, "巳": 2, "亥": 2
+    }
+    
+    # Bước 3: Ma trận Cửu Cung Phi Tinh [Dương, Âm]
+    matrix = [
+        [[1, 9], [4, 6], [7, 3]], # Giờ Tý
+        [[2, 8], [5, 5], [8, 2]], # Giờ Sửu
+        [[3, 7], [6, 4], [9, 1]], # Giờ Dần
+        [[4, 6], [7, 3], [1, 9]], # Giờ Mão
+        [[5, 5], [8, 2], [2, 8]], # Giờ Thìn
+        [[6, 4], [9, 1], [3, 7]], # Giờ Tỵ
+        [[7, 3], [1, 9], [4, 6]], # Giờ Ngọ
+        [[8, 2], [2, 8], [5, 5]], # Giờ Mùi
+        [[9, 1], [3, 7], [6, 4]], # Giờ Thân
+        [[1, 9], [4, 6], [7, 3]], # Giờ Dậu
+        [[2, 8], [5, 5], [8, 2]], # Giờ Tuất
+        [[3, 7], [6, 4], [9, 1]]  # Giờ Hợi
+    ]
+    
+    c_idx = col_map[nhat_chi]
+    r_idx = dia_chi.index(thoi_chi)
+    
+    vals = matrix[r_idx][c_idx]
+    return vals[0] if loai_don == "阳遁" else vals[1]
+
+def get_luc_than(can_gio, can_cung):
+    if not can_cung: return ""
+    # Ngũ Hành: 0-Mộc, 1-Hỏa, 2-Thổ, 3-Kim, 4-Thủy
+    element_map = {"甲":0, "乙":0, "丙":1, "丁":1, "戊":2, "己":2, "庚":3, "辛":3, "壬":4, "癸":4}
+    # Âm Dương: 1-Dương, 0-Âm
+    yy_map = {"甲":1, "乙":0, "丙":1, "丁":0, "戊":1, "己":0, "庚":1, "辛":0, "壬":1, "癸":0}
+
+    b_e = element_map[can_gio]
+    t_e = element_map[can_cung]
+    
+    same_yy = (yy_map[can_gio] == yy_map[can_cung])
+    diff_e = (t_e - b_e) % 5 # Tính khoảng cách sinh khắc
+
+    if diff_e == 0: return "Tỷ" if same_yy else "Kiếp"
+    elif diff_e == 1: return "Thực" if same_yy else "Thương"
+    elif diff_e == 2: return "TTài" if same_yy else "CTài"
+    elif diff_e == 3: return "Sát" if same_yy else "Quan"
+    elif diff_e == 4: return "Kiêu" if same_yy else "Ấn"
+    
+    return ""
+
+# ==========================================
 # 3. THUẬT TOÁN PHI BÀN (TINH - MÔN - THẦN)
 # ==========================================
-def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
+def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
     loai = "阳" if loai_don == "阳遁" else "阴"
     
@@ -153,25 +191,39 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
     can_tuan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
-    cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': ''} for i in range(1, 10)}
+    cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 'phi_tinh': 0, 'lt_thien': '', 'lt_dia': ''} for i in range(1, 10)}
 
-    # --- 1. ĐỊA BÀN (Phi Lạc Thư 9 cung) ---
+    # --- TÍNH CỬU CUNG PHI TINH GHI SỐ GÓC DƯỚI ---
+    center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
+    quydo_luoshu = [5, 6, 7, 8, 9, 1, 2, 3, 4]
+    
+    curr_num = center_num
+    for p in quydo_luoshu:
+        cung_data[p]['phi_tinh'] = curr_num
+        if loai == "阳":
+            curr_num = (curr_num % 9) + 1 # Phi Thuận (+1)
+        else:
+            curr_num = 9 if curr_num == 1 else curr_num - 1 # Phi Nghịch (-1)
+
+    # --- 1. ĐỊA BÀN ---
     dia_ban = {}
     for i, can in enumerate(luc_nghi):
         p = (so_cuc + i - 1) % 9 + 1 if loai == "阳" else (so_cuc - i - 1) % 9 + 1
         dia_ban[p] = can
     
-    for i in range(1, 10): cung_data[i]['dia'] = dia_ban[i]
+    for i in range(1, 10): 
+        cung_data[i]['dia'] = dia_ban[i]
+        cung_data[i]['lt_dia'] = get_luc_than(can_gio, dia_ban[i]) # Tính Lục Thân Địa Bàn
 
     # --- TÌM MÃ ---
     map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
     cung_data[{"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]]['ngua'] = "马"
 
-    # --- 2. THIÊN BÀN TINH & CAN (Bay 9 cung) ---
+    # --- 2. THIÊN BÀN TINH & CAN ---
     base_star_p = [k for k, v in dia_ban.items() if v == can_tuan][0]
     target_star_p = [k for k, v in dia_ban.items() if v == (can_tuan if can_gio == "甲" else can_gio)][0]
     
-    # A. CHỈ RIÊNG CỬU TINH (Luôn Phi Thuận 1->9)
+    # Cửu Tinh
     star_path_forward = luoshu_9  
     idx_base_star_fwd = star_path_forward.index(base_star_p)
     idx_target_star_fwd = star_path_forward.index(target_star_p)
@@ -183,7 +235,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         orig_p_star = star_path_forward[orig_idx_star]
         cung_data[p_star]['sao'] = star_native[orig_p_star - 1]
 
-    # B. THIÊN CAN BÁM LẠC THƯ (Bay Thuận/Nghịch)
+    # Thiên Can
     path_9 = luoshu_9 if loai == "阳" else list(reversed(luoshu_9))
     idx_base = path_9.index(base_star_p)
     idx_target = path_9.index(target_star_p)
@@ -194,9 +246,11 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
         orig_idx = (i - star_shift) % 9
         orig_p = path_9[orig_idx]
         
-        cung_data[p]['thien'] = dia_ban[orig_p]
+        can_thien_bay_toi = dia_ban[orig_p]
+        cung_data[p]['thien'] = can_thien_bay_toi
+        cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) # Tính Lục Thân Thiên Bàn
 
-    # --- 3. BÁT MÔN PHI BÀN  ---
+    # --- 3. BÁT MÔN PHI BÀN ---
     door_native_dict = {1: "休门", 2: "死门", 3: "伤门", 4: "杜门", 6: "开门", 7: "惊门", 8: "生门", 9: "景门"}
     doors_cycle = ["休门", "死门", "伤门", "杜门", "开门", "惊门", "生门", "景门"]
     luoshu_8 = [1, 2, 3, 4, 6, 7, 8, 9]
@@ -224,7 +278,7 @@ def lap_que(hoa_giap_gio, loai_don, so_cuc, ji_palace):
     for p, door in zip(shifted_palaces, shifted_doors):
         cung_data[p]['mon'] = door
 
-    # --- 4. CỬU THẦN (9 Thần Phi Cung) ---
+    # --- 4. CỬU THẦN ---
     for i in range(9):
         p = path_9[i]
         deity_idx = (i - idx_target) % 9
@@ -239,15 +293,15 @@ def tinh_tuan_khong_gio(hoa_giap):
     return [chi_to_cung[dia_chi[(idx_tuan_dau - 2) % 12]], chi_to_cung[dia_chi[(idx_tuan_dau - 1) % 12]]]
 
 # ==========================================
-# 4. GIAO DIỆN LƯỚI CSS SẠCH SẼ 
+# 4. GIAO DIỆN LƯỚI CSS 
 # ==========================================
 def format_stem(stem_str):
     if not stem_str: return ""
-    return stem_str.replace('/', "<span style='margin: 0 4px;'>/</span>")
+    return stem_str
 
 def format_sao(sao_str):
     if not sao_str: return ""
-    return sao_str.replace('/', "<span style='margin: 0 4px;'>/</span>")
+    return sao_str
 
 def render_html_table(cung_data, tk_gio):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
@@ -274,24 +328,16 @@ def render_html_table(cung_data, tk_gio):
         .item-tinh  { grid-column: 1; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
         .item-mon   { grid-column: 1; grid-row: 3; font-size: 15px; color: #222; text-align: left; }
         
-        .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
-        .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; }
+        .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; display: flex; align-items: baseline;}
+        .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: baseline;}
 
-        .center-5 {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            min-height: 85px;
-            font-size: 16px;
-            color: #222;
-            gap: 6px;
-        }
-
+        .luc-than { font-size: 11px; color: #999; margin-left: 6px; font-weight: normal; }
+        
         .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
         .horse-icon { font-size: 14px; font-weight: bold; }
         .void-icon { font-size: 20px; font-weight: normal; line-height: 0.8; margin-top: -2px; }
+        
+        .bottom-left-phitinh { position: absolute; bottom: 3px; left: 5px; font-size: 15px; color: #555; font-weight: bold; }
     </style>
     <table class="qmdj-table">
     """
@@ -301,12 +347,27 @@ def render_html_table(cung_data, tk_gio):
         for p in row:
             d = cung_data[p]
             
+            # --- Xử lý Lục Thân HTML ---
+            lt_thien_html = f"<span class='luc-than'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
+            lt_dia_html = f"<span class='luc-than'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
+            
+            thien_full = f"<span>{format_stem(d['thien'])}</span>{lt_thien_html}"
+            dia_full = f"<span>{format_stem(d['dia'])}</span>{lt_dia_html}"
+            
+            phi_tinh_html = f"<div class='bottom-left-phitinh'>{d['phi_tinh']}</div>"
+            
+            # --- CUNG 5: Ẩn Tinh/Môn/Thần nhưng giữ nguyên Grid Layout để thẳng hàng cung Khảm/Ly ---
             if p == 5:
                 html += f"""
                 <td class="qmdj-td">
-                    <div class="center-5">
-                        <span>{format_stem(d['thien'])}</span>
-                        <span>{format_stem(d['dia'])}</span>
+                    {phi_tinh_html}
+                    <div class="cell-main">
+                        <div class="item-than"></div>
+                        <div class="item-tinh"></div>
+                        <div class="item-mon"></div>
+                        
+                        <div class="item-thien">{thien_full}</div>
+                        <div class="item-dia">{dia_full}</div>
                     </div>
                 </td>"""
                 continue
@@ -319,13 +380,14 @@ def render_html_table(cung_data, tk_gio):
             html += f"""
             <td class="qmdj-td">
                 {indicator_html}
+                {phi_tinh_html}
                 <div class="cell-main">
                     <div class="item-than">{d['than']}</div>
                     <div class="item-tinh">{format_sao(d['sao'])}</div>
                     <div class="item-mon"><span>{d['mon']}</span></div>
                     
-                    <div class="item-thien">{format_stem(d['thien'])}</div>
-                    <div class="item-dia">{format_stem(d['dia'])}</div>
+                    <div class="item-thien">{thien_full}</div>
+                    <div class="item-dia">{dia_full}</div>
                 </div>
             </td>"""
         html += "</tr>"
@@ -363,11 +425,12 @@ day_obj = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
 can_ngay_idx = day_obj.getDayGZ().tg
 can_gio_idx = (can_ngay_idx % 5 * 2 + chi_gio_idx) % 10
 hoa_giap_hien_tai = thien_can[can_gio_idx] + chi_gio
+nhat_chi_hien_tai = dia_chi[day_obj.getDayGZ().dz] # Trích xuất Nhật Chi truyền vào hàm
 
 bazi_dict = {
     'nam': thien_can[day_obj.getYearGZ().tg] + dia_chi[day_obj.getYearGZ().dz],
     'thang': thien_can[day_obj.getMonthGZ().tg] + dia_chi[day_obj.getMonthGZ().dz],
-    'ngay': thien_can[day_obj.getDayGZ().tg] + dia_chi[day_obj.getDayGZ().dz]
+    'ngay': thien_can[day_obj.getDayGZ().tg] + nhat_chi_hien_tai
 }
 
 don, cuc, jq_name, ji_palace, is_nhuan = get_zhirun_ju(actual_date)
@@ -377,7 +440,9 @@ chuoi_cuc = f"飞盘 | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
 tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
-data = lap_que(hoa_giap_hien_tai, don, cuc, ji_palace)
+
+# THỰC THI CHÍNH KÈM NHẬT CHI
+data = lap_que(hoa_giap_hien_tai, nhat_chi_hien_tai, don, cuc, ji_palace)
 
 title = f"<h3 style='margin-bottom:6px; font-family:sans-serif; color: #111; font-weight: 400; font-size: 18px; text-align: center;'>{bazi_chuoi}</h3>"
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: 300; font-size: 15px; text-align: center;'>{chuoi_cuc}</h4>"
