@@ -174,10 +174,10 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
     chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
     can_tuan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
-    # Đổi biến đánh dấu Khố thành strikethrough (gạch ngang)
+    # Đổi cờ báo hiệu thành Kích hình & Nhập khố
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 
                      'phi_tinh': 0, 'lt_thien': '', 'lt_dia': '',
-                     'lt_thien_color': '#555', 'lt_thien_underline': False, 'lt_thien_strikethrough': False} for i in range(1, 10)}
+                     'lt_thien_color': '#555', 'lt_thien_kichhinh': False, 'lt_thien_nhapkho': False} for i in range(1, 10)}
 
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
     quydo_luoshu = [5, 6, 7, 8, 9, 1, 2, 3, 4]
@@ -252,9 +252,9 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         # 2. KIỂM TRA KÍCH HÌNH
         kich_hinh_map = {'戊': 3, '己': 2, '庚': 8, '辛': 9, '壬': 4, '癸': 4}
         if kich_hinh_map.get(can_thien_bay_toi) == p:
-            cung_data[p]['lt_thien_underline'] = True
+            cung_data[p]['lt_thien_kichhinh'] = True
 
-        # 3. KIỂM TRA NHẬP KHỐ (Đổi cờ thành strikethrough)
+        # 3. KIỂM TRA NHẬP KHỐ
         ruku_map = {
             '丙': ('戌', 6), '丁': ('戌', 6), '戊': ('戌', 6), '己': ('戌', 6),
             '庚': ('丑', 8), '辛': ('丑', 8),
@@ -264,7 +264,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         if can_thien_bay_toi in ruku_map:
             kho_chi, kho_cung = ruku_map[can_thien_bay_toi]
             if p == kho_cung or chi_thang == kho_chi:
-                cung_data[p]['lt_thien_strikethrough'] = True
+                cung_data[p]['lt_thien_nhapkho'] = True
         # ==============================================================
 
     # --- 3. BÁT MÔN PHI BÀN ---
@@ -341,13 +341,13 @@ def render_html_table(cung_data, tk_gio):
             margin-left: 5px; 
         }
 
-        /* Khối CSS đặc biệt đẩy Trung Cung ép sát hoàn toàn sang trái */
+        /* Đẩy Trung Cung ép sát trái và CĂN CHUẨN ĐỘ CAO (33px) */
         .cell-center-left {
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
             align-items: flex-start;
-            margin-top: 27px; /* Căn cho bằng chiều cao dòng thứ 2 của các cung khác */
+            margin-top: 33px; 
             margin-left: 5px;
             gap: 6px;
         }
@@ -360,8 +360,6 @@ def render_html_table(cung_data, tk_gio):
         .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
 
         .luc-than-dia { font-size: 11px; color: #555; margin-left: 6px; font-weight: normal; }
-        
-        /* Mặc định nét chữ bình thường (normal) y hệt Lục Thần Địa Bàn */
         .luc-than-thien { font-size: 11px; margin-left: 6px; font-weight: normal; }
         
         .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
@@ -381,23 +379,22 @@ def render_html_table(cung_data, tk_gio):
             # --- Render CSS động cho Lục Thần Thiên Bàn ---
             thien_css_styles = f"color: {d['lt_thien_color']};"
             
-            # Nếu có màu khác màu xám mặc định (#555) tức là CÓ HỢP -> In đậm lên
+            # Nếu có Hợp Hóa thì in đậm
             if d['lt_thien_color'] != '#555':
                 thien_css_styles += " font-weight: bold;"
                 if d['lt_thien_color'] == '#000000':
                     thien_css_styles += " font-weight: 900;" 
             
-            # Xử lý kết hợp nhiều thuộc tính gạch chân (underline) và gạch ngang (line-through)
-            decorations = []
-            if d['lt_thien_underline']:
-                decorations.append("underline")
-            if d['lt_thien_strikethrough']:
-                decorations.append("line-through")
-                
-            if decorations:
-                thien_css_styles += f" text-decoration: {' '.join(decorations)};"
-                if d['lt_thien_underline']:
-                    thien_css_styles += " text-underline-offset: 3px;"
+            # Xử lý nét gạch chân đơn (1) hoặc kép (2)
+            is_kh = d.get('lt_thien_kichhinh', False)
+            is_nk = d.get('lt_thien_nhapkho', False)
+            
+            if is_kh and is_nk:
+                # Vừa Kích Hình, Vừa Nhập Khố -> 2 gạch dưới
+                thien_css_styles += " text-decoration: underline double; text-underline-offset: 3px;"
+            elif is_kh or is_nk:
+                # Bị 1 trong 2 -> 1 gạch dưới
+                thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
             
             lt_thien_html = f"<span class='luc-than-thien' style='{thien_css_styles}'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
             lt_dia_html = f"<span class='luc-than-dia'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
@@ -407,7 +404,6 @@ def render_html_table(cung_data, tk_gio):
             
             phi_tinh_html = f"<div class='bottom-left-phitinh'>{d['phi_tinh']}</div>"
             
-            # --- TRUNG CUNG SỬ DỤNG CLASS CSS MỚI ĐỂ ÉP TRÁI ---
             if p == 5:
                 html += f"""
                 <td class="qmdj-td">
