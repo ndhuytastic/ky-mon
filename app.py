@@ -174,10 +174,10 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
     chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
     can_tuan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
-    # Khởi tạo mặc định: Màu xám đậm (#555) biểu thị trạng thái BÌNH THƯỜNG không hợp hóa
+    # Đổi biến đánh dấu Khố thành strikethrough (gạch ngang)
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 
                      'phi_tinh': 0, 'lt_thien': '', 'lt_dia': '',
-                     'lt_thien_color': '#555', 'lt_thien_underline': False, 'lt_thien_circle': False} for i in range(1, 10)}
+                     'lt_thien_color': '#555', 'lt_thien_underline': False, 'lt_thien_strikethrough': False} for i in range(1, 10)}
 
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
     quydo_luoshu = [5, 6, 7, 8, 9, 1, 2, 3, 4]
@@ -234,7 +234,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) 
 
         # ==============================================================
-        # KIỂM TRA HỢP, KÍCH HÌNH, NHẬP KHỐ (Đọc và thiết lập CSS)
+        # KIỂM TRA HỢP, KÍCH HÌNH, NHẬP KHỐ
         # ==============================================================
         
         # 1. KIỂM TRA HỢP HÓA 
@@ -254,7 +254,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         if kich_hinh_map.get(can_thien_bay_toi) == p:
             cung_data[p]['lt_thien_underline'] = True
 
-        # 3. KIỂM TRA NHẬP KHỐ
+        # 3. KIỂM TRA NHẬP KHỐ (Đổi cờ thành strikethrough)
         ruku_map = {
             '丙': ('戌', 6), '丁': ('戌', 6), '戊': ('戌', 6), '己': ('戌', 6),
             '庚': ('丑', 8), '辛': ('丑', 8),
@@ -264,7 +264,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         if can_thien_bay_toi in ruku_map:
             kho_chi, kho_cung = ruku_map[can_thien_bay_toi]
             if p == kho_cung or chi_thang == kho_chi:
-                cung_data[p]['lt_thien_circle'] = True
+                cung_data[p]['lt_thien_strikethrough'] = True
         # ==============================================================
 
     # --- 3. BÁT MÔN PHI BÀN ---
@@ -340,6 +340,17 @@ def render_html_table(cung_data, tk_gio):
             margin-top: 5px;
             margin-left: 5px; 
         }
+
+        /* Khối CSS đặc biệt đẩy Trung Cung ép sát hoàn toàn sang trái */
+        .cell-center-left {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+            margin-top: 27px; /* Căn cho bằng chiều cao dòng thứ 2 của các cung khác */
+            margin-left: 5px;
+            gap: 6px;
+        }
         
         .item-than  { grid-column: 1 / span 2; grid-row: 1; font-size: 15px; color: #222; text-align: left; }
         .item-tinh  { grid-column: 1; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
@@ -349,7 +360,9 @@ def render_html_table(cung_data, tk_gio):
         .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
 
         .luc-than-dia { font-size: 11px; color: #555; margin-left: 6px; font-weight: normal; }
-        .luc-than-thien { font-size: 11px; margin-left: 6px; font-weight: bold; }
+        
+        /* Mặc định nét chữ bình thường (normal) y hệt Lục Thần Địa Bàn */
+        .luc-than-thien { font-size: 11px; margin-left: 6px; font-weight: normal; }
         
         .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
         .horse-icon { font-size: 14px; font-weight: bold; }
@@ -367,15 +380,24 @@ def render_html_table(cung_data, tk_gio):
             
             # --- Render CSS động cho Lục Thần Thiên Bàn ---
             thien_css_styles = f"color: {d['lt_thien_color']};"
-            if d['lt_thien_color'] == '#000000':
-                thien_css_styles += " font-weight: 900;" # Tăng độ đậm tuyệt đối cho Kim
-                
+            
+            # Nếu có màu khác màu xám mặc định (#555) tức là CÓ HỢP -> In đậm lên
+            if d['lt_thien_color'] != '#555':
+                thien_css_styles += " font-weight: bold;"
+                if d['lt_thien_color'] == '#000000':
+                    thien_css_styles += " font-weight: 900;" 
+            
+            # Xử lý kết hợp nhiều thuộc tính gạch chân (underline) và gạch ngang (line-through)
+            decorations = []
             if d['lt_thien_underline']:
-                thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
+                decorations.append("underline")
+            if d['lt_thien_strikethrough']:
+                decorations.append("line-through")
                 
-            if d['lt_thien_circle']:
-                # Dùng flexbox để mở rộng vòng tròn to rõ ràng, cân tâm chữ
-                thien_css_styles += " border: 1px solid currentColor; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px;"
+            if decorations:
+                thien_css_styles += f" text-decoration: {' '.join(decorations)};"
+                if d['lt_thien_underline']:
+                    thien_css_styles += " text-underline-offset: 3px;"
             
             lt_thien_html = f"<span class='luc-than-thien' style='{thien_css_styles}'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
             lt_dia_html = f"<span class='luc-than-dia'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
@@ -385,15 +407,12 @@ def render_html_table(cung_data, tk_gio):
             
             phi_tinh_html = f"<div class='bottom-left-phitinh'>{d['phi_tinh']}</div>"
             
+            # --- TRUNG CUNG SỬ DỤNG CLASS CSS MỚI ĐỂ ÉP TRÁI ---
             if p == 5:
                 html += f"""
                 <td class="qmdj-td">
                     {phi_tinh_html}
-                    <div class="cell-main">
-                        <div class="item-than" style="visibility:hidden;">值符</div>
-                        <div class="item-tinh" style="visibility:hidden;">天蓬</div>
-                        <div class="item-mon" style="visibility:hidden;">休门</div>
-                        
+                    <div class="cell-center-left">
                         <div class="item-thien">{thien_full}</div>
                         <div class="item-dia">{dia_full}</div>
                     </div>
