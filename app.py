@@ -174,9 +174,10 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
     chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
     can_tuan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
+    # Khởi tạo mặc định: Màu xám đậm (#555) biểu thị trạng thái BÌNH THƯỜNG không hợp hóa
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 
                      'phi_tinh': 0, 'lt_thien': '', 'lt_dia': '',
-                     'lt_thien_color': '#888', 'lt_thien_underline': False, 'lt_thien_circle': False} for i in range(1, 10)}
+                     'lt_thien_color': '#555', 'lt_thien_underline': False, 'lt_thien_circle': False} for i in range(1, 10)}
 
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
     quydo_luoshu = [5, 6, 7, 8, 9, 1, 2, 3, 4]
@@ -233,18 +234,18 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) 
 
         # ==============================================================
-        # KIỂM TRA HỢP, KÍCH HÌNH, NHẬP KHỐ (Đọc và thiết lập hiển thị CSS)
+        # KIỂM TRA HỢP, KÍCH HÌNH, NHẬP KHỐ (Đọc và thiết lập CSS)
         # ==============================================================
         
-        # 1. KIỂM TRA HỢP HÓA (Mã màu tinh chỉnh cực chuẩn)
+        # 1. KIỂM TRA HỢP HÓA 
         combine_map = {
-            '甲': ('己', '#8B4513'), '己': ('甲', '#8B4513'), # Thổ: Nâu đậm (SaddleBrown)
-            '乙': ('庚', '#000000'), '庚': ('乙', '#000000'), # Kim: Đen đậm tuyệt đối
-            '丙': ('辛', '#0000FF'), '辛': ('丙', '#0000FF'), # Thủy: Xanh dương (Blue)
-            '丁': ('壬', '#008000'), '壬': ('丁', '#008000'), # Mộc: Xanh lá cây (Green)
-            '戊': ('癸', '#FF0000'), '癸': ('戊', '#FF0000')  # Hỏa: Đỏ (Red)
+            '甲': ('己', '#8B4513'), '己': ('甲', '#8B4513'), # Thổ: Nâu đậm
+            '乙': ('庚', '#000000'), '庚': ('乙', '#000000'), # Kim: Đen đậm
+            '丙': ('辛', '#1E90FF'), '辛': ('丙', '#1E90FF'), # Thủy: Xanh da trời
+            '丁': ('壬', '#008000'), '壬': ('丁', '#008000'), # Mộc: Xanh lá cây
+            '戊': ('癸', '#FF0000'), '癸': ('戊', '#FF0000')  # Hỏa: Đỏ
         }
-        target_can, hex_color = combine_map.get(can_thien_bay_toi, (None, '#888'))
+        target_can, hex_color = combine_map.get(can_thien_bay_toi, (None, '#555'))
         if target_can in [dia_ban[p], can_thang, can_ngay, can_gio]:
             cung_data[p]['lt_thien_color'] = hex_color
 
@@ -253,7 +254,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         if kich_hinh_map.get(can_thien_bay_toi) == p:
             cung_data[p]['lt_thien_underline'] = True
 
-        # 3. KIỂM TRA NHẬP KHỐ 
+        # 3. KIỂM TRA NHẬP KHỐ
         ruku_map = {
             '丙': ('戌', 6), '丁': ('戌', 6), '戊': ('戌', 6), '己': ('戌', 6),
             '庚': ('丑', 8), '辛': ('丑', 8),
@@ -347,7 +348,7 @@ def render_html_table(cung_data, tk_gio):
         .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
         .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
 
-        .luc-than-dia { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
+        .luc-than-dia { font-size: 11px; color: #555; margin-left: 6px; font-weight: normal; }
         .luc-than-thien { font-size: 11px; margin-left: 6px; font-weight: bold; }
         
         .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
@@ -366,11 +367,15 @@ def render_html_table(cung_data, tk_gio):
             
             # --- Render CSS động cho Lục Thần Thiên Bàn ---
             thien_css_styles = f"color: {d['lt_thien_color']};"
+            if d['lt_thien_color'] == '#000000':
+                thien_css_styles += " font-weight: 900;" # Tăng độ đậm tuyệt đối cho Kim
+                
             if d['lt_thien_underline']:
                 thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
+                
             if d['lt_thien_circle']:
-                # Dùng CSS Flexbox để ép hình tròn to, căng và chữ nằm hoàn hảo ở trung tâm
-                thien_css_styles += " border: 1px solid currentColor; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px;"
+                # Dùng flexbox để mở rộng vòng tròn to rõ ràng, cân tâm chữ
+                thien_css_styles += " border: 1px solid currentColor; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px;"
             
             lt_thien_html = f"<span class='luc-than-thien' style='{thien_css_styles}'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
             lt_dia_html = f"<span class='luc-than-dia'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
