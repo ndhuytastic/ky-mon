@@ -166,7 +166,6 @@ def get_luc_than(can_gio, can_cung):
 # ==========================================
 # 3. THUẬT TOÁN PHI BÀN (TINH - MÔN - THẦN)
 # ==========================================
-# [ĐÃ THÊM] can_thang, can_ngay, chi_thang vào tham số hàm để phục vụ tính Hợp và Khố
 def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_ngay, chi_thang):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
     loai = "阳" if loai_don == "阳遁" else "阴"
@@ -175,7 +174,6 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
     chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
     can_tuan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[chi_tuan]
 
-    # [ĐÃ THÊM] Các cờ (flag) CSS: lt_thien_color, lt_thien_underline, lt_thien_circle
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 
                      'phi_tinh': 0, 'lt_thien': '', 'lt_dia': '',
                      'lt_thien_color': '#888', 'lt_thien_underline': False, 'lt_thien_circle': False} for i in range(1, 10)}
@@ -235,30 +233,27 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) 
 
         # ==============================================================
-        # [ĐÃ THÊM] KHỐI KIỂM TRA HỢP, KÍCH HÌNH, NHẬP KHỐ (KHÔNG SỬA DATA)
+        # KIỂM TRA HỢP, KÍCH HÌNH, NHẬP KHỐ (Đọc và thiết lập hiển thị CSS)
         # ==============================================================
         
-        # 1. KIỂM TRA HỢP HÓA (Đổi màu lục thân)
-        # Bảng tra cứu đối tượng hợp và màu sinh ra:
+        # 1. KIỂM TRA HỢP HÓA (Mã màu tinh chỉnh cực chuẩn)
         combine_map = {
-            '甲': ('己', '#8B4513'), '己': ('甲', '#8B4513'), # Thổ (Nâu đậm)
-            '乙': ('庚', '#222222'), '庚': ('乙', '#222222'), # Kim (Đen đậm)
-            '丙': ('辛', '#1E90FF'), '辛': ('丙', '#1E90FF'), # Thủy (Xanh da trời)
-            '丁': ('壬', '#228B22'), '壬': ('丁', '#228B22'), # Mộc (Xanh lá cây)
-            '戊': ('癸', '#FF0000'), '癸': ('戊', '#FF0000')  # Hỏa (Đỏ)
+            '甲': ('己', '#8B4513'), '己': ('甲', '#8B4513'), # Thổ: Nâu đậm (SaddleBrown)
+            '乙': ('庚', '#000000'), '庚': ('乙', '#000000'), # Kim: Đen đậm tuyệt đối
+            '丙': ('辛', '#0000FF'), '辛': ('丙', '#0000FF'), # Thủy: Xanh dương (Blue)
+            '丁': ('壬', '#008000'), '壬': ('丁', '#008000'), # Mộc: Xanh lá cây (Green)
+            '戊': ('癸', '#FF0000'), '癸': ('戊', '#FF0000')  # Hỏa: Đỏ (Red)
         }
         target_can, hex_color = combine_map.get(can_thien_bay_toi, (None, '#888'))
-        # Kiểm tra xem có hợp với Địa Bàn Can trong cung, hoặc Can Tháng/Ngày/Giờ không
         if target_can in [dia_ban[p], can_thang, can_ngay, can_gio]:
             cung_data[p]['lt_thien_color'] = hex_color
 
-        # 2. KIỂM TRA KÍCH HÌNH (Gạch chân lục thân)
+        # 2. KIỂM TRA KÍCH HÌNH
         kich_hinh_map = {'戊': 3, '己': 2, '庚': 8, '辛': 9, '壬': 4, '癸': 4}
         if kich_hinh_map.get(can_thien_bay_toi) == p:
             cung_data[p]['lt_thien_underline'] = True
 
-        # 3. KIỂM TRA NHẬP KHỐ (Khoanh tròn lục thân)
-        # Map thiên can -> (Chi khố, Cung Lạc Thư chứa chi khố)
+        # 3. KIỂM TRA NHẬP KHỐ 
         ruku_map = {
             '丙': ('戌', 6), '丁': ('戌', 6), '戊': ('戌', 6), '己': ('戌', 6),
             '庚': ('丑', 8), '辛': ('丑', 8),
@@ -267,7 +262,6 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         }
         if can_thien_bay_toi in ruku_map:
             kho_chi, kho_cung = ruku_map[can_thien_bay_toi]
-            # Nhập khố theo Cung Lạc Thư hoặc theo Chi Tháng
             if p == kho_cung or chi_thang == kho_chi:
                 cung_data[p]['lt_thien_circle'] = True
         # ==============================================================
@@ -350,8 +344,8 @@ def render_html_table(cung_data, tk_gio):
         .item-tinh  { grid-column: 1; grid-row: 2; font-size: 15px; color: #222; text-align: left; }
         .item-mon   { grid-column: 1; grid-row: 3; font-size: 15px; color: #222; text-align: left; }
         
-        .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; display: flex; align-items: baseline;}
-        .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: baseline;}
+        .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
+        .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
 
         .luc-than-dia { font-size: 11px; color: #888; margin-left: 6px; font-weight: normal; }
         .luc-than-thien { font-size: 11px; margin-left: 6px; font-weight: bold; }
@@ -370,12 +364,13 @@ def render_html_table(cung_data, tk_gio):
         for p in row:
             d = cung_data[p]
             
-            # --- [ĐÃ THÊM] Render CSS động cho Lục Thần Thiên Bàn ---
+            # --- Render CSS động cho Lục Thần Thiên Bàn ---
             thien_css_styles = f"color: {d['lt_thien_color']};"
             if d['lt_thien_underline']:
-                thien_css_styles += " text-decoration: underline;"
+                thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
             if d['lt_thien_circle']:
-                thien_css_styles += " border: 1px solid currentColor; border-radius: 50%; padding: 0 1px; display: inline-block; line-height: 1.1;"
+                # Dùng CSS Flexbox để ép hình tròn to, căng và chữ nằm hoàn hảo ở trung tâm
+                thien_css_styles += " border: 1px solid currentColor; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px;"
             
             lt_thien_html = f"<span class='luc-than-thien' style='{thien_css_styles}'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
             lt_dia_html = f"<span class='luc-than-dia'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
@@ -455,8 +450,6 @@ can_gio_idx = (can_ngay_idx % 5 * 2 + chi_gio_idx) % 10
 hoa_giap_hien_tai = thien_can[can_gio_idx] + chi_gio
 
 nhat_chi_hien_tai = dia_chi[day_obj.getDayGZ().dz] 
-
-# [ĐÃ THÊM] Truy xuất Tứ Trụ để phục vụ check Hợp Hóa & Nhập Khố
 can_ngay_hien_tai = thien_can[day_obj.getDayGZ().tg]
 can_thang_hien_tai = thien_can[day_obj.getMonthGZ().tg]
 chi_thang_hien_tai = dia_chi[day_obj.getMonthGZ().dz]
@@ -474,8 +467,6 @@ chuoi_cuc = f"飞盘 | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
 tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
-
-# [ĐÃ THÊM] Truyền các Can/Chi lấy được vào hàm lập quẻ
 data = lap_que(hoa_giap_hien_tai, nhat_chi_hien_tai, don, cuc, ji_palace, can_thang_hien_tai, can_ngay_hien_tai, chi_thang_hien_tai)
 
 title = f"<h3 style='margin-bottom:6px; font-family:sans-serif; color: #111; font-weight: 400; font-size: 18px; text-align: center;'>{bazi_chuoi}</h3>"
