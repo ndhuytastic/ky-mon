@@ -356,7 +356,7 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
 
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 530px; min-width: 400px; height: 530px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 510px; min-width: 400px; height: 510px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 10px; }
         
         .cell-main {
@@ -516,7 +516,7 @@ qimen_board_html = render_html_table(data, tk_gio, toan_ban_st, cung_st, cung_3_
 
 combined_html = f"""
     <div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;">
-        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 530px;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">
             {title}
             {sub_title}
             {qimen_board_html}
