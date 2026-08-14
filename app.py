@@ -437,6 +437,138 @@ def render_html_table(cung_data, tk_gio):
     return html
 
 # ==========================================
+# MODULE ĐỘC LẬP: PHÂN TÍCH CÁCH CỤC & CÁT HUNG KỲ MÔN
+# ==========================================
+def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
+    toan_ban_status = []
+    cung_status = {i: [] for i in range(1, 10)}     # Chứa Tuple (Tên cách cục, màu sắc)
+    cung_3_elements = {i: [] for i in range(1, 10)} # Chứa 3 chuỗi tổ hợp
+
+    # --- TỪ ĐIỂN CÁT HUNG ---
+    than_cung_data = {
+        '值符': {1:'吉', 2:'吉', 3:'吉', 4:'吉', 5:'凶', 6:'吉', 7:'吉', 8:'吉', 9:'吉'},
+        '螣蛇': {1:'凶', 2:'凶', 3:'凶', 4:'凶', 5:'凶', 6:'凶', 7:'凶', 8:'凶', 9:'凶'},
+        '太阴': {1:'吉', 2:'吉', 3:'吉', 4:'吉', 5:'凶', 6:'吉', 7:'吉', 8:'吉', 9:'吉'},
+        '六合': {1:'吉', 2:'吉', 3:'吉', 4:'吉', 5:'凶', 6:'吉', 7:'吉', 8:'吉', 9:'吉'},
+        '勾陈': {1:'凶', 2:'凶', 3:'凶', 4:'凶', 5:'凶', 6:'凶', 7:'凶', 8:'凶', 9:'凶'},
+        '朱雀': {1:'凶', 2:'凶', 3:'凶', 4:'凶', 5:'凶', 6:'凶', 7:'凶', 8:'凶', 9:'凶'},
+        '九地': {1:'吉', 2:'吉', 3:'吉', 4:'吉', 5:'凶', 6:'吉', 7:'吉', 8:'吉', 9:'吉'},
+        '九天': {1:'吉', 2:'吉', 3:'吉', 4:'吉', 5:'凶', 6:'吉', 7:'吉', 8:'吉', 9:'吉'},
+        '太常': {1:'吉', 2:'凶', 3:'凶', 4:'吉', 5:'凶', 6:'凶', 7:'凶', 8:'吉', 9:'吉'}
+    }
+    mon_sao_data = {
+        '休门': {'天蓬':'凶', '天芮':'吉', '天冲':'吉', '天辅':'吉', '天禽':'凶', '天心':'吉', '天柱':'吉', '天任':'吉', '天英':'凶'},
+        '生门': {'天蓬':'吉', '天芮':'凶', '天冲':'吉', '天辅':'吉', '天禽':'凶', '天心':'吉', '天柱':'吉', '天任':'凶', '天英':'吉'},
+        '伤门': {'天蓬':'凶', '天芮':'凶', '天冲':'凶', '天辅':'凶', '天禽':'凶', '天心':'凶', '天柱':'凶', '天任':'凶', '天英':'凶'},
+        '杜门': {'天蓬':'凶', '天芮':'凶', '天冲':'凶', '天辅':'凶', '天禽':'凶', '天心':'凶', '天柱':'凶', '天任':'凶', '天英':'凶'},
+        '景门': {'天蓬':'凶', '天芮':'吉', '天冲':'吉', '天辅':'吉', '天禽':'凶', '天心':'吉', '天柱':'吉', '天任':'吉', '天英':'凶'},
+        '死门': {'天蓬':'凶', '天芮':'凶', '天冲':'凶', '天辅':'凶', '天禽':'凶', '天心':'凶', '天柱':'凶', '天任':'凶', '天英':'凶'},
+        '惊门': {'天蓬':'凶', '天芮':'凶', '天冲':'凶', '天辅':'凶', '天禽':'凶', '天心':'凶', '天柱':'凶', '天任':'凶', '天英':'凶'},
+        '开门': {'天蓬':'吉', '天芮':'吉', '天冲':'吉', '天辅':'凶', '天禽':'凶', '天心':'凶', '天柱':'吉', '天任':'吉', '天英':'吉'}
+    }
+    can_can_data = {
+        '甲': {'甲':'吉', '乙':'吉', '丙':'吉', '丁':'吉', '戊':'凶', '己':'吉', '庚':'大凶', '辛':'凶', '壬':'凶', '癸':'吉'},
+        '乙': {'甲':'吉', '乙':'凶', '丙':'吉', '丁':'吉', '戊':'吉', '己':'吉', '庚':'凶', '辛':'大凶', '壬':'吉', '癸':'凶'},
+        '丙': {'甲':'吉', '乙':'吉', '丙':'凶', '丁':'吉', '戊':'吉', '己':'吉', '庚':'大凶', '辛':'吉', '壬':'吉', '癸':'凶'},
+        '丁': {'甲':'吉', '乙':'吉', '丙':'吉', '丁':'吉', '戊':'吉', '己':'凶', '庚':'吉', '辛':'凶', '壬':'吉', '癸':'大凶'},
+        '戊': {'甲':'凶', '乙':'吉', '丙':'吉', '丁':'吉', '戊':'凶', '己':'凶', '庚':'凶', '辛':'凶', '壬':'吉', '癸':'凶'},
+        '己': {'甲':'凶', '乙':'吉', '丙':'凶', '丁':'凶', '戊':'吉', '己':'凶', '庚':'凶', '辛':'凶', '壬':'凶', '癸':'凶'},
+        '庚': {'甲':'大凶', '乙':'凶', '丙':'大凶', '丁':'吉', '戊':'凶', '己':'大凶', '庚':'大凶', '辛':'凶', '壬':'大凶', '癸':'大凶'},
+        '辛': {'甲':'凶', '乙':'大凶', '丙':'凶', '丁':'吉', '戊':'凶', '己':'凶', '庚':'凶', '辛':'凶', '壬':'凶', '癸':'凶'},
+        '壬': {'甲':'凶', '乙':'凶', '丙':'凶', '丁':'吉', '戊':'吉', '己':'凶', '庚':'凶', '辛':'吉', '壬':'凶', '癸':'凶'},
+        '癸': {'甲':'吉', '乙':'凶', '丙':'吉', '丁':'大凶', '戊':'吉', '己':'凶', '庚':'大凶', '辛':'凶', '壬':'凶', '癸':'凶'}
+    }
+
+    # --- A. TOÀN BÀN & THỜI GIAN (Hiển thị Trung Cung) ---
+    ngu_bat_ngo = {'甲':'庚', '乙':'辛', '丙':'壬', '丁':'癸', '戊':'甲', '己':'乙', '庚':'丙', '辛':'丁', '壬':'戊', '癸':'己'}
+    if ngu_bat_ngo.get(can_ngay) == can_gio: toan_ban_status.append("五不遇时")
+
+    sao_goc = {1:"天蓬", 2:"天芮", 3:"天冲", 4:"天辅", 5:"天禽", 6:"天心", 7:"天柱", 8:"天任", 9:"天英"}
+    mon_goc = {1:"休门", 2:"死门", 3:"伤门", 4:"杜门", 6:"开门", 7:"惊门", 8:"生门", 9:"景门"}
+    doi_xung = {1:9, 2:8, 3:7, 4:6, 6:4, 7:3, 8:2, 9:1}
+    
+    sao_phuc = sao_phan = mon_phuc = mon_phan = True
+    for p in [1, 2, 3, 4, 6, 7, 8, 9]:
+        d = cung_data[p]
+        if d['sao'] != sao_goc[p]: sao_phuc = False
+        if d['mon'] != mon_goc[p]: mon_phuc = False
+        if d['sao'] != sao_goc[doi_xung[p]]: sao_phan = False
+        if d['mon'] != mon_goc[doi_xung[p]]: mon_phan = False
+    if sao_phuc: toan_ban_status.append("九星伏吟")
+    if mon_phuc: toan_ban_status.append("八门伏吟")
+    if sao_phan: toan_ban_status.append("九星反吟")
+    if mon_phan: toan_ban_status.append("八门反吟")
+
+    # --- B. XÉT TỪNG CUNG (8 Cung Xung Quanh) ---
+    for p, d in cung_data.items():
+        if p == 5: continue 
+        
+        # 1. THAY THẾ GIÁP ẨN TRONG LỤC NGHI
+        t_can_real = d['thien']
+        d_can_real = d['dia']
+        t_can = '甲' if t_can_real == can_tuan else t_can_real
+        d_can = '甲' if d_can_real == can_tuan else d_can_real
+
+        mon = d['mon']
+        sao = d['sao']
+        than = d['than']
+        phi_tinh = d['phi_tinh'] 
+
+        # 2. XÉT CÁC CÁCH CỤC
+        # (A) Nhóm Cát (Màu Đỏ: #CC0000)
+        if t_can == '甲' and d_can == '丙': cung_status[p].append(("青竜返首", "#CC0000"))
+        if t_can == '丙' and d_can == '甲': cung_status[p].append(("飛鳥跌穴", "#CC0000"))
+        if truc_su_door and t_can == '丁' and mon == truc_su_door: cung_status[p].append(("玉女守門", "#CC0000"))
+        if t_can == '乙' and p == 3: cung_status[p].append(("乙奇昇殿", "#CC0000"))
+        if t_can == '丙' and p == 9: cung_status[p].append(("丙奇昇殿", "#CC0000"))
+        if t_can == '丁' and p == 9: cung_status[p].append(("丁奇昇殿", "#CC0000"))
+        if t_can == '乙' and d_can == '己': cung_status[p].append(("乙奇得使", "#CC0000"))
+        if t_can == '丙' and d_can == '戊': cung_status[p].append(("丙奇得使", "#CC0000"))
+        if t_can == '丁' and d_can == '壬': cung_status[p].append(("丁奇得使", "#CC0000"))
+        
+        if t_can == '丙' and d_can == '戊' and mon == "生门": cung_status[p].append(("天遁", "#CC0000"))
+        if t_can == '乙' and d_can == '己' and mon == "开门": cung_status[p].append(("地遁", "#CC0000"))
+        if t_can == '丁' and mon == "休门" and than == "太阴": cung_status[p].append(("人遁", "#CC0000"))
+        if t_can == '丙' and mon == "生门" and than == "九天": cung_status[p].append(("神遁", "#CC0000"))
+        if t_can == '丁' and mon == "开门" and than == "九地": cung_status[p].append(("鬼遁", "#CC0000"))
+        if (t_can == '乙' and mon == "开门") or (t_can == '乙' and p == 6 and mon in ["休门", "生门"]): cung_status[p].append(("竜遁", "#CC0000"))
+        if (t_can == '乙' and mon == "生门") or (t_can == '乙' and p == 8 and mon in ["休门", "开门"]): cung_status[p].append(("虎遁", "#CC0000"))
+        if t_can == '乙' and p == 4 and mon in ["休门", "生门", "开门"]: cung_status[p].append(("風遁", "#CC0000"))
+        if t_can == '乙' and p == 2 and mon in ["休门", "生门", "开门"]: cung_status[p].append(("雲遁", "#CC0000"))
+
+        # (B) Nhóm Hung (Màu Đen: #000000)
+        if (t_can == '戊' and p == 3) or (t_can == '己' and p == 2) or \
+           (t_can == '庚' and p == 8) or (t_can == '辛' and p == 9) or \
+           (t_can == '壬' and p == 4) or (t_can == '癸' and p == 4): cung_status[p].append(("六儀擊刑", "#000000"))
+        if (t_can == '乙' and p == 2) or (t_can in ['丙', '丁'] and p == 6): cung_status[p].append(("三奇入墓", "#000000"))
+        if (t_can == '丙' and d_can == can_ngay) or (t_can == can_ngay and d_can == '丙'): cung_status[p].append(("悖格", "#000000"))
+        if t_can == can_ngay and d_can == '庚': cung_status[p].append(("飛干", "#000000"))
+        if t_can == '庚' and d_can == can_ngay: cung_status[p].append(("伏干", "#000000"))
+        
+        if t_can == d_can and t_can not in ['甲', '丁']: cung_status[p].append(("干伏吟", "#000000"))
+        if (t_can, d_can) in [('戊','辛'), ('辛','戊'), ('己','壬'), ('壬','己'), ('庚','癸'), ('癸','庚')]: cung_status[p].append(("干反吟", "#000000")) # Tự động sửa 1 lỗi lặp chữ
+        
+        mon_bach_rules = {"休门":[9], "伤门":[2, 8], "杜门":[2, 8], "景门":[6, 7], "生门":[1], "死门":[1], "开门":[3, 4], "惊门":[3, 4]}
+        if p in mon_bach_rules.get(mon, []): cung_status[p].append(("门迫", "#000000"))
+            
+        # Thời Mộ (Lưu trong logic, nhưng KHÔNG đưa vào hiển thị theo yêu cầu)
+        # mo_cung = {'丙': 6, '丁': 6, '戊': 6, '己': 6, '庚': 8, '辛': 8, '壬': 4, '癸': 4, '乙': 2}
+        # if t_can_real == can_gio and mo_cung.get(can_gio) == p: 
+        #    pass 
+
+        # 3. BA TỔ HỢP CÁT HUNG
+        if t_can in can_can_data and d_can in can_can_data[t_can]:
+            cung_3_elements[p].append(f"天x地: {can_can_data[t_can][d_can]}")
+        
+        if mon in mon_sao_data and sao in mon_sao_data[mon]:
+            cung_3_elements[p].append(f"星x门: {mon_sao_data[mon][sao]}")
+            
+        if than in than_cung_data and phi_tinh in than_cung_data[than]:
+            cung_3_elements[p].append(f"神x宫: {than_cung_data[than][phi_tinh]}")
+
+    return toan_ban_status, cung_status, cung_3_elements
+
+# ==========================================
 # 5. GIAO DIỆN STREAMLIT
 # ==========================================
 def get_current_vn_time():
