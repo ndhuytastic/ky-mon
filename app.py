@@ -185,10 +185,8 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
     curr_num = center_num
     for p in quydo_luoshu:
         cung_data[p]['phi_tinh'] = curr_num
-        if loai == "阳":
-            curr_num = (curr_num % 9) + 1 
-        else:
-            curr_num = 9 if curr_num == 1 else curr_num - 1 
+        # Chỉ phi thuận: Luôn cộng thêm 1, đi hết 9 thì vòng lại 1
+        curr_num = (curr_num % 9) + 1 
 
     # --- 1. ĐỊA BÀN ---
     dia_ban = {}
