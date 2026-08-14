@@ -332,11 +332,16 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
 
         # 3. BA TỔ HỢP CÁT HUNG
         if t_can in can_can_data and d_can in can_can_data[t_can]:
-            cung_3_elements[p].append(f"天x地: {can_can_data[t_can][d_can]}")
+            kq_can_can = can_can_data[t_can][d_can]
+            if can_tuan == '庚' and (t_can_real == '庚' or d_can_real == '庚'):
+                kq_can_can = '大凶'
+            cung_3_elements[p].append(kq_can_can)
+            
         if mon in mon_sao_data and sao in mon_sao_data[mon]:
-            cung_3_elements[p].append(f"星x门: {mon_sao_data[mon][sao]}")
+            cung_3_elements[p].append(mon_sao_data[mon][sao])
+            
         if than in than_cung_data and phi_tinh in than_cung_data[than]:
-            cung_3_elements[p].append(f"神x宫: {than_cung_data[than][phi_tinh]}")
+            cung_3_elements[p].append(than_cung_data[than][phi_tinh])
 
     return toan_ban_status, cung_status, cung_3_elements
 
@@ -351,7 +356,7 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
 
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 550px; min-width: 500px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 530px; min-width: 400px; height: 530px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 10px; }
         
         .cell-main {
@@ -379,8 +384,7 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
         .right-panel { position: absolute; right: 5px; top: 22px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px; font-family: sans-serif; }
         .combo-item { color: #555; font-weight: 500; margin-bottom: 2px; }
         .spacer { height: 8px; }
-        .formation-item { margin-bottom: 2px; font-weight: bold; letter-spacing: 1px; }
-        .center-right-panel { position: absolute; right: 5px; top: 33px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px; font-weight: bold; color: #000; letter-spacing: 1px; }
+        .formation-item { margin-bottom: 2px; font-weight: bold; letter-spacing: 1px; color: #000; }
     </style>
     <table class="qmdj-table">
     """
@@ -406,11 +410,13 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
             
             if p == 5:
                 toan_ban_html = "".join([f"<div class='formation-item'>{c}</div>" for c in toan_ban_status])
-                center_panel_html = f"<div class='center-right-panel'>{toan_ban_html}</div>"
+                # Mock combos tàng hình để tạo khoảng trống hệt như 8 cung khác, giúp Cách Cục ở Trung Cung thẳng hàng
+                mock_combos = "".join(["<div class='combo-item' style='visibility:hidden;'>吉</div>" for _ in range(3)])
+                right_panel_html = f"<div class='right-panel'>{mock_combos}<div class='spacer'></div>{toan_ban_html}</div>"
                 html += f"""
                 <td class="qmdj-td">
                     {phi_tinh_html}
-                    {center_panel_html}
+                    {right_panel_html}
                     <div class="cell-center-left">
                         <div class="item-thien">{thien_full}</div>
                         <div class="item-dia">{dia_full}</div>
@@ -487,7 +493,7 @@ bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}
 tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
 data = lap_que(hoa_giap_hien_tai, nhat_chi_hien_tai, don, cuc, ji_palace, can_thang_hien_tai, can_ngay_hien_tai, chi_thang_hien_tai)
 
-# --- KHỐI TÍNH TOÁN CÁCH CỤC MỚI ---
+# --- KHỐI TÍNH TOÁN CÁCH CỤC ---
 can_gio_phai, chi_gio_phai = hoa_giap_hien_tai[0], hoa_giap_hien_tai[1]
 idx_can, idx_chi = thien_can.index(can_gio_phai), dia_chi.index(chi_gio_phai)
 chi_tuan = dia_chi[(idx_chi - idx_can) % 12]
@@ -510,7 +516,7 @@ qimen_board_html = render_html_table(data, tk_gio, toan_ban_st, cung_st, cung_3_
 
 combined_html = f"""
     <div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;">
-        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 550px;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 530px;">
             {title}
             {sub_title}
             {qimen_board_html}
