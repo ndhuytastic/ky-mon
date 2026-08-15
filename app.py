@@ -66,7 +66,7 @@ def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
     F_past = get_phu_dau(T_tram_date)
     chao_shen = (T_tram_date - F_past).days
     
-    is_leap = (chao_shen >= 9)
+    is_leap = (chao_shen >= 5)
     Start_Line = F_past
 
     # Khắc phục triệt để lỗi đệ quy và định danh trạm trước đó
