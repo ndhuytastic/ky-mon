@@ -158,7 +158,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
 
     cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 
                      'phi_tinh': 0, 'lt_thien': '', 'lt_dia': '',
-                     'lt_thien_color': '#555', 'lt_thien_kichhinh': False} for i in range(1, 10)}
+                     'lt_thien_color': '#555', 'lt_thien_kichhinh': False, 'lt_thien_nhapkho': False} for i in range(1, 10)}
 
     # PHI TINH TRUNG CUNG - LUÔN PHI THUẬN
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
@@ -214,8 +214,15 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         target_can, hex_color = combine_map.get(can_thien_bay_toi, (None, '#555'))
         if target_can in [dia_ban[p], can_thang, can_ngay, can_gio]: cung_data[p]['lt_thien_color'] = hex_color
 
+        # Tính Kích Hình
         kich_hinh_map = {'戊': 3, '己': 2, '庚': 8, '辛': 9, '壬': 4, '癸': 4}
         if kich_hinh_map.get(can_thien_bay_toi) == p: cung_data[p]['lt_thien_kichhinh'] = True
+            
+        # KHÔI PHỤC: Tính Nhập Mộ
+        ruku_map = {'丙':('戌', 6), '丁':('戌', 6), '戊':('戌', 6), '己':('戌', 6), '庚':('丑', 8), '辛':('丑', 8), '壬':('辰', 4), '癸':('辰', 4), '甲':('未', 2), '乙':('未', 2)}
+        if can_thien_bay_toi in ruku_map:
+            kho_chi, kho_cung = ruku_map[can_thien_bay_toi]
+            if p == kho_cung or chi_thang == kho_chi: cung_data[p]['lt_thien_nhapkho'] = True
 
     # --- 3. BÁT MÔN PHI BÀN ---
     door_native_dict = {1: "休门", 2: "死门", 3: "伤门", 4: "杜门", 6: "开门", 7: "惊门", 8: "生门", 9: "景门"}
@@ -399,13 +406,19 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
             d = cung_data[p]
             phi_tinh_html = f"<div class='bottom-left-phitinh'>{d['phi_tinh']}</div>"
             
+            # Tính toán CSS gạch chân cho Lục Thân
             thien_css_styles = f"color: {d['lt_thien_color']};"
             if d['lt_thien_color'] != '#555':
                 thien_css_styles += " font-weight: bold;"
                 if d['lt_thien_color'] == '#000000': thien_css_styles += " font-weight: 900;" 
             
             is_kh = d.get('lt_thien_kichhinh', False)
-            if is_kh: thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
+            is_nk = d.get('lt_thien_nhapkho', False) # KHÔI PHỤC BIẾN NÀY
+            
+            if is_kh and is_nk: 
+                thien_css_styles += " text-decoration: underline double; text-underline-offset: 3px;"
+            elif is_kh or is_nk: 
+                thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
             
             lt_thien_html = f"<span class='luc-than-thien' style='{thien_css_styles}'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
             lt_dia_html = f"<span class='luc-than-dia'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
