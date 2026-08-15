@@ -333,8 +333,6 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         # 3. BA TỔ HỢP CÁT HUNG
         if t_can in can_can_data and d_can in can_can_data[t_can]:
             kq_can_can = can_can_data[t_can][d_can]
-            if can_tuan == '庚' and (t_can_real == '庚' or d_can_real == '庚'):
-                kq_can_can = '大凶'
             cung_3_elements[p].append(kq_can_can)
             
         if mon in mon_sao_data and sao in mon_sao_data[mon]:
