@@ -210,7 +210,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         cung_data[p]['thien'] = can_thien_bay_toi
         cung_data[p]['lt_thien'] = get_luc_than(can_gio, can_thien_bay_toi) 
 
-        combine_map = {'甲':('己','#8B4513'), '己':('甲','#8B4513'), '乙':('庚','#000000'), '庚':('乙','#000000'), '丙':('辛','#1E90FF'), '辛':('丙','#1E90FF'), '丁':('壬','#008000'), '壬':('丁','#008000'), '戊':('癸','#FF0000'), '癸':('戊','#FF0000')}
+        combine_map = {'甲':('己','#8B4513'), '己':('甲','#8B4513'), '乙':('庚','#808080'), '庚':('乙','#808080'), '丙':('辛','#1E90FF'), '辛':('丙','#1E90FF'), '丁':('壬','#008000'), '壬':('丁','#008000'), '戊':('癸','#FF0000'), '癸':('戊','#FF0000')}
         target_can, hex_color = combine_map.get(can_thien_bay_toi, (None, '#555'))
         if target_can in [dia_ban[p], can_thang, can_ngay, can_gio]: cung_data[p]['lt_thien_color'] = hex_color
 
@@ -358,20 +358,20 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         if rank == "3": return 2
         return 1
 
-    # Sắp xếp Trung cung
+    # Sắp xếp Trung cung (ĐÃ SỬA: Đưa số (Rank) lên trước)
     toan_ban_status.sort(key=get_rank_weight)
     for i in range(len(toan_ban_status)):
         raw_name = toan_ban_status[i]
         if raw_name in FORMATION_RANKS:
-            toan_ban_status[i] = f"{raw_name} <span style='font-size: 0.8em; font-weight: normal; color: #666;'>({FORMATION_RANKS[raw_name]})</span>"
+            toan_ban_status[i] = f"<span style='font-size: 0.8em; font-weight: normal; color: #666;'>({FORMATION_RANKS[raw_name]})</span> {raw_name}"
 
-    # Sắp xếp 8 cung còn lại
+    # Sắp xếp 8 cung còn lại (ĐÃ SỬA: Đưa số (Rank) lên trước)
     for p in cung_status:
         cung_status[p].sort(key=lambda x: get_rank_weight(x[0]))
         formatted_list = []
         for raw_name, color in cung_status[p]:
             if raw_name in FORMATION_RANKS:
-                display_name = f"{raw_name} <span style='font-size: 0.8em; font-weight: normal; color: #666;'>({FORMATION_RANKS[raw_name]})</span>"
+                display_name = f"<span style='font-size: 0.8em; font-weight: normal; color: #666;'>({FORMATION_RANKS[raw_name]})</span> {raw_name}"
             else:
                 display_name = raw_name
             formatted_list.append((display_name, color))
@@ -390,7 +390,7 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
 
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 510px; min-width: 400px; height: 450px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 510px; min-width: 400px; height: 420px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 10px; }
         
         .cell-main {
@@ -433,7 +433,8 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
             thien_css_styles = f"color: {d['lt_thien_color']};"
             if d['lt_thien_color'] != '#555':
                 thien_css_styles += " font-weight: bold;"
-                if d['lt_thien_color'] == '#000000': thien_css_styles += " font-weight: 900;" 
+                # ĐÃ SỬA: Nhận diện màu Xám #808080 (của hợp Kim) thay vì Đen #000000 để làm nét chữ đậm hơn
+                if d['lt_thien_color'] == '#808080': thien_css_styles += " font-weight: 900;" 
             
             is_kh = d.get('lt_thien_kichhinh', False)
             is_nk = d.get('lt_thien_nhapkho', False) 
