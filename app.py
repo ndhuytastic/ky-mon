@@ -591,3 +591,150 @@ combined_html = f"""
 """
 
 st.components.v1.html(combined_html, height=700, scrolling=True)
+
+# ==========================================
+# 7. MODULE SCAN / LỌC TÌM KIẾM THỜI ĐIỂM
+# ==========================================
+st.markdown("---")
+st.markdown("<h3 style='text-align: center; color: #2E86C1;'>🔍 MODULE SCAN: TÌM KIẾM THỜI ĐIỂM TỐT</h3>", unsafe_allow_html=True)
+
+# Khai báo dữ liệu cho các bộ lọc
+huong_list = {"": None, "N (Bắc - Khảm)": 1, "NE (Đông Bắc - Cấn)": 8, "E (Đông - Chấn)": 3, "SE (Đông Nam - Tốn)": 4, 
+              "S (Nam - Ly)": 9, "SW (Tây Nam - Khôn)": 2, "W (Tây - Đoài)": 7, "NW (Tây Bắc - Càn)": 6}
+can_list = ["", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+mon_list = ["", "休门", "生门", "伤门", "杜门", "景门", "死门", "惊门", "开门"]
+tinh_list = ["", "天蓬", "天芮", "天冲", "天辅", "天禽", "天心", "天柱", "天任", "天英"]
+than_list = ["", "值符", "螣蛇", "太阴", "六合", "勾陈", "太常", "朱雀", "九地", "九天"]
+cat_cach_list = ["", "青竜返首", "飛鳥跌穴", "玉女守門", "乙奇昇殿", "丙奇昇殿", "丁奇昇殿", "乙奇得使", "丙奇得使", "丁奇得使", 
+                 "天遁", "地遁", "人遁", "神遁", "鬼遁", "竜遁", "虎遁", "風遁", "雲遁"]
+
+# Thiết kế giao diện lưới chọn bộ lọc
+with st.container():
+    c1, c2, c3 = st.columns(3)
+    loc_huong = c1.selectbox("1. Hướng (Cung)", options=list(huong_list.keys()))
+    loc_thien_can = c2.selectbox("2. Thiên Bàn Can", options=can_list)
+    loc_dia_can = c3.selectbox("3. Địa Bàn Can", options=can_list)
+    
+    c4, c5, c6 = st.columns(3)
+    loc_mon = c4.selectbox("4. Bát Môn", options=mon_list)
+    loc_tinh = c5.selectbox("5. Cửu Tinh", options=tinh_list)
+    loc_than = c6.selectbox("6. Cửu Thần", options=than_list)
+    
+    c7, c8, c9 = st.columns(3)
+    loc_cat_cach = c7.selectbox("7. Cát Cách (Tốt)", options=cat_cach_list)
+    # (Để dành 2 ô trống cho 2 bộ lọc sau này bạn muốn thêm)
+    # loc_tuong_lai_1 = c8.selectbox("8. Bộ Lọc 8", options=[""])
+    # loc_tuong_lai_2 = c9.selectbox("9. Bộ Lọc 9", options=[""])
+
+# Hàm hỗ trợ: Làm tròn thời gian hiện tại về đầu giờ âm lịch (ví dụ: 14:15 -> 13:00 giờ Mùi)
+def get_shichen_start(dt):
+    h = dt.hour
+    start_h = h if h % 2 != 0 else h - 1
+    if start_h < 0:
+        return (dt - timedelta(days=1)).replace(hour=23, minute=0, second=0, microsecond=0)
+    return dt.replace(hour=start_h, minute=0, second=0, microsecond=0)
+
+# Hàm kiểm tra xem 1 cung có thỏa mãn tất cả tiêu chí lọc không
+def check_cung_match(d_cung, status_cung, f_thien, f_dia, f_mon, f_tinh, f_than, f_catcach):
+    if f_thien and d_cung['thien'] != f_thien: return False
+    if f_dia and d_cung['dia'] != f_dia: return False
+    if f_mon and d_cung['mon'] != f_mon: return False
+    if f_tinh and d_cung['sao'] != f_tinh: return False
+    if f_than and d_cung['than'] != f_than: return False
+    if f_catcach:
+        # Kiểm tra xem tên cát cách có xuất hiện trong danh sách cung_status không (vì cung_status chứa cả mã HTML)
+        if not any(f_catcach in item[0] for item in status_cung):
+            return False
+    return True
+
+if st.button("🚀 Quét 10 Thời Điểm Thỏa Mãn", type="primary", use_container_width=True):
+    with st.spinner('Đang dùng thuật toán quét can chi các ngày tới...'):
+        results = []
+        # Bắt đầu tính từ đầu mốc giờ âm lịch hiện tại đang hiển thị trên giao diện
+        current_scan_dt = get_shichen_start(user_dt)
+        max_shichen_limit = 4320 # Giới hạn vòng lặp khoảng 1 năm (đề phòng chọn tổ hợp không bao giờ tồn tại)
+        loops = 0
+        
+        while len(results) < 10 and loops < max_shichen_limit:
+            loops += 1
+            # Bước sang giờ tiếp theo (cộng 2 tiếng)
+            current_scan_dt += timedelta(hours=2)
+            
+            # Tính toán lại Lịch Can Chi cho thời điểm quét
+            if current_scan_dt.hour >= 23:
+                s_date = current_scan_dt.date() + timedelta(days=1)
+                c_gio_idx = 0 
+            else:
+                s_date = current_scan_dt.date()
+                c_gio_idx = (current_scan_dt.hour + 1) // 2 % 12
+                
+            c_gio = dia_chi[c_gio_idx]
+            s_obj = sxtwl.fromSolar(s_date.year, s_date.month, s_date.day)
+            
+            c_ngay_idx = s_obj.getDayGZ().tg
+            can_gio_idx_scan = (c_ngay_idx % 5 * 2 + c_gio_idx) % 10
+            hg_gio_scan = thien_can[can_gio_idx_scan] + c_gio
+            
+            nc_scan = dia_chi[s_obj.getDayGZ().dz] 
+            cn_scan = thien_can[s_obj.getDayGZ().tg]
+            ct_scan = thien_can[s_obj.getMonthGZ().tg]
+            cht_scan = dia_chi[s_obj.getMonthGZ().dz]
+            
+            # Lập cục
+            s_don, s_cuc, _, s_ji, _ = get_zhirun_ju(s_date)
+            
+            # Lập Quẻ Phi Bàn
+            scan_data = lap_que(hg_gio_scan, nc_scan, s_don, s_cuc, s_ji, ct_scan, cn_scan, cht_scan)
+            
+            # Phân tích Cát Hung (Chỉ cần mượn module 4 để lấy status)
+            idx_c_scan, idx_ch_scan = thien_can.index(hg_gio_scan[0]), dia_chi.index(hg_gio_scan[1])
+            tuan_scan = dia_chi[(idx_ch_scan - idx_c_scan) % 12]
+            can_tuan_scan = {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[tuan_scan]
+            
+            ts_door_scan = None
+            for p, d in scan_data.items():
+                if p != 5 and d['dia'] == can_tuan_scan:
+                    ts_door_scan = d['mon']
+                    break
+            if not ts_door_scan and s_ji in scan_data: ts_door_scan = scan_data[s_ji]['mon']
+            
+            tb_st, cung_st, _ = qimen_analyzer(scan_data, cn_scan, hg_gio_scan[0], can_tuan_scan, ts_door_scan)
+            
+            # TIẾN HÀNH ĐỐI CHIẾU VỚI CÁC BỘ LỌC
+            is_match = False
+            target_palace = huong_list[loc_huong]
+            
+            # Nếu người dùng có chọn cụ thể 1 Hướng
+            if target_palace:
+                if target_palace != 5: # Bỏ qua trung cung vì ko có môn/tinh
+                    is_match = check_cung_match(scan_data[target_palace], cung_st[target_palace], loc_thien_can, loc_dia_can, loc_mon, loc_tinh, loc_than, loc_cat_cach)
+            
+            # Nếu người dùng KHÔNG chọn Hướng (Quét xem có cung nào thỏa mãn không)
+            else:
+                for p in range(1, 10):
+                    if p == 5: continue
+                    if check_cung_match(scan_data[p], cung_st[p], loc_thien_can, loc_dia_can, loc_mon, loc_tinh, loc_than, loc_cat_cach):
+                        is_match = True
+                        target_palace = p # Lưu lại cung thỏa mãn để hiển thị
+                        break
+            
+            # Nếu tìm thấy, lưu vào kết quả
+            if is_match:
+                end_scan_dt = current_scan_dt + timedelta(hours=2, minutes=-1) # Tính tới 59 phút
+                time_str = f"{current_scan_dt.strftime('%d/%m/%Y %H:00')} - {end_scan_dt.strftime('%H:59')}"
+                can_chi_str = f"Ngày {cn_scan}{nc_scan} - Giờ {hg_gio_scan}"
+                
+                # Tìm tên Cung tương ứng
+                ten_cung = [k for k, v in huong_list.items() if v == target_palace][0]
+                results.append((time_str, can_chi_str, ten_cung))
+
+        # Hiển thị kết quả
+        if len(results) > 0:
+            st.success(f"✅ Đã tìm thấy {len(results)} thời điểm thỏa mãn yêu cầu:")
+            for idx, (t_str, c_str, cung_str) in enumerate(results):
+                huong_text = f"**Tại Hướng:** {cung_str}" if cung_str else ""
+                st.markdown(f"**{idx+1}. {t_str}** | {c_str} | {huong_text}")
+            if loops >= max_shichen_limit and len(results) < 10:
+                st.warning("⚠️ Đã quét tối đa 1 năm tới nhưng không tìm đủ 10 kết quả. Tổ hợp bạn chọn có thể rất hiếm xuất hiện.")
+        else:
+            st.error("❌ Không tìm thấy thời điểm nào trong vòng 1 năm tới thỏa mãn tổ hợp cực hiếm này.")
