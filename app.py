@@ -596,7 +596,7 @@ st.components.v1.html(combined_html, height=700, scrolling=True)
 # 7. MODULE SCAN: DỤNG SỰ (TÌM KIẾM THỜI ĐIỂM)
 # ==========================================
 st.markdown("---")
-st.markdown("<h3 style='text-align: center; color: #333; font-family: sans-serif;'>DỤNG SỰ</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: #333; font-family: sans-serif; margin-bottom: 20px;'>DỤNG SỰ</h3>", unsafe_allow_html=True)
 
 # --- TỪ ĐIỂN RANK ĐỂ FORMAT GIAO DIỆN LỌC ---
 FORMATION_RANKS_LOCAL = {
@@ -682,22 +682,20 @@ THOI_CAT_DICT = {
 tran_hung_list = format_ui_list(list(TRAN_HUNG_DICT.keys()))
 thoi_cat_list = format_ui_list(list(THOI_CAT_DICT.keys()))
 
-# --- GIAO DIỆN LỌC ---
+# --- GIAO DIỆN LỌC (Gộp lên 1 hàng) ---
 with st.container():
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
     loc_huong = c1.selectbox("方向 (Hướng)", options=list(huong_list.keys()))
     loc_thien_can = c2.selectbox("天盤 (Thiên Bàn)", options=can_list)
     loc_dia_can = c3.selectbox("地盤 (Địa Bàn)", options=can_list)
     loc_mon = c4.selectbox("八門 (Bát Môn)", options=mon_list)
-    
-    c5, c6, c7, c8 = st.columns(4)
     loc_tinh = c5.selectbox("九星 (Cửu Tinh)", options=tinh_list)
     loc_than = c6.selectbox("八神 (Bát Thần)", options=than_list)
     loc_cat_cach = c7.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
-    # Cột 8 để trống cho cân đối
     
-    st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
-    c9, c10 = st.columns(2)
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    
+    c9, c10, _ = st.columns([2, 2, 3])
     loc_tran_hung = c9.selectbox("鎮凶 (Trấn Hung)", options=tran_hung_list)
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
 
@@ -743,7 +741,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
         max_shichen_limit = 4320 
         loops = 0
         
-        # Tiền kiểm tra: Nếu chọn Trấn Hung/Thôi Cát nhưng cả 2 PA đều rỗng -> Báo luôn
+        # Tiền kiểm tra: Tránh quét thừa nếu Không có phương án
         if mode == "TRAN_HUNG":
             pa1_reqs, pa2_reqs = TRAN_HUNG_DICT[val_tran_hung]
             if not pa1_reqs and not pa2_reqs:
@@ -754,6 +752,10 @@ if st.button("TÌM KIẾM", use_container_width=True):
             if not pa1_reqs and not pa2_reqs:
                 st.info(f"Không có phương án nào để Thôi Cát cho cách cục [{val_thoi_cat}].")
                 max_shichen_limit = 0
+
+        # CACHE ngày để thuật toán siêu nhanh
+        current_cached_date = None
+        s_don, s_cuc, s_ji = None, None, None
 
         while loops < max_shichen_limit:
             if mode == "NORMAL" and len(results_normal) >= 10: break
@@ -785,7 +787,12 @@ if st.button("TÌM KIẾM", use_container_width=True):
             ct_scan = thien_can[s_obj.getMonthGZ().tg]
             cht_scan = dia_chi[s_obj.getMonthGZ().dz]
             
-            s_don, s_cuc, _, s_ji, _ = get_zhirun_ju(s_date)
+            # --- TỐI ƯU TỐC ĐỘ (CACHE) ---
+            if s_date != current_cached_date:
+                cached_ju_data = get_zhirun_ju(s_date)
+                current_cached_date = s_date
+            s_don, s_cuc, _, s_ji, _ = cached_ju_data
+            
             scan_data = lap_que(hg_gio_scan, nc_scan, s_don, s_cuc, s_ji, ct_scan, cn_scan, cht_scan)
             
             idx_c_scan, idx_ch_scan = thien_can.index(hg_gio_scan[0]), dia_chi.index(hg_gio_scan[1])
@@ -827,45 +834,43 @@ if st.button("TÌM KIẾM", use_container_width=True):
             
             # --- XỬ LÝ TRẤN HUNG / THÔI CÁT ---
             else:
-                target_name = val_tran_hung if mode == "TRAN_HUNG" else val_thoi_cat
                 for p in range(1, 10):
                     if p == 5: continue
-                    # Nếu Cung này xuất hiện cách cục mục tiêu
-                    if any(target_name in item[0] for item in cung_st[p]):
-                        ten_cung = [k for k, v in huong_list.items() if v == p][0]
-                        
-                        # Kiểm tra Phương án 1
-                        if len(results_pa1) < 5 and pa1_reqs:
-                            found_pa1 = find_fulfilled_plan(pa1_reqs, scan_data[p], cung_st[p])
-                            if found_pa1:
-                                results_pa1.append((time_str, can_chi_str, ten_cung, found_pa1))
-                        
-                        # Kiểm tra Phương án 2
-                        if len(results_pa2) < 5 and pa2_reqs:
-                            found_pa2 = find_fulfilled_plan(pa2_reqs, scan_data[p], cung_st[p])
-                            if found_pa2:
-                                results_pa2.append((time_str, can_chi_str, ten_cung, found_pa2))
+                    # Đi tìm Phương Án 1 / Phương Án 2 trực tiếp (Không cần tìm Hung/Cát cách gốc nữa)
+                    
+                    if len(results_pa1) < 5 and pa1_reqs:
+                        found_pa1 = find_fulfilled_plan(pa1_reqs, scan_data[p], cung_st[p])
+                        if found_pa1:
+                            ten_cung = [k for k, v in huong_list.items() if v == p][0]
+                            results_pa1.append((time_str, can_chi_str, ten_cung, found_pa1))
+                    
+                    if len(results_pa2) < 5 and pa2_reqs:
+                        found_pa2 = find_fulfilled_plan(pa2_reqs, scan_data[p], cung_st[p])
+                        if found_pa2:
+                            ten_cung = [k for k, v in huong_list.items() if v == p][0]
+                            results_pa2.append((time_str, can_chi_str, ten_cung, found_pa2))
 
         # --- HIỂN THỊ KẾT QUẢ ---
         if mode == "NORMAL":
             if results_normal:
-                st.success(f"TÌM THẤY {len(results_normal)} KẾT QUẢ")
+                st.write(f"**TÌM THẤY {len(results_normal)} KẾT QUẢ:**")
                 for idx, (t_str, c_str, cung_str) in enumerate(results_normal):
                     h_text = f" | Hướng: {cung_str}" if cung_str else ""
-                    st.write(f"**{idx+1}.** {t_str} | {c_str}{h_text}")
+                    st.write(f"{idx+1}. {t_str} | {c_str}{h_text}")
             else:
-                st.error("Không tìm thấy thời điểm nào trong vòng 1 năm tới.")
+                st.write("Không tìm thấy kết quả nào trong vòng 1 năm tới.")
         
         else: # TRAN_HUNG / THOI_CAT
             if not results_pa1 and not results_pa2 and max_shichen_limit > 0:
-                st.error(f"Đã quét 1 năm tới nhưng không tìm thấy thời điểm nào có thể xử lý [{target_name}].")
+                st.write(f"Đã quét 1 năm nhưng không tìm thấy thời điểm nào có thể xử lý [{target_name}].")
             
             if results_pa1:
-                st.success(f"Phương án 1 (Tìm thấy {len(results_pa1)})")
+                st.write(f"**Phương án 1 (Tìm thấy {len(results_pa1)}):**")
                 for idx, (t_str, c_str, cung_str, dung_cach) in enumerate(results_pa1):
-                    st.write(f"**{idx+1}.** Dùng **{dung_cach}** | {t_str} | {c_str} | Hướng: {cung_str}")
+                    st.write(f"{idx+1}. Dùng **{dung_cach}** | {t_str} | {c_str} | Tại: {cung_str}")
             
             if results_pa2:
-                st.info(f"Phương án 2 (Tìm thấy {len(results_pa2)})")
+                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+                st.write(f"**Phương án 2 (Tìm thấy {len(results_pa2)}):**")
                 for idx, (t_str, c_str, cung_str, dung_cach) in enumerate(results_pa2):
-                    st.write(f"**{idx+1}.** Dùng **{dung_cach}** | {t_str} | {c_str} | Hướng: {cung_str}")
+                    st.write(f"{idx+1}. Dùng **{dung_cach}** | {t_str} | {c_str} | Tại: {cung_str}")
