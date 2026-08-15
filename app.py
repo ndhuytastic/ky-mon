@@ -30,17 +30,6 @@ solar_term_ju = {
     "秋分":[7,1,4], "寒露":[6,9,3], "霜降":[5,8,2], "立冬":[6,9,3], "小雪":[5,8,2], "大雪":[4,7,1]
 }
 
-JIEQI_PALACE_MAP = {
-    "冬至": 1, "小寒": 1, "大寒": 1,
-    "立春": 8, "雨水": 8, "惊蛰": 8,
-    "春分": 3, "清明": 3, "谷雨": 3,
-    "立夏": 4, "小满": 4, "芒种": 4,
-    "夏至": 9, "小暑": 9, "大暑": 9,
-    "立秋": 2, "处暑": 2, "白露": 2,
-    "秋分": 7, "寒露": 7, "霜降": 7,
-    "立冬": 6, "小雪": 6, "大雪": 6
-}
-
 # --- CÁC HẰNG SỐ MỚI (CHUYỂN BÀN - 10 CAN) ---
 THIEN_CAN = "甲乙丙丁戊己庚辛壬癸"
 DIA_CHI = "子丑寅卯辰巳午未申酉戌亥"
@@ -64,14 +53,14 @@ def get_phu_dau(d_date):
     return d_date
 
 def get_station(start_date, include_start=False):
+    # Đã bỏ điều kiện ["芒种", "大雪"], giờ sẽ lấy bất kỳ tiết khí nào gần nhất
     start_offset = 0 if include_start else 1
     for i in range(start_offset, 250): 
         check_date = start_date - timedelta(days=i)
         day_obj = sxtwl.fromSolar(check_date.year, check_date.month, check_date.day)
         if day_obj.hasJieQi():
             jq_idx = day_obj.getJieQi()
-            if jq_names[jq_idx] in ["芒种", "大雪"]:
-                return check_date, jq_names[jq_idx]
+            return check_date, jq_names[jq_idx]
     return None, None
 
 def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
@@ -116,8 +105,7 @@ def get_zhirun_ju(actual_date):
     final_term, nguyen_index, is_nhuan = run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date)
     loai_don = "阳遁" if final_term in yang_terms else "阴遁"
     so_cuc = solar_term_ju[final_term][nguyen_index]
-    ji_palace = JIEQI_PALACE_MAP[final_term]
-    return loai_don, so_cuc, final_term, ji_palace, is_nhuan
+    return loai_don, so_cuc, final_term, nguyen_index, is_nhuan
 
 
 # ==========================================
@@ -218,11 +206,10 @@ def an_bat_mon(p_circle, can_gio, dun_type):
 
     return bat_mon
 
-def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_ngay, chi_thang):
+def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, can_thang, can_ngay, chi_thang):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
 
-    cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 
-                     'phi_tinh': 0, 'lt_thien_color': '#555', 'lt_thien_kichhinh': False, 'lt_thien_nhapkho': False} for i in range(1, 10)}
+    cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'phi_tinh': 0} for i in range(1, 10)}
 
     # PHI TINH TRUNG CUNG
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
@@ -240,17 +227,7 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
     # 2. THIÊN BÀN CAN
     thien_ban, p_circle, p_hour_stem = an_thien_ban(dia_ban, can_gio, chi_gio)
     for i in range(1, 10):
-        c_thien = thien_ban[i]
-        cung_data[i]['thien'] = c_thien
-        
-        # Color & Properties
-        if c_thien:
-            combine_map = {'甲':('己','#8B4513'), '己':('甲','#8B4513'), '乙':('庚','#000000'), '庚':('乙','#000000'), '丙':('辛','#1E90FF'), '辛':('丙','#1E90FF'), '丁':('壬','#008000'), '壬':('丁','#008000'), '戊':('癸','#FF0000'), '癸':('戊','#FF0000')}
-            target_can, hex_color = combine_map.get(c_thien, (None, '#555'))
-            if target_can in [dia_ban[i], can_thang, can_ngay, can_gio]: cung_data[i]['lt_thien_color'] = hex_color
-
-            kich_hinh_map = {'戊': 3, '己': 2, '庚': 8, '辛': 9, '壬': 4, '癸': 4}
-            if kich_hinh_map.get(c_thien) == i: cung_data[i]['lt_thien_kichhinh'] = True
+        cung_data[i]['thien'] = thien_ban[i]
 
     # 3. BÁT MÔN
     bat_mon = an_bat_mon(p_circle, can_gio, loai_don)
@@ -440,15 +417,8 @@ def render_html_table(cung_data, toan_ban_status, cung_status, cung_3_elements):
             d = cung_data[p]
             phi_tinh_html = f"<div class='bottom-left-phitinh'>{d['phi_tinh']}</div>"
             
-            thien_css_styles = f"color: {d['lt_thien_color']};"
-            if d['lt_thien_color'] != '#555':
-                thien_css_styles += " font-weight: bold;"
-                if d['lt_thien_color'] == '#000000': thien_css_styles += " font-weight: 900;" 
-            is_kh, is_nk = d.get('lt_thien_kichhinh', False), d.get('lt_thien_nhapkho', False)
-            if is_kh and is_nk: thien_css_styles += " text-decoration: underline double; text-underline-offset: 3px;"
-            elif is_kh or is_nk: thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
-            
-            thien_full = f"<span style='{thien_css_styles}'>{format_stem(d['thien'])}</span>"
+            # Đã xóa phần gạch chân và đổi màu Thiên Bàn
+            thien_full = f"<span>{format_stem(d['thien'])}</span>"
             dia_full = f"<span>{format_stem(d['dia'])}</span>"
             
             if p == 5:
@@ -521,12 +491,19 @@ chi_thang_hien_tai = dia_chi[day_obj.getMonthGZ().dz]
 
 bazi_dict = {'nam': thien_can[day_obj.getYearGZ().tg] + dia_chi[day_obj.getYearGZ().dz], 'thang': can_thang_hien_tai + chi_thang_hien_tai, 'ngay': can_ngay_hien_tai + nhat_chi_hien_tai}
 
-don, cuc, jq_name, ji_palace, is_nhuan = get_zhirun_ju(actual_date)
+# Lấy thông tin cục
+don, cuc, jq_name, nguyen_index, is_nhuan = get_zhirun_ju(actual_date)
 nhuan_str = " - 闰奇" if is_nhuan else ""
-chuoi_cuc = f"{jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
+
+# Map Nguyên (Thượng, Trung, Hạ)
+nguyen_map = {0: "上元", 1: "中元", 2: "下元"}
+nguyen_str = nguyen_map.get(nguyen_index, "")
+
+# Format Chuỗi tiêu đề mới
+chuoi_cuc = f"{jq_name}{nhuan_str} - {nguyen_str} - {don}{cuc}局"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
-data = lap_que(hoa_giap_hien_tai, nhat_chi_hien_tai, don, cuc, ji_palace, can_thang_hien_tai, can_ngay_hien_tai, chi_thang_hien_tai)
+data = lap_que(hoa_giap_hien_tai, nhat_chi_hien_tai, don, cuc, can_thang_hien_tai, can_ngay_hien_tai, chi_thang_hien_tai)
 
 # --- KHỐI TÍNH TOÁN CÁCH CỤC ---
 can_gio_phai, chi_gio_phai = hoa_giap_hien_tai[0], hoa_giap_hien_tai[1]
