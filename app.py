@@ -5,7 +5,7 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Kỳ Môn Phi Bàn", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Kỳ Môn Chuyển Bàn", layout="wide", initial_sidebar_state="collapsed")
 
 # ==========================================
 # 1. HỆ THỐNG DỮ LIỆU CƠ BẢN
@@ -136,25 +136,6 @@ def get_cung_phi_tinh(nhat_chi, thoi_chi, loai_don):
     vals = matrix[r_idx][c_idx]
     return vals[0] if loai_don == "阳遁" else vals[1]
 
-def get_luc_than(can_gio, can_cung):
-    if not can_cung: return ""
-    element_map = {"甲":0, "乙":0, "丙":1, "丁":1, "戊":2, "己":2, "庚":3, "辛":3, "壬":4, "癸":4}
-    b_e = element_map[can_gio]
-    t_e = element_map[can_cung]
-    diff_e = (t_e - b_e) % 5 
-    if diff_e == 0: return "兄"    
-    elif diff_e == 1: return "孙"   
-    elif diff_e == 2: return "财"   
-    elif diff_e == 3: return "官"   
-    elif diff_e == 4: return "父"   
-    return ""
-
-def tinh_tuan_khong_gio(hoa_giap):
-    idx_can, idx_chi = thien_can.index(hoa_giap[0]), dia_chi.index(hoa_giap[1])
-    idx_tuan_dau = (idx_chi - idx_can) % 12
-    chi_to_cung = {"子":1, "丑":8, "寅":8, "卯":3, "辰":4, "巳":4, "午":9, "未":2, "申":2, "酉":7, "戌":6, "亥":6}
-    return [chi_to_cung[dia_chi[(idx_tuan_dau - 2) % 12]], chi_to_cung[dia_chi[(idx_tuan_dau - 1) % 12]]]
-
 
 # ==========================================
 # 3. THUẬT TOÁN HỖN HỢP PHI - CHUYỂN
@@ -240,9 +221,8 @@ def an_bat_mon(p_circle, can_gio, dun_type):
 def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_ngay, chi_thang):
     can_gio, chi_gio = hoa_giap_gio[0], hoa_giap_gio[1]
 
-    cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 'ngua': '', 
-                     'phi_tinh': 0, 'lt_thien': '', 'lt_dia': '',
-                     'lt_thien_color': '#555', 'lt_thien_kichhinh': False, 'lt_thien_nhapkho': False} for i in range(1, 10)}
+    cung_data = {i: {'dia': '', 'sao': '', 'mon': '', 'than': '', 'thien': '', 
+                     'phi_tinh': 0, 'lt_thien_color': '#555', 'lt_thien_kichhinh': False, 'lt_thien_nhapkho': False} for i in range(1, 10)}
 
     # PHI TINH TRUNG CUNG
     center_num = get_cung_phi_tinh(nhat_chi, chi_gio, loai_don)
@@ -252,22 +232,16 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         cung_data[p]['phi_tinh'] = curr_num
         curr_num = (curr_num % 9) + 1  
 
-    # TÌM MÃ
-    map_ngua = {"子":"寅", "丑":"亥", "寅":"申", "卯":"巳", "辰":"寅", "巳":"亥", "午":"申", "未":"巳", "申":"寅", "酉":"亥", "戌":"申", "亥":"巳"}
-    cung_data[{"寅":8, "巳":4, "申":2, "亥":6}[map_ngua[chi_gio]]]['ngua'] = "马"
-
     # 1. ĐỊA BÀN
     dia_ban = an_dia_ban(loai_don, so_cuc)
     for i in range(1, 10): 
         cung_data[i]['dia'] = dia_ban[i]
-        cung_data[i]['lt_dia'] = get_luc_than(can_gio, dia_ban[i]) 
 
     # 2. THIÊN BÀN CAN
     thien_ban, p_circle, p_hour_stem = an_thien_ban(dia_ban, can_gio, chi_gio)
     for i in range(1, 10):
         c_thien = thien_ban[i]
         cung_data[i]['thien'] = c_thien
-        cung_data[i]['lt_thien'] = get_luc_than(can_gio, c_thien) 
         
         # Color & Properties
         if c_thien:
@@ -277,11 +251,6 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
 
             kich_hinh_map = {'戊': 3, '己': 2, '庚': 8, '辛': 9, '壬': 4, '癸': 4}
             if kich_hinh_map.get(c_thien) == i: cung_data[i]['lt_thien_kichhinh'] = True
-
-            ruku_map = {'丙':('戌', 6), '丁':('戌', 6), '戊':('戌', 6), '己':('戌', 6), '庚':('丑', 8), '辛':('丑', 8), '壬':('辰', 4), '癸':('辰', 4), '甲':('未', 2), '乙':('未', 2)}
-            if c_thien in ruku_map:
-                kho_chi, kho_cung = ruku_map[c_thien]
-                if i == kho_cung or chi_thang == kho_chi: cung_data[i]['lt_thien_nhapkho'] = True
 
     # 3. BÁT MÔN
     bat_mon = an_bat_mon(p_circle, can_gio, loai_don)
@@ -303,22 +272,22 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
         orig_p_star = star_path_forward[orig_idx_star]
         cung_data[p_star]['sao'] = star_native[orig_p_star - 1]
 
-    # 5. BÁT THẦN (Chuyển Bàn)
+    # 5. BÁT THẦN (Chuyển Bàn - dùng Câu Trần, Chu Tước cho cả 2)
     deity_target = p_hour_stem
     if deity_target == 5:
         deity_target = p_circle
         if deity_target == 5:
-            deity_target = 2 # Nếu cả hai rơi vào 5, Ký qua Không theo cách truyền thống
+            deity_target = 2 
             
     idx_deity_target = OUTER_PALACES.index(deity_target)
     
+    deities = ["值符", "螣蛇", "太阴", "六合", "勾陈", "朱雀", "九地", "九天"]
+    
     if loai_don == "阳遁":
-        deities = ["值符", "勾陈", "太阴", "六合", "青龙", "朱雀", "九地", "九天"]
         for i in range(8):
             palace = OUTER_PALACES[(idx_deity_target + i) % 8]
             cung_data[palace]['than'] = deities[i]
     else:
-        deities = ["值符", "螣蛇", "太阴", "六合", "白虎", "玄武", "九地", "九天"]
         for i in range(8):
             palace = OUTER_PALACES[(idx_deity_target - i) % 8]
             cung_data[palace]['than'] = deities[i]
@@ -345,43 +314,38 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         '勾陈':{1:'凶',2:'凶',3:'凶',4:'凶',5:'凶',6:'凶',7:'凶',8:'凶',9:'凶'}, 
         '朱雀':{1:'凶',2:'凶',3:'凶',4:'凶',5:'凶',6:'凶',7:'凶',8:'凶',9:'凶'}, 
         '九地':{1:'吉',2:'吉',3:'吉',4:'吉',5:'凶',6:'吉',7:'吉',8:'吉',9:'吉'}, 
-        '九天':{1:'吉',2:'吉',3:'吉',4:'吉',5:'凶',6:'吉',7:'吉',8:'吉',9:'吉'},
-        '白虎':{1:'凶',2:'凶',3:'凶',4:'凶',5:'凶',6:'凶',7:'凶',8:'凶',9:'凶'},
-        '玄武':{1:'凶',2:'凶',3:'凶',4:'凶',5:'凶',6:'凶',7:'凶',8:'凶',9:'凶'},
-        '青龙':{1:'凶',2:'凶',3:'凶',4:'凶',5:'凶',6:'凶',7:'凶',8:'凶',9:'凶'}
+        '九天':{1:'吉',2:'吉',3:'吉',4:'吉',5:'凶',6:'吉',7:'吉',8:'吉',9:'吉'}
     }
     mon_sao_data = {'休门':{'天蓬':'凶','天芮':'吉','天冲':'吉','天辅':'吉','天禽':'凶','天心':'吉','天柱':'吉','天任':'吉','天英':'凶'}, '生门':{'天蓬':'吉','天芮':'凶','天冲':'吉','天辅':'吉','天禽':'凶','天心':'吉','天柱':'吉','天任':'凶','天英':'吉'}, '伤门':{'天蓬':'凶','天芮':'凶','天冲':'凶','天辅':'凶','天禽':'凶','天心':'凶','天柱':'凶','天任':'凶','天英':'凶'}, '杜门':{'天蓬':'凶','天芮':'凶','天冲':'凶','天辅':'凶','天禽':'凶','天心':'凶','天柱':'凶','天任':'凶','天英':'凶'}, '景门':{'天蓬':'凶','天芮':'吉','天冲':'吉','天辅':'吉','天禽':'凶','天心':'吉','天柱':'吉','天任':'吉','天英':'凶'}, '死门':{'天蓬':'凶','天芮':'凶','天冲':'凶','天辅':'凶','天禽':'凶','天心':'凶','天柱':'凶','天任':'凶','天英':'凶'}, '惊门':{'天蓬':'凶','天芮':'凶','天冲':'凶','天辅':'凶','天禽':'凶','天心':'凶','天柱':'凶','天任':'凶','天英':'凶'}, '开门':{'天蓬':'吉','天芮':'吉','天冲':'吉','天辅':'凶','天禽':'凶','天心':'凶','天柱':'吉','天任':'吉','天英':'吉'}}
     can_can_data = {'甲':{'甲':'吉','乙':'吉','丙':'吉','丁':'吉','戊':'凶','己':'吉','庚':'大凶','辛':'凶','壬':'凶','癸':'吉'}, '乙':{'甲':'吉','乙':'凶','丙':'吉','丁':'吉','戊':'吉','己':'吉','庚':'凶','辛':'大凶','壬':'吉','癸':'凶'}, '丙':{'甲':'吉','乙':'吉','丙':'凶','丁':'吉','戊':'吉','己':'吉','庚':'大凶','辛':'吉','壬':'吉','癸':'凶'}, '丁':{'甲':'吉','乙':'吉','丙':'吉','丁':'吉','戊':'吉','己':'凶','庚':'吉','辛':'凶','壬':'吉','癸':'大凶'}, '戊':{'甲':'凶','乙':'吉','丙':'吉','丁':'吉','戊':'凶','己':'凶','庚':'凶','辛':'凶','壬':'吉','癸':'凶'}, '己':{'甲':'凶','乙':'吉','丙':'凶','丁':'凶','戊':'吉','己':'凶','庚':'凶','辛':'凶','壬':'凶','癸':'凶'}, '庚':{'甲':'大凶','乙':'凶','丙':'大凶','丁':'吉','戊':'凶','己':'大凶','庚':'大凶','辛':'凶','壬':'大凶','癸':'大凶'}, '辛':{'甲':'凶','乙':'大凶','丙':'凶','丁':'吉','戊':'凶','己':'凶','庚':'凶','辛':'凶','壬':'凶','癸':'凶'}, '壬':{'甲':'凶','乙':'凶','丙':'凶','丁':'吉','戊':'吉','己':'凶','庚':'凶','辛':'吉','壬':'凶','癸':'凶'}, '癸':{'甲':'吉','乙':'凶','丙':'吉','丁':'大凶','戊':'吉','己':'凶','庚':'大凶','辛':'凶','壬':'凶','癸':'凶'}}
+
+    # --- ĐỊNH NGHĨA TINH MÔN PHỤC / PHẢN THEO ẢNH ---
+    xing_men_fuyin = {
+        '天蓬': '休门', '天芮': '死门', '天冲': '伤门', '天辅': '杜门', 
+        '天心': '开门', '天柱': '惊门', '天任': '生门', '天英': '景门'
+    }
+    xing_men_fanyin = {
+        '天蓬': '景门', '天任': '死门', '天冲': '惊门', '天辅': '开门', 
+        '天英': '休门', '天芮': '生门', '天柱': '伤门', '天心': '杜门'
+    }
 
     # --- A. TOÀN BÀN & THỜI GIAN (Trung Cung) ---
     ngu_bat_ngo = {'甲':'庚', '乙':'辛', '丙':'壬', '丁':'癸', '戊':'甲', '己':'乙', '庚':'丙', '辛':'丁', '壬':'戊', '癸':'己'}
     if ngu_bat_ngo.get(can_ngay) == can_gio: toan_ban_status.append("五不遇时")
 
-    sao_goc = {1:"天蓬", 2:"天芮", 3:"天冲", 4:"天辅", 5:"天禽", 6:"天心", 7:"天柱", 8:"天任", 9:"天英"}
-    mon_goc = {1:"休门", 2:"死门", 3:"伤门", 4:"杜门", 6:"开门", 7:"惊门", 8:"生门", 9:"景门"}
-    doi_xung = {1:9, 2:8, 3:7, 4:6, 6:4, 7:3, 8:2, 9:1}
-    
-    sao_phuc = sao_phan = mon_phuc = mon_phan = True
-    for p in [1, 2, 3, 4, 6, 7, 8, 9]:
-        d = cung_data[p]
-        if d['sao'] != sao_goc[p]: sao_phuc = False
-        if d['mon'] != mon_goc[p]: mon_phuc = False
-        if d['sao'] != sao_goc[doi_xung[p]]: sao_phan = False
-        if d['mon'] != mon_goc[doi_xung[p]]: mon_phan = False
-    if sao_phuc: toan_ban_status.append("九星伏吟")
-    if mon_phuc: toan_ban_status.append("八门伏吟")
-    if sao_phan: toan_ban_status.append("九星反吟")
-    if mon_phan: toan_ban_status.append("八门反吟")
-
     # --- B. XÉT TỪNG CUNG ---
     for p, d in cung_data.items():
         if p == 5: continue 
         
-        # Vì Dùng 10 Can (không giấu Giáp), nên t_can/d_can chính là giá trị thực hiển thị trên bàn
         t_can = d['thien']
         d_can = d['dia']
-
         mon, sao, than, phi_tinh = d['mon'], d['sao'], d['than'], d['phi_tinh']
+
+        # 1. KIỂM TRA TINH MÔN PHỤC NGÂM / PHẢN NGÂM
+        if xing_men_fuyin.get(sao) == mon:
+            cung_status[p].append(("星門伏吟", "#000000"))
+        if xing_men_fanyin.get(sao) == mon:
+            cung_status[p].append(("星門反吟", "#000000"))
 
         # 2. XÉT CÁC CÁCH CỤC
         if t_can == '甲' and d_can == '丙': cung_status[p].append(("青竜返首", "#CC0000"))
@@ -407,7 +371,7 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         if (t_can == '戊' and p == 3) or (t_can == '己' and p == 2) or \
            (t_can == '庚' and p == 8) or (t_can == '辛' and p == 9) or \
            (t_can == '壬' and p == 4) or (t_can == '癸' and p == 4): cung_status[p].append(("六儀擊刑", "#000000"))
-        if (t_can == '乙' and p == 2) or (t_can in ['丙', '丁'] and p == 6): cung_status[p].append(("三奇入墓", "#000000"))
+        
         if (t_can == '丙' and d_can == can_ngay) or (t_can == can_ngay and d_can == '丙'): cung_status[p].append(("悖格", "#000000"))
         if t_can == can_ngay and d_can == '庚': cung_status[p].append(("飛干", "#000000"))
         if t_can == '庚' and d_can == can_ngay: cung_status[p].append(("伏干", "#000000"))
@@ -415,7 +379,8 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         if t_can and d_can and t_can == d_can and t_can not in ['甲', '丁']: cung_status[p].append(("干伏吟", "#000000"))
         if (t_can, d_can) in [('戊','辛'), ('辛','戊'), ('己','壬'), ('壬','己'), ('庚','癸'), ('癸','庚')]: cung_status[p].append(("干反吟", "#000000"))
         
-        mon_bach_rules = {"休门":[9], "伤门":[2, 8], "杜门":[2, 8], "景门":[6, 7], "生门":[1], "死门":[1], "开门":[3, 4], "惊门":[3, 4]}
+        # MÔN BỨC / MÔN THỤ CHẾ (Chỉ áp dụng cho 4 cửa: Hưu, Cảnh, Sinh, Khai)
+        mon_bach_rules = {"休门": [9], "景门": [6, 7], "生门": [1], "开门": [3, 4]}
         if p in mon_bach_rules.get(mon, []): cung_status[p].append(("门迫", "#000000"))
 
         # 3. BA TỔ HỢP CÁT HUNG
@@ -437,7 +402,7 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
 def format_stem(stem_str): return stem_str if stem_str else ""
 def format_sao(sao_str): return sao_str if sao_str else ""
 
-def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_elements):
+def render_html_table(cung_data, toan_ban_status, cung_status, cung_3_elements):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
 
     html = """
@@ -459,12 +424,6 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
         .item-thien { grid-column: 2; grid-row: 2; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
         .item-dia   { grid-column: 2; grid-row: 3; font-size: 15px; color: #222; text-align: left; display: flex; align-items: center;}
 
-        .luc-than-dia { font-size: 11px; color: #555; margin-left: 6px; font-weight: normal; }
-        .luc-than-thien { font-size: 11px; margin-left: 6px; font-weight: normal; }
-        
-        .top-right-indicators { position: absolute; top: 3px; right: 4px; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; color: #444; }
-        .horse-icon { font-size: 14px; font-weight: bold; }
-        .void-icon { font-size: 20px; font-weight: normal; line-height: 0.8; margin-top: -2px; }
         .bottom-left-phitinh { position: absolute; bottom: 3px; left: 5px; font-size: 15px; color: #555; font-weight: bold; }
 
         .right-panel { position: absolute; right: 5px; top: 22px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px; font-family: sans-serif; }
@@ -489,10 +448,8 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
             if is_kh and is_nk: thien_css_styles += " text-decoration: underline double; text-underline-offset: 3px;"
             elif is_kh or is_nk: thien_css_styles += " text-decoration: underline; text-underline-offset: 3px;"
             
-            lt_thien_html = f"<span class='luc-than-thien' style='{thien_css_styles}'>{d['lt_thien']}</span>" if d['lt_thien'] else ""
-            lt_dia_html = f"<span class='luc-than-dia'>{d['lt_dia']}</span>" if d['lt_dia'] else ""
-            thien_full = f"<span>{format_stem(d['thien'])}</span>{lt_thien_html}"
-            dia_full = f"<span>{format_stem(d['dia'])}</span>{lt_dia_html}"
+            thien_full = f"<span style='{thien_css_styles}'>{format_stem(d['thien'])}</span>"
+            dia_full = f"<span>{format_stem(d['dia'])}</span>"
             
             if p == 5:
                 toan_ban_html = "".join([f"<div class='formation-item'>{c}</div>" for c in toan_ban_status])
@@ -509,18 +466,12 @@ def render_html_table(cung_data, tk_gio, toan_ban_status, cung_status, cung_3_el
                 </td>"""
                 continue
                 
-            indicators = []
-            if d.get('ngua'): indicators.append("<span class='horse-icon'>马</span>")
-            if p in tk_gio: indicators.append("<span class='void-icon'>○</span>")
-            indicator_html = f"<div class='top-right-indicators'>{''.join(indicators)}</div>" if indicators else ""
-            
             combos_html = "".join([f"<div class='combo-item'>{c}</div>" for c in cung_3_elements[p]])
             form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
             right_panel_html = f"<div class='right-panel'>{combos_html}<div class='spacer'></div>{form_html}</div>"
             
             html += f"""
             <td class="qmdj-td">
-                {indicator_html}
                 {phi_tinh_html}
                 {right_panel_html}
                 <div class="cell-main">
@@ -572,17 +523,15 @@ bazi_dict = {'nam': thien_can[day_obj.getYearGZ().tg] + dia_chi[day_obj.getYearG
 
 don, cuc, jq_name, ji_palace, is_nhuan = get_zhirun_ju(actual_date)
 nhuan_str = " - 闰奇" if is_nhuan else ""
-chuoi_cuc = f"飞盘 (10天干) | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
+chuoi_cuc = f"{jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
-tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
 data = lap_que(hoa_giap_hien_tai, nhat_chi_hien_tai, don, cuc, ji_palace, can_thang_hien_tai, can_ngay_hien_tai, chi_thang_hien_tai)
 
 # --- KHỐI TÍNH TOÁN CÁCH CỤC ---
 can_gio_phai, chi_gio_phai = hoa_giap_hien_tai[0], hoa_giap_hien_tai[1]
 can_tuan = get_xun_leader(can_gio_phai, chi_gio_phai)
 
-# Xác định lại môn trực sử (bảo vệ lỗi Trung cung / Thiếu Can)
 p_circle_list = [c for c, d in data.items() if d['dia'] == can_tuan]
 p_circle = p_circle_list[0] if p_circle_list else 5
 truc_su_door = ORIGINAL_GATES.get(p_circle, "死门")
@@ -593,7 +542,7 @@ toan_ban_st, cung_st, cung_3_el = qimen_analyzer(data, can_ngay_hien_tai, can_gi
 title = f"<h3 style='margin-bottom:6px; font-family:sans-serif; color: #111; font-weight: 400; font-size: 18px; text-align: center;'>{bazi_chuoi}</h3>"
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: 300; font-size: 15px; text-align: center;'>{chuoi_cuc}</h4>"
 
-qimen_board_html = render_html_table(data, tk_gio, toan_ban_st, cung_st, cung_3_el)
+qimen_board_html = render_html_table(data, toan_ban_st, cung_st, cung_3_el)
 
 combined_html = f"""
     <div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;">
