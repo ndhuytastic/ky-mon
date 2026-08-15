@@ -53,7 +53,6 @@ def get_phu_dau(d_date):
     return d_date
 
 def get_station(start_date, include_start=False):
-    # Đã bỏ điều kiện ["芒种", "大雪"], giờ lấy bất kỳ tiết khí nào gần nhất
     start_offset = 0 if include_start else 1
     for i in range(start_offset, 250): 
         check_date = start_date - timedelta(days=i)
@@ -64,66 +63,51 @@ def get_station(start_date, include_start=False):
     return None, None
 
 def run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date):
-    # 1. Tìm Phù Đầu và tính khoảng cách Siêu Thần (Chao Shen)
     F_past = get_phu_dau(T_tram_date)
     chao_shen = (T_tram_date - F_past).days
     
-    # 2. ĐIỀU KIỆN NHUẬN MỚI
-    # Xóa hoàn toàn is_fake_tie_qi (Nhuận ảo). Cứ Siêu Thần >= 9 là kích hoạt Nhuận.
     is_leap = (chao_shen >= 9)
-    
-    # Start_Line bám chặt vào Phù Đầu, TUYỆT ĐỐI KHÔNG cộng thêm 15 ngày
     Start_Line = F_past
 
-    # 3. Xử lý đệ quy nếu ngày xem nằm trước mốc Phù Đầu
+    # Khắc phục triệt để lỗi đệ quy và định danh trạm trước đó
     if D < Start_Line:
-        T_prev2_tram_date, _ = get_station(T_prev_tram_date, include_start=False)
-        day_prev_obj = sxtwl.fromSolar(T_prev_tram_date.year, T_prev_tram_date.month, T_prev_tram_date.day)
-        T_prev_tram_name = jq_names[day_prev_obj.getJieQi()]
-        return run_trinhuan_algorithm(D, T_prev_tram_date, T_prev_tram_name, T_prev2_tram_date)
+        T_prev_exact, T_prev_name = get_station(T_prev_tram_date, include_start=True)
+        T_prev2_exact, _ = get_station(T_prev_exact, include_start=False)
+        return run_trinhuan_algorithm(D, T_prev_exact, T_prev_name, T_prev2_exact)
 
-    # =========================================================
-    # 4. LOGIC TÍNH CỤC VÀ NGUYÊN (Khối 5 ngày - Chunking)
-    # =========================================================
     delta_days = (D - Start_Line).days
-    
-    # Chia thời gian thành các khối 5 ngày
     chunk_5d = delta_days // 5 
     station_idx = jq_names.index(T_tram_name)
     
     is_nhuan_hien_tai = False
 
     if is_leap:
-        # --- NẾU KÍCH HOẠT NHUẬN ---
         if chunk_5d == 0:
-            # 5 NGÀY ĐẦU TIÊN (chunk = 0): Chèn Nhuận
-            # Lùi về Tiết Khí trước đó (-1)
             final_idx = (station_idx - 1) % 24
-            # Ép cứng là Thượng Nguyên (0)
             nguyen_index = 0
             is_nhuan_hien_tai = True
         else:
-            # TỪ NGÀY THỨ 6 TRỞ ĐI (chunk >= 1): Bắt đầu Tiết Khí mới
-            # Trừ đi 1 chunk đã dùng cho đợt Nhuận để reset chu kỳ
             adjusted_chunk = chunk_5d - 1
-            
-            # Cứ 3 chunk (15 ngày) thì đổi 1 Tiết Khí
             final_idx = (station_idx + (adjusted_chunk // 3)) % 24
-            
-            # Luân phiên Thượng (0) -> Trung (1) -> Hạ (2)
             nguyen_index = adjusted_chunk % 3
-            is_nhuan_hien_tai = False
-            
     else:
-        # --- NẾU KHÔNG CÓ NHUẬN ---
-        # Chạy lịch bình thường
         final_idx = (station_idx + (chunk_5d // 3)) % 24
         nguyen_index = chunk_5d % 3
-        is_nhuan_hien_tai = False
 
     final_term = jq_names[final_idx]
-    
     return final_term, nguyen_index, is_nhuan_hien_tai
+
+def get_zhirun_ju(actual_date):
+    D = actual_date
+    T_tram_date, T_tram_name = get_station(D, include_start=True)
+    T_prev_tram_date, _ = get_station(T_tram_date, include_start=False)
+    
+    final_term, nguyen_index, is_nhuan = run_trinhuan_algorithm(D, T_tram_date, T_tram_name, T_prev_tram_date)
+    
+    loai_don = "阳遁" if final_term in yang_terms else "阴遁"
+    so_cuc = solar_term_ju[final_term][nguyen_index]
+    
+    return loai_don, so_cuc, final_term, nguyen_index, is_nhuan
 
 
 # ==========================================
