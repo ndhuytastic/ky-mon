@@ -279,17 +279,18 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
     for p, d in cung_data.items():
         if p == 5: continue 
         
-        # 1. THAY THẾ GIÁP ẨN
+        # 1. BIẾN t_can_real VÀ d_can_real CHỨA CAN THẬT (Dùng cho bảng Cát Hung 10x10)
         t_can_real = d['thien']
         d_can_real = d['dia']
+        # t_can và d_can CHỈ dùng cho Cách Cục cần quy đổi Giáp ẩn
         t_can = '甲' if t_can_real == can_tuan else t_can_real
         d_can = '甲' if d_can_real == can_tuan else d_can_real
 
         mon, sao, than, phi_tinh = d['mon'], d['sao'], d['than'], d['phi_tinh']
 
-        # 2. XÉT CÁC CÁCH CỤC
-        if t_can == '甲' and d_can == '丙': cung_status[p].append(("青竜返首", "#CC0000"))
-        if t_can == '丙' and d_can == '甲': cung_status[p].append(("飛鳥跌穴", "#CC0000"))
+        # 2. XÉT CÁC CÁCH CỤC CÁT
+        if (t_can == '甲' and d_can == '丙') or (t_can == '戊' and d_can == '丙'): cung_status[p].append(("青竜返首", "#CC0000"))
+        if (t_can == '丙' and d_can == '甲') or (t_can == '丙' and d_can == '戊'): cung_status[p].append(("飛鳥跌穴", "#CC0000"))
         if truc_su_door and t_can == '丁' and mon == truc_su_door: cung_status[p].append(("玉女守門", "#CC0000"))
         if t_can == '乙' and p == 3: cung_status[p].append(("乙奇昇殿", "#CC0000"))
         if t_can == '丙' and p == 9: cung_status[p].append(("丙奇昇殿", "#CC0000"))
@@ -308,24 +309,36 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         if t_can == '乙' and p == 4 and mon in ["休门", "生门", "开门"]: cung_status[p].append(("風遁", "#CC0000"))
         if t_can == '乙' and p == 2 and mon in ["休门", "生门", "开门"]: cung_status[p].append(("雲遁", "#CC0000"))
 
+        # 3. XÉT CÁC CÁCH CỤC HUNG
         if (t_can == '戊' and p == 3) or (t_can == '己' and p == 2) or \
            (t_can == '庚' and p == 8) or (t_can == '辛' and p == 9) or \
            (t_can == '壬' and p == 4) or (t_can == '癸' and p == 4): cung_status[p].append(("六儀擊刑", "#000000"))
         if (t_can == '乙' and p == 2) or (t_can in ['丙', '丁'] and p == 6): cung_status[p].append(("三奇入墓", "#000000"))
-        if (t_can == '丙' and d_can == can_ngay) or (t_can == can_ngay and d_can == '丙'): cung_status[p].append(("悖格", "#000000"))
-        if t_can == can_ngay and d_can == '庚': cung_status[p].append(("飛干", "#000000"))
-        if t_can == '庚' and d_can == can_ngay: cung_status[p].append(("伏干", "#000000"))
         
-        if t_can == d_can and t_can not in ['甲', '丁']: cung_status[p].append(("干伏吟", "#000000"))
+        # Thêm 12 Cách cục mới từ ảnh
+        if t_can == '庚' and d_can == '癸': cung_status[p].append(("大格", "#000000"))
+        if t_can == '庚' and d_can == '壬': cung_status[p].append(("小格", "#000000"))
+        if t_can == '庚' and d_can == '己': cung_status[p].append(("刑格", "#000000"))
+        if t_can == '庚' and d_can == '庚': cung_status[p].append(("戦格", "#000000"))
+        if t_can == '甲' and d_can == '庚': cung_status[p].append(("飛宮格", "#000000"))
+        if t_can == '庚' and d_can == '甲': cung_status[p].append(("伏宮格", "#000000"))
+        if t_can == '乙' and d_can == '辛': cung_status[p].append(("青竜逃走", "#000000"))
+        if t_can == '辛' and d_can == '乙': cung_status[p].append(("白虎猖狂", "#000000"))
+        if t_can == '丙' and d_can == '庚': cung_status[p].append(("熒惑入白", "#000000"))
+        if t_can == '庚' and d_can == '丙': cung_status[p].append(("太白入熒", "#000000"))
+        if t_can == '丁' and d_can == '癸': cung_status[p].append(("朱雀投江", "#000000"))
+        if t_can == '癸' and d_can == '丁': cung_status[p].append(("螣蛇妖嬌", "#000000"))
+
+        if t_can == d_can and t_can not in ['甲', '丁', '庚']: cung_status[p].append(("干伏吟", "#000000"))
         if (t_can, d_can) in [('戊','辛'), ('辛','戊'), ('己','壬'), ('壬','己'), ('庚','癸'), ('癸','庚')]: cung_status[p].append(("干反吟", "#000000"))
         
-        # CHỈ XÉT MÔN BỨC CHO KHAI, SINH, HƯU, CẢNH
+        # Môn Bách chỉ xét cho Khai, Sinh, Hưu, Cảnh
         mon_bach_rules = {"休门":[9], "景门":[6, 7], "生门":[1], "开门":[3, 4]}
         if p in mon_bach_rules.get(mon, []): cung_status[p].append(("门迫", "#000000"))
 
-        # 3. BA TỔ HỢP CÁT HUNG
-        if t_can in can_can_data and d_can in can_can_data[t_can]:
-            kq_can_can = can_can_data[t_can][d_can]
+        # 4. BA TỔ HỢP CÁT HUNG (Sử dụng Can Thực Tế để đối chiếu theo yêu cầu)
+        if t_can_real in can_can_data and d_can_real in can_can_data[t_can_real]:
+            kq_can_can = can_can_data[t_can_real][d_can_real]
             cung_3_elements[p].append(kq_can_can)
             
         if mon in mon_sao_data and sao in mon_sao_data[mon]:
