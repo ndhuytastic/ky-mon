@@ -253,6 +253,25 @@ def lap_que(hoa_giap_gio, nhat_chi, loai_don, so_cuc, ji_palace, can_thang, can_
 # 4. MODULE ĐỘC LẬP: PHÂN TÍCH CÁCH CỤC
 # ==========================================
 def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
+    # --- TỪ ĐIỂN PHÂN LOẠI CẤP BẬC CÁCH CỤC (A=1, B=2, C=3) ---
+    # Về sau bạn muốn thêm/sửa/xóa hay đổi cấp, chỉ cần chỉnh sửa trong danh sách này:
+    FORMATION_RANKS = {
+        # --- HẠNG 1 (Tương đương A rank) ---
+        "天遁": "1", "地遁": "1", "人遁": "1", "神遁": "1", "鬼遁": "1",
+        "大格": "1", "小格": "1", "刑格": "1", "戦格": "1", "飛宮格": "1", 
+        "伏宮格": "1", "青竜逃走": "1", "白虎猖狂": "1", "熒惑入白": "1", 
+        "太白入熒": "1", "朱雀投江": "1", "螣蛇妖嬌": "1",
+        
+        # --- HẠNG 2 (Tương đương B rank) ---
+        "青竜返首": "2", "飛鳥跌穴": "2", "玉女守門": "2", "乙奇得使": "2", 
+        "丙奇得使": "2", "丁奇得使": "2", "竜遁": "2", "虎遁": "2", 
+        "風遁": "2", "雲遁": "2", "三奇入墓": "2", "干伏吟": "2", "干反吟": "2",
+        
+        # --- HẠNG 3 (Tương đương C rank) ---
+        "乙奇昇殿": "3", "丙奇昇殿": "3", "丁奇昇殿": "3",
+        "九星伏吟": "3", "八门伏吟": "3", "九星反吟": "3", "八门反吟": "3" # Quy đổi từ 星門伏吟 / 星門反吟
+    }
+
     toan_ban_status = []
     cung_status = {i: [] for i in range(1, 10)}
     cung_3_elements = {i: [] for i in range(1, 10)} 
@@ -322,7 +341,7 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
            (t_can == '壬' and p == 4) or (t_can == '癸' and p == 4): cung_status[p].append(("六儀擊刑", "#000000"))
         if (t_can == '乙' and p == 2) or (t_can in ['丙', '丁'] and p == 6): cung_status[p].append(("三奇入墓", "#000000"))
         
-        # Thêm 12 Cách cục mới từ ảnh
+        # Thêm 12 Cách cục mới
         if t_can == '庚' and d_can == '癸': cung_status[p].append(("大格", "#000000"))
         if t_can == '庚' and d_can == '壬': cung_status[p].append(("小格", "#000000"))
         if t_can == '庚' and d_can == '己': cung_status[p].append(("刑格", "#000000"))
@@ -343,7 +362,7 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         mon_bach_rules = {"休门":[9], "景门":[6, 7], "生门":[1], "开门":[3, 4]}
         if p in mon_bach_rules.get(mon, []): cung_status[p].append(("门迫", "#000000"))
 
-        # 4. BA TỔ HỢP CÁT HUNG (Sử dụng Can Thực Tế để đối chiếu theo yêu cầu)
+        # 4. BA TỔ HỢP CÁT HUNG
         if t_can_real in can_can_data and d_can_real in can_can_data[t_can_real]:
             kq_can_can = can_can_data[t_can_real][d_can_real]
             cung_3_elements[p].append(kq_can_can)
@@ -353,6 +372,24 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
             
         if than in than_cung_data and phi_tinh in than_cung_data[than]:
             cung_3_elements[p].append(than_cung_data[than][phi_tinh])
+
+    # --- BƯỚC CUỐI: GẮN RANK (1, 2, 3) VÀO CÁCH CỤC ĐỂ HIỂN THỊ ---
+    # Xử lý Toàn Bàn (Trung Cung)
+    for i in range(len(toan_ban_status)):
+        raw_name = toan_ban_status[i]
+        if raw_name in FORMATION_RANKS:
+            toan_ban_status[i] = f"{raw_name} <span style='font-size: 0.8em; font-weight: normal; color: #666;'>({FORMATION_RANKS[raw_name]})</span>"
+
+    # Xử lý 8 Cung
+    for p in cung_status:
+        formatted_list = []
+        for raw_name, color in cung_status[p]:
+            if raw_name in FORMATION_RANKS:
+                display_name = f"{raw_name} <span style='font-size: 0.8em; font-weight: normal; color: #666;'>({FORMATION_RANKS[raw_name]})</span>"
+            else:
+                display_name = raw_name
+            formatted_list.append((display_name, color))
+        cung_status[p] = formatted_list
 
     return toan_ban_status, cung_status, cung_3_elements
 
