@@ -259,10 +259,17 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         "大格": "1", "小格": "1", "刑格": "1", "戦格": "1", "飛宮格": "1", 
         "伏宮格": "1", "青竜逃走": "1", "白虎猖狂": "1", "熒惑入白": "1", 
         "太白入熒": "1", "朱雀投江": "1", "螣蛇妖嬌": "1",
+        
         # Hạng 2 (Nằm trên Hạng 1)
         "青竜返首": "2", "飛鳥跌穴": "2", "玉女守門": "2", "乙奇得使": "2", 
         "丙奇得使": "2", "丁奇得使": "2", "竜遁": "2", "虎遁": "2", 
-        "風遁": "2", "雲遁": "2", "三奇入墓": "2", "干伏吟": "2", "干反吟": "2",
+        "風遁": "2", "雲遁": "2", 
+        
+        # Các cách cục đã được gọi tên chi tiết (Rank 2)
+        "乙奇入墓": "2", "丙奇入墓": "2", "丁奇入墓": "2",
+        "甲儀伏吟": "2", "乙奇伏吟": "2", "丙奇伏吟": "2", "丁奇伏吟": "2", "戊儀伏吟": "2", "己儀伏吟": "2", "庚儀伏吟": "2", "辛儀伏吟": "2", "壬儀伏吟": "2", "癸儀伏吟": "2",
+        "戊儀反吟": "2", "己儀反吟": "2", "庚儀反吟": "2", "辛儀反吟": "2", "壬儀反吟": "2", "癸儀反吟": "2",
+        
         # Hạng 3 (Nằm trên Hạng 2)
         "乙奇昇殿": "3", "丙奇昇殿": "3", "丁奇昇殿": "3",
         "九星伏吟": "3", "八门伏吟": "3", "九星反吟": "3", "八门反吟": "3"
@@ -303,8 +310,10 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         d_can = '甲' if d_can_real == can_tuan else d_can_real
         mon, sao, than, phi_tinh = d['mon'], d['sao'], d['than'], d['phi_tinh']
 
-        if (t_can == '甲' and d_can == '丙') or (t_can == '戊' and d_can == '丙'): cung_status[p].append(("青竜返首", "#CC0000"))
-        if (t_can == '丙' and d_can == '甲') or (t_can == '丙' and d_can == '戊'): cung_status[p].append(("飛鳥跌穴", "#CC0000"))
+        # YÊU CẦU 2: Phản Thủ và Điểu Trật chỉ xét Giáp/Bính và Bính/Giáp
+        if t_can == '甲' and d_can == '丙': cung_status[p].append(("青竜返首", "#CC0000"))
+        if t_can == '丙' and d_can == '甲': cung_status[p].append(("飛鳥跌穴", "#CC0000"))
+        
         if truc_su_door and t_can == '丁' and mon == truc_su_door: cung_status[p].append(("玉女守門", "#CC0000"))
         if t_can == '乙' and p == 3: cung_status[p].append(("乙奇昇殿", "#CC0000"))
         if t_can == '丙' and p == 9: cung_status[p].append(("丙奇昇殿", "#CC0000"))
@@ -324,7 +333,11 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         if t_can == '乙' and p == 2 and mon in ["休门", "生门", "开门"]: cung_status[p].append(("雲遁", "#CC0000"))
 
         if (t_can == '戊' and p == 3) or (t_can == '己' and p == 2) or (t_can == '庚' and p == 8) or (t_can == '辛' and p == 9) or (t_can == '壬' and p == 4) or (t_can == '癸' and p == 4): cung_status[p].append(("六儀擊刑", "#000000"))
-        if (t_can == '乙' and p == 2) or (t_can in ['丙', '丁'] and p == 6): cung_status[p].append(("三奇入墓", "#000000"))
+        
+        # YÊU CẦU 3: Tách chi tiết Tam Kỳ Nhập Mộ
+        if t_can == '乙' and p == 2: cung_status[p].append(("乙奇入墓", "#000000"))
+        if t_can == '丙' and p == 6: cung_status[p].append(("丙奇入墓", "#000000"))
+        if t_can == '丁' and p == 6: cung_status[p].append(("丁奇入墓", "#000000"))
         
         if t_can == '庚' and d_can == '癸': cung_status[p].append(("大格", "#000000"))
         if t_can == '庚' and d_can == '壬': cung_status[p].append(("小格", "#000000"))
@@ -339,18 +352,27 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         if t_can == '丁' and d_can == '癸': cung_status[p].append(("朱雀投江", "#000000"))
         if t_can == '癸' and d_can == '丁': cung_status[p].append(("螣蛇妖嬌", "#000000"))
 
-        if t_can == d_can and t_can not in ['甲', '丁', '庚']: cung_status[p].append(("干伏吟", "#000000"))
-        if (t_can, d_can) in [('戊','辛'), ('辛','戊'), ('己','壬'), ('壬','己'), ('庚','癸'), ('癸','庚')]: cung_status[p].append(("干反吟", "#000000"))
+        # YÊU CẦU 3: Tách chi tiết Can Phục Ngâm
+        if t_can == d_can and t_can not in ['甲', '丁', '庚']:
+            ten_ki_nghi = {'乙':'乙奇', '丙':'丙奇', '戊':'戊儀', '己':'己儀', '辛':'辛儀', '壬':'壬儀', '癸':'癸儀'}
+            if t_can in ten_ki_nghi:
+                cung_status[p].append((f"{ten_ki_nghi[t_can]}伏吟", "#000000"))
+
+        # YÊU CẦU 3: Tách chi tiết Can Phản Ngâm
+        fan_yin_map = {('戊','辛'): '戊儀', ('辛','戊'): '辛儀', ('己','壬'): '己儀', ('壬','己'): '壬儀', ('庚','癸'): '庚儀', ('癸','庚'): '癸儀'}
+        if (t_can, d_can) in fan_yin_map:
+            prefix = fan_yin_map[(t_can, d_can)]
+            cung_status[p].append((f"{prefix}反吟", "#000000"))
         
         mon_bach_rules = {"休门":[9], "景门":[6, 7], "生门":[1], "开门":[3, 4]}
         if p in mon_bach_rules.get(mon, []): cung_status[p].append(("门迫", "#000000"))
 
-        if t_can_real in can_can_data and d_can_real in can_can_data[t_can_real]: cung_3_elements[p].append(can_can_data[t_can_real][d_can_real])
+        # YÊU CẦU 1: Đổi t_can_real -> t_can để tra Cát Hung (Dùng Giáp nếu bị ẩn)
+        if t_can in can_can_data and d_can in can_can_data[t_can]: cung_3_elements[p].append(can_can_data[t_can][d_can])
         if mon in mon_sao_data and sao in mon_sao_data[mon]: cung_3_elements[p].append(mon_sao_data[mon][sao])
         if than in than_cung_data and phi_tinh in than_cung_data[than]: cung_3_elements[p].append(than_cung_data[than][phi_tinh])
 
     # --- THUẬT TOÁN TRỌNG SỐ ĐỂ SẮP XẾP ---
-    # Không rank (Top) -> Rank 3 -> Rank 2 -> Rank 1 (Bottom)
     def get_rank_weight(name):
         rank = FORMATION_RANKS.get(name)
         if rank == "1": return 4
@@ -358,14 +380,12 @@ def qimen_analyzer(cung_data, can_ngay, can_gio, can_tuan, truc_su_door=None):
         if rank == "3": return 2
         return 1
 
-    # Sắp xếp Trung cung (ĐÃ SỬA: Đưa số (Rank) lên trước)
     toan_ban_status.sort(key=get_rank_weight)
     for i in range(len(toan_ban_status)):
         raw_name = toan_ban_status[i]
         if raw_name in FORMATION_RANKS:
             toan_ban_status[i] = f"<span style='font-size: 0.8em; font-weight: normal; color: #666;'>({FORMATION_RANKS[raw_name]})</span> {raw_name}"
 
-    # Sắp xếp 8 cung còn lại (ĐÃ SỬA: Đưa số (Rank) lên trước)
     for p in cung_status:
         cung_status[p].sort(key=lambda x: get_rank_weight(x[0]))
         formatted_list = []
