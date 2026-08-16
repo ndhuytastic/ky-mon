@@ -108,7 +108,8 @@ def get_zhirun_ju(actual_date):
     loai_don = "阳遁" if final_term in yang_terms else "阴遁"
     so_cuc = solar_term_ju[final_term][nguyen_index]
     ji_palace = JIEQI_PALACE_MAP[final_term]
-    return loai_don, so_cuc, final_term, ji_palace, is_nhuan
+    ten_nguyen = {0: "上元", 1: "中元", 2: "下元"}[nguyen_index]
+    return loai_don, so_cuc, final_term, ji_palace, is_nhuan, ten_nguyen
 
 # ==========================================
 # 2B. CÁC HÀM TÍNH TOÁN BỔ SUNG ĐỘC LẬP 
@@ -551,9 +552,9 @@ chi_thang_hien_tai = dia_chi[day_obj.getMonthGZ().dz]
 
 bazi_dict = {'nam': thien_can[day_obj.getYearGZ().tg] + dia_chi[day_obj.getYearGZ().dz], 'thang': can_thang_hien_tai + chi_thang_hien_tai, 'ngay': can_ngay_hien_tai + nhat_chi_hien_tai}
 
-don, cuc, jq_name, ji_palace, is_nhuan = get_zhirun_ju(actual_date)
+don, cuc, jq_name, ji_palace, is_nhuan, ten_nguyen = get_zhirun_ju(actual_date)
 nhuan_str = " - 闰奇" if is_nhuan else ""
-chuoi_cuc = f"飞盘 | {jq_name}{nhuan_str} - {don}{cuc}局 | 寄宫: {ji_palace}"
+chuoi_cuc = f"{jq_name}{nhuan_str} - {ten_nguyen} - {don}{cuc}局"
 bazi_chuoi = f"{bazi_dict['nam']}年 {bazi_dict['thang']}月 {bazi_dict['ngay']}日 {hoa_giap_hien_tai}时"
 
 tk_gio = tinh_tuan_khong_gio(hoa_giap_hien_tai)
@@ -796,7 +797,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 if s_date != current_cached_date:
                     cached_ju_data = get_zhirun_ju(s_date)
                     current_cached_date = s_date
-                s_don, s_cuc, _, s_ji, _ = cached_ju_data
+                s_don, s_cuc, _, s_ji, _, _ = cached_ju_data
                 
                 scan_data = lap_que(hg_gio_scan, nc_scan, s_don, s_cuc, s_ji, ct_scan, cn_scan, cht_scan)
                 
