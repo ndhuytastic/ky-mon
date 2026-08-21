@@ -574,9 +574,12 @@ with st.container():
     loc_cat_cach = c7.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
     
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-    c9, c10 = st.columns(2)
+    c9, c10, c11, c12 = st.columns(4)
     loc_tran_hung = c9.selectbox("鎮凶 (Trấn Hung)", options=tran_hung_list)
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
+    # Thêm 2 lựa chọn mới
+    loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
+    loc_dia_loi = c12.selectbox("地利 (Địa Lợi)", options=["", "Có"])
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
     for req in plan_list:
@@ -628,9 +631,13 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 chi_ngay_scan = dia_chi[gz_scan.dz]
                 
                 wl_dun_s, wl_ju_s = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
-                scan_data, p_circle_scan, _, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
+                
+                # Lấy thêm cung_phi_tinh_scan để phục vụ tính Quẻ Dịch (Địa Lợi)
+                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
-                cung_st_scan, _ = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
+                
+                # Lấy thêm stem_colors_scan để phục vụ tính Thiên/Địa bàn Cát (Thiên Thời)
+                cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
                 time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
                 c_str = f"{wl_dun_s} {wl_ju_s}局 | Ngày {can_ngay_scan}{chi_ngay_scan}"
@@ -650,6 +657,23 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         if loc_than and d['than'] != loc_than: return False
                         if val_cat_cach:
                             if not any(val_cat_cach in item[0] for item in cung_st_scan[p]): return False
+                            
+                        # --- KIỂM TRA THIÊN THỜI ---
+                        if loc_thien_thoi == "Có":
+                            # "#000000" nghĩa là hung, "#CC0000" nghĩa là cát
+                            if stem_colors_scan.get(p, "#000000") == "#000000":
+                                return False
+                                
+                        # --- KIỂM TRA ĐỊA LỢI ---
+                        if loc_dia_loi == "Có":
+                            global_lower_gate = scan_data[cung_phi_tinh_scan]['mon']
+                            global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
+                            out_upper_tri = TIEN_THIEN_MAP.get(p, "天")
+                            out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "✕")
+                            # Chỉ lấy Quẻ Cát (〇) hoặc Bình hòa (△)
+                            if out_eval not in ["〇", "△"]:
+                                return False
+                                
                         return True
 
                     if target_palace:
