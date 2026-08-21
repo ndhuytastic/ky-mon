@@ -73,16 +73,15 @@ def get_hour_nine_star(day_branch, hour_branch, dun_type):
     res = (start_star + hb_idx) % 9 if dun_type == "阳遁" else (start_star - hb_idx) % 9
     return 9 if res == 0 else res
 
-def calculate_exact_daily_ju(target_date, target_time, tz_hours):
+def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
+    # physical_dt: Thời gian vật lý thực tế để soi thiên văn
+    # can_chi_date: Ngày Can Chi thực tế để đếm bước modulo
     local_tz = timezone(timedelta(hours=tz_hours))
-    target_dt = datetime.combine(target_date, target_time).replace(tzinfo=local_tz)
+    target_dt = physical_dt.replace(tzinfo=local_tz)
     target_utc = target_dt.astimezone(timezone.utc)
     
-    obs = ephem.Observer()
-    obs.date = target_utc
-    
     # Lấy thời khắc Đông Chí và Hạ Chí thực tế gần nhất
-    prev_solstice_winter = ephem.previous_solstice(target_utc)
+    prev_solstice_winter = ephem.previous_winter_solstice(target_utc)
     prev_solstice_summer = ephem.previous_summer_solstice(target_utc)
     
     # Xác định Pha (Âm hay Dương Độn)
@@ -108,7 +107,9 @@ def calculate_exact_daily_ju(target_date, target_time, tz_hours):
 
     # Gán giá trị Sao khởi tạo và tính Cục (Phi Tinh Ngày)
     anchor_star = 1 if wl_dun == "阳遁" else 9
-    delta_days = (target_date - anchor_date).days
+    
+    # Tính khoảng cách dựa trên can_chi_date
+    delta_days = (can_chi_date - anchor_date).days
     
     steps = ((delta_days % 9) + 9) % 9
     
@@ -445,21 +446,23 @@ _, col_opt1, col_opt2, _ = st.columns([3, 2.5, 2.5, 3])
 with col_opt1: manual_hoagiap = st.selectbox("Hoa Giáp", options=["Tùy Chọn"] + hoa_giap_60)
 with col_opt2: manual_cucso = st.selectbox("Cục Số", options=["Tùy Chọn"] + cuc_so_list)
 
-# Tính toán lịch cho Ngày
-actual_date = selected_date
+# Lấy chính xác Thời Gian Vật Lý
+user_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
+
+# Tính toán lịch cho Ngày Can Chi (Cộng 1 ngày nếu là Giờ Tý)
+actual_date = user_dt.date() + timedelta(days=1) if user_dt.hour >= 23 else user_dt.date()
 day_obj = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
 lunar_m = day_obj.getLunarMonth()
 lunar_d = day_obj.getLunarDay()
 
-# Trích xuất Can Chi Ngày thay vì Giờ
+# Trích xuất Can Chi Ngày
 day_gz = day_obj.getDayGZ()
 wl_can = thien_can[day_gz.tg]
 wl_chi = dia_chi[day_gz.dz]
 hoa_giap_hien_tai = wl_can + wl_chi
 
-# Tính toán Độn và Cục thiên văn
-t_time = time(selected_hour, selected_minute)
-wl_dun, wl_ju = calculate_exact_daily_ju(actual_date, t_time, selected_tz)
+# Tính toán Độn và Cục thiên văn (Truyền 2 tham số tách biệt)
+wl_dun, wl_ju = calculate_exact_daily_ju(user_dt, actual_date, selected_tz)
 
 if manual_hoagiap != "Tùy Chọn":
     wl_can = manual_hoagiap[0]
@@ -624,7 +627,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 can_ngay_scan = thien_can[gz_scan.tg]
                 chi_ngay_scan = dia_chi[gz_scan.dz]
                 
-                wl_dun_s, wl_ju_s = calculate_exact_daily_ju(s_date, current_scan_dt.time(), selected_tz)
+                wl_dun_s, wl_ju_s = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
                 scan_data, p_circle_scan, _, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
                 cung_st_scan, _ = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
