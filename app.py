@@ -186,7 +186,7 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay):
     # Khóa cứng Trung Cung (Cung 5) tạo Hạ Quái Đoài/Cấn theo chuẩn Lập Hướng
     cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"
 
-    curr_star = get_hour_nine_star(chi_ngay, chi_gio, dun_type)
+    curr_star = ju_num  # Lấy chính Cục số làm sao nhập Trung Cung (Phi Tinh Ngày)
     for cung in WOLONG_FLYING_PATH:
         cung_data[cung]['hour_star'] = curr_star
         curr_star = 1 if curr_star == 9 else curr_star + 1
@@ -442,7 +442,7 @@ cuc_so_list = [f"阳遁{i}局" for i in range(1, 10)] + [f"阴遁{i}局" for i i
 
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 _, col_opt1, col_opt2, _ = st.columns([3, 2.5, 2.5, 3])
-with col_opt1: manual_hoagiap = st.selectbox("Hoa Giáp Ngày", options=["Tùy Chọn"] + hoa_giap_60)
+with col_opt1: manual_hoagiap = st.selectbox("Hoa Giáp", options=["Tùy Chọn"] + hoa_giap_60)
 with col_opt2: manual_cucso = st.selectbox("Cục Số", options=["Tùy Chọn"] + cuc_so_list)
 
 # Tính toán lịch cho Ngày
@@ -478,8 +478,7 @@ can_tuan = get_xun_leader(wl_can, wl_chi)
 cung_st, stem_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 
 # Render Giao Diện
-bazi_chuoi = f"农历 {lunar_m}月 {lunar_d}日 | {wl_can}{wl_chi}日"
-title = f"<h3 style='margin-bottom:8px; font-family:sans-serif; color: #1a1a1a; font-weight: normal; font-size: 18px; text-align: center;'>{bazi_chuoi}</h3>"
+title = ""
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>{hoa_giap_hien_tai}日 | {wl_dun}{wl_ju}局</h4>"
 
 user_birth_star = 0 # Loại bỏ Vòng tròn xanh Giờ Sinh (Báo giá trị 0)
@@ -493,7 +492,7 @@ st.components.v1.html(combined_html, height=550, scrolling=True)
 # 7. MODULE SCAN: DỤNG SỰ (TÌM KIẾM THEO NGÀY)
 # ==========================================
 st.markdown("---")
-st.markdown("<h3 style='text-align: center; color: #333; font-family: sans-serif; margin-bottom: 20px;'>DỤNG SỰ TÌM NGÀY TỐT</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: #333; font-family: sans-serif; margin-bottom: 20px;'>DỤNG SỰ</h3>", unsafe_allow_html=True)
 
 FORMATION_RANKS_LOCAL = {
     "天遁": 1, "地遁": 1, "人遁": 1, "神遁": 1, "鬼遁": 1,
