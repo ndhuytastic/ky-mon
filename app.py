@@ -657,9 +657,13 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 chi_ngay_scan = dia_chi[gz_scan.dz]
                 
                 wl_dun_s, wl_ju_s = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
-                scan_data, p_circle_scan, _, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
+                
+                # Khôi phục biến cung_phi_tinh_scan để tính Địa Lợi
+                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
-                cung_st_scan, _ = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
+                
+                # Khôi phục biến stem_colors_scan để tính Thiên Thời
+                cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
                 time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
                 c_str = f"{wl_dun_s} {wl_ju_s}局 | Ngày {can_ngay_scan}{chi_ngay_scan}"
@@ -681,7 +685,21 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     if val_cat_cach:
                         if not any(val_cat_cach in item[0] for item in cung_st_scan[p]): return False, ""
                         
-                    # 2. Quét tiếp điều kiện Trấn Hung / Thôi Cát (nếu user có chọn)
+                    # 2. Quét điều kiện THIÊN THỜI (Màu đỏ #CC0000 từ đánh giá Can-Can)
+                    if loc_thien_thoi == "Có":
+                        if stem_colors_scan.get(p, "#000000") == "#000000": # Nếu hung (màu đen) -> Loại
+                            return False, ""
+                            
+                    # 3. Quét điều kiện ĐỊA LỢI (Đánh giá quẻ phải là 〇)
+                    if loc_dia_loi == "Có":
+                        global_lower_gate = scan_data[cung_phi_tinh_scan]['mon']
+                        global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
+                        out_upper_tri = TIEN_THIEN_MAP[p]
+                        out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "△")
+                        if out_eval != "〇": # Nếu không phải Đại Cát (〇) -> Loại
+                            return False, ""
+                        
+                    # 4. Quét tiếp điều kiện Trấn Hung / Thôi Cát
                     dung_cach = ""
                     if val_tran_hung or val_thoi_cat:
                         pa1_reqs, pa2_reqs = TRAN_HUNG_DICT[val_tran_hung] if val_tran_hung else THOI_CAT_DICT[val_thoi_cat]
