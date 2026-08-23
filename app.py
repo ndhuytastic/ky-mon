@@ -729,14 +729,27 @@ if st.button("TÌM KIẾM", use_container_width=True):
                             
                 if is_match:
                     ten_cung = [k for k, v in huong_list.items() if v == target_palace][0]
-                    results.append((time_str, c_str, ten_cung, matched_cach))
+                    # LẤY THÊM DỮ LIỆU: Toàn bộ danh sách Cát/Hung cách của cung này
+                    cach_cuc_cua_cung = cung_st_scan[target_palace]
+                    
+                    # Nạp thêm cach_cuc_cua_cung vào danh sách kết quả
+                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung))
 
             # --- IN KẾT QUẢ ĐÃ GỘP ---
             if results:
                 st.success(f"**TÌM THẤY {len(results)} KẾT QUẢ:**")
-                for idx, (t_str, canchi_str, cung_str, d_cach) in enumerate(results):
+                for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung) in enumerate(results):
                     h_text = f" | Hướng: {cung_str}" if cung_str else ""
                     cach_text = f" | Dùng: **{d_cach}**" if d_cach else ""
-                    st.write(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}")
+                    
+                    # TẠO CHUỖI HIỂN THỊ CÁCH CỤC (Kèm màu sắc và cấp độ)
+                    cach_cuc_html = ""
+                    if cach_cuc_cua_cung:
+                        # name đã chứa sẵn cấp độ (1,2), color đã chứa mã màu Đỏ/Đen từ hàm phân tích
+                        list_html = [f"<span style='color:{color}; font-weight:bold;'>{name}</span>" for name, color in cach_cuc_cua_cung]
+                        cach_cuc_html = " ➔ " + ", ".join(list_html)
+                        
+                    # Dùng st.markdown với unsafe_allow_html=True để hiển thị được màu sắc
+                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}", unsafe_allow_html=True)
             else:
                 st.warning("Không tìm thấy ngày nào thỏa mãn TẤT CẢ các điều kiện trong 1 năm tới.")
