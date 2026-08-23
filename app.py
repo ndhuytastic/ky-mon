@@ -67,59 +67,100 @@ def get_xun_leader(can, chi):
     return {"子":"戊", "戌":"己", "申":"庚", "午":"辛", "辰":"壬", "寅":"癸"}[dia_chi[(dia_chi.index(chi) - thien_can.index(can)) % 12]]
 
 def get_hour_nine_star(day_branch, hour_branch, dun_type):
+    # Hàm này giữ nguyên để tương thích nếu sau này bạn dùng tính năng Giờ
     hb_idx = dia_chi.index(hour_branch) 
     start_star = 1 if day_branch in ["子","午","卯","酉"] else (4 if day_branch in ["辰","戌","丑","未"] else 7)
     if dun_type == "阴遁": start_star = 7 if day_branch in ["辰","戌","丑","未"] else (4 if day_branch in ["寅","申","巳","亥"] else 1)
     res = (start_star + hb_idx) % 9 if dun_type == "阳遁" else (start_star - hb_idx) % 9
     return 9 if res == 0 else res
 
-def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
-    # physical_dt: Thời gian vật lý thực tế để soi thiên văn
-    # can_chi_date: Ngày Can Chi thực tế để đếm bước modulo
-    local_tz = timezone(timedelta(hours=tz_hours))
-    target_dt = physical_dt.replace(tzinfo=local_tz)
-    target_utc = target_dt.astimezone(timezone.utc)
+# --- CÁC HÀM CƠ SỞ CHO THUẬT TOÁN NEO ĐỘNG ---
+def get_solstice(year, s_type, local_tz):
+    """ Lấy chính xác ngày giao tiết thiên văn quy đổi theo múi giờ địa phương """
+    if s_type == "DC": # Đông Chí (Khoảng 21-22/12)
+        # Ép tìm Đông Chí của đúng năm truyền vào bằng cách start từ tháng 11
+        solstice = ephem.next_winter_solstice(f"{year}-11-01")
+    else: # "HC" - Hạ Chí (Khoảng 21-22/06)
+        # Ép tìm Hạ Chí của đúng năm truyền vào bằng cách start từ tháng 5
+        solstice = ephem.next_summer_solstice(f"{year}-05-01")
     
-    # Lấy thời khắc Đông Chí và Hạ Chí thực tế gần nhất
-    prev_solstice_winter = ephem.previous_winter_solstice(target_utc)
-    prev_solstice_summer = ephem.previous_summer_solstice(target_utc)
-    
-    # Xác định Pha (Âm hay Dương Độn)
-    if prev_solstice_summer > prev_solstice_winter:
-        wl_dun = "阴遁"
-        source_solstice_dt = prev_solstice_summer.datetime().replace(tzinfo=timezone.utc).astimezone(local_tz).date()
-    else:
-        wl_dun = "阳遁"
-        source_solstice_dt = prev_solstice_winter.datetime().replace(tzinfo=timezone.utc).astimezone(local_tz).date()
-        
-    # Tìm mốc Giáp Tý gần Tiết Khí khởi nguồn nhất (Phù Đầu)
-    min_diff = 999
-    anchor_date = source_solstice_dt
-    for i in range(-35, 35):
-        test_date = source_solstice_dt + timedelta(days=i)
+    # Quy đổi UTC từ ephem sang múi giờ địa phương và lấy Date
+    return solstice.datetime().replace(tzinfo=timezone.utc).astimezone(local_tz).date()
+
+def get_closest_giap_ty(target_date):
+    """ Tìm Trạm Giáp Tý gần nhất. Nếu 30=30 thì lấy trạm tương lai (GT_after) """
+    # 1. Tìm Giáp Tý lùi về quá khứ (Kể cả chính nó)
+    GT_before = None
+    dist_before = 0
+    for i in range(60):
+        test_date = target_date - timedelta(days=i)
         test_obj = sxtwl.fromSolar(test_date.year, test_date.month, test_date.day)
         gz = test_obj.getDayGZ()
-        
-        if gz.tg == 0 and gz.dz == 0: # Giáp Tý
-            if abs(i) < min_diff:
-                min_diff = abs(i)
-                anchor_date = test_date
+        if gz.tg == 0 and gz.dz == 0: # 0, 0 là Giáp Tý
+            GT_before = test_date
+            dist_before = i
+            break
 
-    # Gán giá trị Sao khởi tạo và tính Cục (Phi Tinh Ngày)
-    anchor_star = 1 if wl_dun == "阳遁" else 9
+    # 2. Tìm Giáp Tý tiến về tương lai
+    GT_after = None
+    dist_after = 0
+    for i in range(60):
+        test_date = target_date + timedelta(days=i)
+        test_obj = sxtwl.fromSolar(test_date.year, test_date.month, test_date.day)
+        gz = test_obj.getDayGZ()
+        if gz.tg == 0 and gz.dz == 0:
+            GT_after = test_date
+            dist_after = i
+            break
+
+    # 3. Chốt chặn ngoại lệ (Ép lấy tương lai nếu khoảng cách bằng nhau)
+    if dist_before < dist_after:
+        return GT_before
+    else:
+        return GT_after
+
+# --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC ---
+def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
+    """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số bằng Dynamic Anchoring """
+    local_tz = timezone(timedelta(hours=tz_hours))
+    Input_Date = can_chi_date # Ngày cần xem
+    current_year = Input_Date.year
     
-    # Tính khoảng cách dựa trên can_chi_date
-    delta_days = (can_chi_date - anchor_date).days
+    # BƯỚC 1: Lấy các Mốc Giao Tiết bao quanh năm hiện tại
+    DC_prev = get_solstice(current_year - 1, "DC", local_tz) # Đông Chí năm ngoái
+    HC_curr = get_solstice(current_year, "HC", local_tz)     # Hạ Chí năm nay
+    DC_curr = get_solstice(current_year, "DC", local_tz)     # Đông Chí năm nay
     
-    steps = ((delta_days % 9) + 9) % 9
+    # BƯỚC 2: Dựng các Trạm kiểm soát Giáp Tý (Anchors)
+    Anchor_Duong_0 = get_closest_giap_ty(DC_prev)
+    Anchor_Am      = get_closest_giap_ty(HC_curr)
+    Anchor_Duong_1 = get_closest_giap_ty(DC_curr)
+    
+    # BƯỚC 3: Phân vùng Độn (Phase Determination)
+    if Input_Date < Anchor_Am:
+        # Vùng nửa đầu năm: Từ Đông chí năm ngoái đến trước trạm Âm Độn năm nay
+        wl_dun = "阳遁"
+        anchor_date = Anchor_Duong_0
+        
+    elif Input_Date >= Anchor_Am and Input_Date < Anchor_Duong_1:
+        # Vùng nửa cuối năm: Nằm giữa trạm Âm Độn và trạm Dương Độn mới
+        wl_dun = "阴遁"
+        anchor_date = Anchor_Am
+        
+    else:
+        # Vùng chu kỳ mới: Khí Dương mới đã khởi động cuối năm
+        wl_dun = "阳遁"
+        anchor_date = Anchor_Duong_1
+        
+    # BƯỚC 4: Nội suy ra Cửu Tinh (Cục Số)
+    days_passed = (Input_Date - anchor_date).days
+    index = days_passed % 9
     
     if wl_dun == "阳遁":
-        target_star = anchor_star + steps
+        final_ju = index + 1
     else:
-        target_star = anchor_star - steps
+        final_ju = 9 - index
         
-    final_ju = ((target_star - 1 + 9) % 9) + 1
-    
     return wl_dun, final_ju
 
 # ==========================================
@@ -574,12 +615,9 @@ with st.container():
     loc_cat_cach = c7.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
     
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-    c9, c10, c11, c12 = st.columns(4)
+    c9, c10 = st.columns(2)
     loc_tran_hung = c9.selectbox("鎮凶 (Trấn Hung)", options=tran_hung_list)
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
-    # Thêm 2 lựa chọn mới
-    loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
-    loc_dia_loi = c12.selectbox("地利 (Địa Lợi)", options=["", "Có"])
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
     for req in plan_list:
@@ -631,13 +669,9 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 chi_ngay_scan = dia_chi[gz_scan.dz]
                 
                 wl_dun_s, wl_ju_s = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
-                
-                # Lấy thêm cung_phi_tinh_scan để phục vụ tính Quẻ Dịch (Địa Lợi)
-                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
+                scan_data, p_circle_scan, _, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
-                
-                # Lấy thêm stem_colors_scan để phục vụ tính Thiên/Địa bàn Cát (Thiên Thời)
-                cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
+                cung_st_scan, _ = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
                 time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
                 c_str = f"{wl_dun_s} {wl_ju_s}局 | Ngày {can_ngay_scan}{chi_ngay_scan}"
@@ -657,23 +691,6 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         if loc_than and d['than'] != loc_than: return False
                         if val_cat_cach:
                             if not any(val_cat_cach in item[0] for item in cung_st_scan[p]): return False
-                            
-                        # --- KIỂM TRA THIÊN THỜI ---
-                        if loc_thien_thoi == "Có":
-                            # "#000000" nghĩa là hung, "#CC0000" nghĩa là cát
-                            if stem_colors_scan.get(p, "#000000") == "#000000":
-                                return False
-                                
-                        # --- KIỂM TRA ĐỊA LỢI ---
-                        if loc_dia_loi == "Có":
-                            global_lower_gate = scan_data[cung_phi_tinh_scan]['mon']
-                            global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
-                            out_upper_tri = TIEN_THIEN_MAP.get(p, "天")
-                            out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "✕")
-                            # Chỉ lấy Quẻ Cát (〇) hoặc Bình hòa (△)
-                            if out_eval not in ["〇", "△"]:
-                                return False
-                                
                         return True
 
                     if target_palace:
