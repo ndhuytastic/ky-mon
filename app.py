@@ -119,40 +119,45 @@ def get_closest_giap_ty(target_date):
     else:
         return GT_after
 
-# --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC ---
+# --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC (ĐÃ FIX LỖI YEAR-BOUNDARY) ---
 def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
-    """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số bằng Dynamic Anchoring """
+    """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số bằng Timeline Anchoring """
     local_tz = timezone(timedelta(hours=tz_hours))
-    Input_Date = can_chi_date # Ngày cần xem
-    current_year = Input_Date.year
+    Input_Date = can_chi_date 
+    y = Input_Date.year
     
-    # BƯỚC 1: Lấy các Mốc Giao Tiết bao quanh năm hiện tại
-    DC_prev = get_solstice(current_year - 1, "DC", local_tz) # Đông Chí năm ngoái
-    HC_curr = get_solstice(current_year, "HC", local_tz)     # Hạ Chí năm nay
-    DC_curr = get_solstice(current_year, "DC", local_tz)     # Đông Chí năm nay
+    # BƯỚC 1: Lấy 5 mốc giao tiết trải dài từ 2 năm trước đến năm nay
+    # Việc mở rộng vùng quét giúp vét sạch các trường hợp Nhuận vắt qua ngày 1/1
+    dc_y2 = get_solstice(y - 2, "DC", local_tz)
+    hc_y1 = get_solstice(y - 1, "HC", local_tz)
+    dc_y1 = get_solstice(y - 1, "DC", local_tz)
+    hc_y  = get_solstice(y, "HC", local_tz)
+    dc_y  = get_solstice(y, "DC", local_tz)
     
-    # BƯỚC 2: Dựng các Trạm kiểm soát Giáp Tý (Anchors)
-    Anchor_Duong_0 = get_closest_giap_ty(DC_prev)
-    Anchor_Am      = get_closest_giap_ty(HC_curr)
-    Anchor_Duong_1 = get_closest_giap_ty(DC_curr)
+    # BƯỚC 2: Dựng các Trạm kiểm soát Giáp Tý (Anchor) và gán Độn tương ứng
+    anchors = [
+        (get_closest_giap_ty(dc_y2), "阳遁"), # Dương Độn (Năm y-2)
+        (get_closest_giap_ty(hc_y1), "阴遁"), # Âm Độn (Năm y-1)
+        (get_closest_giap_ty(dc_y1), "阳遁"), # Dương Độn (Năm y-1)
+        (get_closest_giap_ty(hc_y), "阴遁"),  # Âm Độn (Năm nay)
+        (get_closest_giap_ty(dc_y), "阳遁")   # Dương Độn (Năm nay)
+    ]
     
-    # BƯỚC 3: Phân vùng Độn (Phase Determination)
-    if Input_Date < Anchor_Am:
-        # Vùng nửa đầu năm: Từ Đông chí năm ngoái đến trước trạm Âm Độn năm nay
-        wl_dun = "阳遁"
-        anchor_date = Anchor_Duong_0
-        
-    elif Input_Date >= Anchor_Am and Input_Date < Anchor_Duong_1:
-        # Vùng nửa cuối năm: Nằm giữa trạm Âm Độn và trạm Dương Độn mới
-        wl_dun = "阴遁"
-        anchor_date = Anchor_Am
-        
-    else:
-        # Vùng chu kỳ mới: Khí Dương mới đã khởi động cuối năm
-        wl_dun = "阳遁"
-        anchor_date = Anchor_Duong_1
-        
-    # BƯỚC 4: Nội suy ra Cửu Tinh (Cục Số)
+    # Sắp xếp Timeline từ Tương lai lùi dần về Quá khứ
+    anchors.sort(key=lambda x: x[0], reverse=True)
+    
+    # BƯỚC 3: Dò tìm điểm Neo của Input_Date
+    wl_dun = None
+    anchor_date = None
+    
+    # Quét từ tương lai về quá khứ. Trạm đầu tiên nằm ở mốc <= Input_Date chính là bến đỗ.
+    for anchor_dt, dun_type in anchors:
+        if Input_Date >= anchor_dt:
+            wl_dun = dun_type
+            anchor_date = anchor_dt
+            break
+            
+    # BƯỚC 4: Tính toán Cửu Tinh (Cục Số) với toán tử Modulo
     days_passed = (Input_Date - anchor_date).days
     index = days_passed % 9
     
