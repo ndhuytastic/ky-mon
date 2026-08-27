@@ -121,43 +121,43 @@ def get_closest_giap_ty(target_date):
 
 # --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC (ĐÃ FIX LỖI YEAR-BOUNDARY) ---
 def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
-    """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số bằng Timeline Anchoring """
+    """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số (Bảo toàn Tiếp Khí, Cắt Khí tại Nhuận) """
     local_tz = timezone(timedelta(hours=tz_hours))
     Input_Date = can_chi_date 
     y = Input_Date.year
     
-    # BƯỚC 1: Lấy 5 mốc giao tiết trải dài từ 2 năm trước đến năm nay
-    # Việc mở rộng vùng quét giúp vét sạch các trường hợp Nhuận vắt qua ngày 1/1
     dc_y2 = get_solstice(y - 2, "DC", local_tz)
     hc_y1 = get_solstice(y - 1, "HC", local_tz)
     dc_y1 = get_solstice(y - 1, "DC", local_tz)
     hc_y  = get_solstice(y, "HC", local_tz)
     dc_y  = get_solstice(y, "DC", local_tz)
     
-    # BƯỚC 2: Dựng các Trạm kiểm soát Giáp Tý (Anchor) và gán Độn tương ứng
+    def get_boundary_and_anchor(solstice_dt):
+        anchor = get_closest_giap_ty(solstice_dt)
+        # Chỉ kích hoạt cắt ranh giới tại Tiết Khí khi khoảng cách vọt quá giới hạn (Nhuận)
+        if (anchor - solstice_dt).days > 15:
+            return solstice_dt, anchor
+        return anchor, anchor
+
     anchors = [
-        (get_closest_giap_ty(dc_y2), "阳遁"), # Dương Độn (Năm y-2)
-        (get_closest_giap_ty(hc_y1), "阴遁"), # Âm Độn (Năm y-1)
-        (get_closest_giap_ty(dc_y1), "阳遁"), # Dương Độn (Năm y-1)
-        (get_closest_giap_ty(hc_y), "阴遁"),  # Âm Độn (Năm nay)
-        (get_closest_giap_ty(dc_y), "阳遁")   # Dương Độn (Năm nay)
+        (get_boundary_and_anchor(dc_y2)[0], get_boundary_and_anchor(dc_y2)[1], "阳遁"),
+        (get_boundary_and_anchor(hc_y1)[0], get_boundary_and_anchor(hc_y1)[1], "阴遁"),
+        (get_boundary_and_anchor(dc_y1)[0], get_boundary_and_anchor(dc_y1)[1], "阳遁"),
+        (get_boundary_and_anchor(hc_y)[0],  get_boundary_and_anchor(hc_y)[1],  "阴遁"),
+        (get_boundary_and_anchor(dc_y)[0],  get_boundary_and_anchor(dc_y)[1],  "阳遁")
     ]
     
-    # Sắp xếp Timeline từ Tương lai lùi dần về Quá khứ
     anchors.sort(key=lambda x: x[0], reverse=True)
     
-    # BƯỚC 3: Dò tìm điểm Neo của Input_Date
     wl_dun = None
     anchor_date = None
     
-    # Quét từ tương lai về quá khứ. Trạm đầu tiên nằm ở mốc <= Input_Date chính là bến đỗ.
-    for anchor_dt, dun_type in anchors:
-        if Input_Date >= anchor_dt:
+    for boundary_dt, anch_dt, dun_type in anchors:
+        if Input_Date >= boundary_dt:
             wl_dun = dun_type
-            anchor_date = anchor_dt
+            anchor_date = anch_dt
             break
             
-    # BƯỚC 4: Tính toán Cửu Tinh (Cục Số) với toán tử Modulo
     days_passed = (Input_Date - anchor_date).days
     index = days_passed % 9
     
@@ -384,23 +384,39 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 510px; min-width: 400px; height: 430px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
-        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 10px; }
-        .cell-main {
-            display: grid; grid-template-columns: auto auto 1fr; grid-template-rows: 22px 22px 22px;   
-            column-gap: 15px; row-gap: 6px; height: 100%; min-height: 85px; align-content: start; margin-top: 5px; margin-left: 5px; 
-        }
-        .item-than  { grid-column: 1 / span 2; grid-row: 1; font-size: 15px; color: #999999; text-align: left; }
-        .item-tinh  { grid-column: 1; grid-row: 2; font-size: 15px; color: #999999; text-align: left; }
-        .item-mon   { grid-column: 1; grid-row: 3; font-size: 15px; color: #999999; text-align: left; }
+        /* Thu nhỏ toàn bộ bảng Kỳ Môn (Bỏ bớt chiều cao vì đã xóa Thần/Tinh/Môn) */
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 400px; min-width: 320px; height: 320px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 5px; }
         
-        .bottom-left-phitinh { position: absolute; bottom: 3px; left: 5px; font-size: 15px; color: #555; font-weight: bold; }
+        .bottom-left-phitinh { position: absolute; bottom: 5px; left: 5px; font-size: 15px; color: #555; font-weight: bold; }
         .star-highlight { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px solid #0000FF; border-radius: 50%; color: #0000FF; background-color: rgba(0,0,255,0.05); }
         
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px;}
         .formation-item { margin-top: 1px; font-weight: bold; letter-spacing: 1px; color: #000; }
         
-        .bottom-right-hex { position: absolute; bottom: 5px; right: 2px; display: flex; flex-direction: column; align-items: center; width: 44px; }
+        /* Box chứa Quẻ Dịch và (Thiên/Địa Can) xếp ngang sát nhau */
+        .bottom-right-group {
+            position: absolute; 
+            bottom: 6px; 
+            right: 6px; 
+            display: flex; 
+            flex-direction: row; 
+            align-items: center; 
+            gap: 6px; /* Khoảng cách giữa Quẻ và Can */
+        }
+        /* Cột chứa Quẻ Dịch */
+        .hex-col {
+            font-size: 22px; /* Căn chỉnh chiều cao Quẻ tương đương với 2 dòng Can */
+            line-height: 0.9;
+            text-align: center;
+        }
+        /* Cột chứa Thiên Can và Địa Can */
+        .stem-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.1;
+        }
     </style>
     <table class="qmdj-table">
     """
@@ -421,17 +437,24 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
             
-            t_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {t_decor}; text-underline-offset: 4px; text-decoration-thickness: 2px;"
-            d_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {d_decor}; text-underline-offset: 4px; text-decoration-thickness: 2px;"
+            # CSS Style cho Can (Kích thước 18px)
+            t_style = f"font-weight: bold; color: {base_color}; font-size: 18px; text-decoration: {t_decor}; text-underline-offset: 4px; text-decoration-thickness: 2px;"
+            d_style = f"font-weight: bold; color: {base_color}; font-size: 18px; text-decoration: {d_decor}; text-underline-offset: 4px; text-decoration-thickness: 2px;"
 
             if p == 5:
+                # Cung Trung Cung (Không có Quẻ, chỉ có Can nằm ở góc phải dưới)
                 html += f"""
-                <td class="qmdj-td" style="background-color: transparent; text-align: center;">
+                <td class="qmdj-td" style="background-color: transparent;">
                     {phi_tinh_html}
-                    <div style="position: absolute; bottom: 30px; right: 6px; {t_style}">{t_can}</div>
-                    <div style="position: absolute; bottom: 6px; right: 6px; {d_style}">{d_can}</div>
+                    <div class="bottom-right-group">
+                        <div class="stem-col">
+                            <div style="{t_style}">{t_can}</div>
+                            <div style="{d_style}">{d_can}</div>
+                        </div>
+                    </div>
                 </td>"""
             else:
+                # Tính Quẻ Dịch cho các Cung ngoài
                 out_upper_tri = TIEN_THIEN_MAP[p]
                 out_lower_tri = global_lower_tri 
                 out_eval = EVAL_DICT.get(out_upper_tri, {}).get(out_lower_tri, "△")
@@ -440,31 +463,23 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                 elif out_eval == "△": out_hex_color = "#B8860B"  
                 else: out_hex_color = "#000000"  
                 
-                out_hex_name = HEX_NAME_DICT.get((out_upper_tri, out_lower_tri), "Không rõ")
-                
-                outer_hex_html = f"""
-                <div class="bottom-right-hex">
-                    <div style="font-size:26px; line-height:0.85; color:{out_hex_color}; margin-bottom: 2px; text-align: center;">
-                        {TRIGRAM_UNICODE[out_upper_tri]}<br>{TRIGRAM_UNICODE[out_lower_tri]}
-                    </div>
-                    <div style="width: 100%; font-size:10px; font-weight:normal; color:#999999; letter-spacing: -0.5px; text-align: center;">{out_hex_name}</div>
-                </div>
-                """
-
+                # Cát Hung Cách nằm góc trên phải
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
+                # HTML render cả Quẻ và Can
                 html += f"""
                 <td class="qmdj-td" style="background-color: transparent;">
                     {phi_tinh_html}
                     {top_right_html}
-                    {outer_hex_html}
-                    <div class="cell-main">
-                        <div class="item-than">{d['than']}</div>
-                        <div class="item-tinh">{d['sao']}</div>
-                        <div class="item-mon"><span>{d['mon']}</span></div>
-                        <div style="grid-column: 2; grid-row: 2; text-align: left; display: flex; align-items: center; {t_style}">{t_can}</div>
-                        <div style="grid-column: 2; grid-row: 3; text-align: left; display: flex; align-items: center; {d_style}">{d_can}</div>
+                    <div class="bottom-right-group">
+                        <div class="hex-col" style="color: {out_hex_color};">
+                            {TRIGRAM_UNICODE[out_upper_tri]}<br>{TRIGRAM_UNICODE[out_lower_tri]}
+                        </div>
+                        <div class="stem-col">
+                            <div style="{t_style}">{t_can}</div>
+                            <div style="{d_style}">{d_can}</div>
+                        </div>
                     </div>
                 </td>"""
         html += "</tr>"
