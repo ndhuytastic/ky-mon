@@ -121,7 +121,7 @@ def get_closest_giap_ty(target_date):
 
 # --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC (ĐÃ FIX LỖI YEAR-BOUNDARY) ---
 def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
-    """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số (Bảo toàn Tiếp Khí, Cắt Khí tại Nhuận) """
+    """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số (Bảo toàn 100% cơ chế nhận diện Nhuận của code gốc) """
     local_tz = timezone(timedelta(hours=tz_hours))
     Input_Date = can_chi_date 
     y = Input_Date.year
@@ -134,10 +134,10 @@ def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
     
     def get_boundary_and_anchor(solstice_dt):
         anchor = get_closest_giap_ty(solstice_dt)
-        # Chỉ kích hoạt cắt ranh giới tại Tiết Khí khi khoảng cách vọt quá giới hạn (Nhuận)
-        if (anchor - solstice_dt).days > 15:
-            return solstice_dt, anchor
-        return anchor, anchor
+        # BÁM SÁT CODE CŨ: Code gốc phát hiện Nhuận khi hàm trả về Giáp Tý ở tương lai.
+        if anchor > solstice_dt:
+            return solstice_dt, anchor # Năm Nhuận: Cắt ranh giới tại đúng ngày Tiết Khí
+        return anchor, anchor          # Năm Thường: Ranh giới vẫn là ngày Giáp Tý y hệt code cũ
 
     anchors = [
         (get_boundary_and_anchor(dc_y2)[0], get_boundary_and_anchor(dc_y2)[1], "阳遁"),
@@ -384,9 +384,9 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
-        /* Thu nhỏ toàn bộ bảng Kỳ Môn (Bỏ bớt chiều cao vì đã xóa Thần/Tinh/Môn) */
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 400px; min-width: 320px; height: 320px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
-        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 5px; }
+        /* Tăng kích thước bảng lên mức trung bình (không quá to, không quá nhỏ) */
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 450px; min-width: 350px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         
         .bottom-left-phitinh { position: absolute; bottom: 5px; left: 5px; font-size: 15px; color: #555; font-weight: bold; }
         .star-highlight { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px solid #0000FF; border-radius: 50%; color: #0000FF; background-color: rgba(0,0,255,0.05); }
@@ -394,19 +394,19 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px;}
         .formation-item { margin-top: 1px; font-weight: bold; letter-spacing: 1px; color: #000; }
         
-        /* Box chứa Quẻ Dịch và (Thiên/Địa Can) xếp ngang sát nhau */
+        /* Box chứa Quẻ Dịch và Can sát nhau */
         .bottom-right-group {
             position: absolute; 
-            bottom: 6px; 
-            right: 6px; 
+            bottom: 8px; 
+            right: 8px; 
             display: flex; 
             flex-direction: row; 
             align-items: center; 
-            gap: 6px; /* Khoảng cách giữa Quẻ và Can */
+            gap: 8px; /* Khoảng cách ngang giữa Quẻ và Can */
         }
-        /* Cột chứa Quẻ Dịch */
+        /* Cột chứa Quẻ Dịch - Chỉnh size tương xứng với Can */
         .hex-col {
-            font-size: 22px; /* Căn chỉnh chiều cao Quẻ tương đương với 2 dòng Can */
+            font-size: 20px; 
             line-height: 0.9;
             text-align: center;
         }
@@ -415,7 +415,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             display: flex;
             flex-direction: column;
             align-items: center;
-            line-height: 1.1;
+            gap: 4px; /* TẠO KHOẢNG TRỐNG GIỮA 2 CAN ĐỂ GẠCH CHÂN KHÔNG BỊ DÍNH */
         }
     </style>
     <table class="qmdj-table">
@@ -434,15 +434,16 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             t_can, d_can = d.get('thien', ''), d.get('dia', '')
             base_color = stem_colors.get(p, "#000000") 
             
+            # Cấu hình gạch chân tách biệt
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
             
-            # CSS Style cho Can (Kích thước 18px)
-            t_style = f"font-weight: bold; color: {base_color}; font-size: 18px; text-decoration: {t_decor}; text-underline-offset: 4px; text-decoration-thickness: 2px;"
-            d_style = f"font-weight: bold; color: {base_color}; font-size: 18px; text-decoration: {d_decor}; text-underline-offset: 4px; text-decoration-thickness: 2px;"
+            # CSS Style cho Can (Giảm cỡ chữ xuống 16px, căn chỉnh offset gạch chân)
+            t_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            d_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
             if p == 5:
-                # Cung Trung Cung (Không có Quẻ, chỉ có Can nằm ở góc phải dưới)
+                # Cung Trung Cung (Chỉ có Can nằm ở góc phải dưới)
                 html += f"""
                 <td class="qmdj-td" style="background-color: transparent;">
                     {phi_tinh_html}
