@@ -497,18 +497,27 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 440px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         
-        .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px;}
-        .formation-item { margin-top: 1px; font-weight: bold; letter-spacing: 1px; color: #000; }
+        /* CÁCH CỤC KỲ MÔN (GÓC TRÊN PHẢI) - Đã chuyển thành viết dọc */
+        .top-right-panel { 
+            position: absolute; top: 5px; right: 5px; 
+            display: flex; flex-direction: row-reverse; /* Xếp cột từ phải qua trái */
+            gap: 4px; align-items: flex-start;
+        }
+        .formation-item { 
+            writing-mode: vertical-rl; /* Lệnh xoay dọc chữ */
+            font-weight: bold; letter-spacing: 1px; color: #000; font-size: 10.5px; line-height: 1.2;
+        }
         
         .bottom-right-group { position: absolute; bottom: 8px; right: 8px; display: flex; flex-direction: row; align-items: center; gap: 8px; }
         .hex-col { font-size: 20px; line-height: 0.9; text-align: center; }
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         
-        /* Box Khí Học: Đặt Sao và Cách cục (viết dọc) nằm ngang cạnh nhau */
+        /* CỘT KHÍ HỌC: Sao và chữ nằm ngang sát nhau, căn bằng đầu */
         .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column;}
         .k-row { height: 33.33%; display: flex; flex-direction: row; align-items: flex-start; gap: 4px; overflow: hidden; padding-top: 2px;}
-        .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; }
-        .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px;}
+        .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; line-height: 1;}
+        /* Thêm padding-top 1.5px để hạ đỉnh chữ xuống cho bằng với đỉnh của số (Sao) */
+        .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px; padding-top: 1.5px;}
     </style>
     <table class="qmdj-table">
     """
@@ -546,6 +555,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                 out_eval = EVAL_DICT.get(out_upper_tri, {}).get(out_lower_tri, "△")
                 out_hex_color = "#CC0000" if out_eval == "〇" else ("#B8860B" if out_eval == "△" else "#000000")
                 
+                # Render Cách cục Kỳ Môn (CSS vertical-rl sẽ lo việc xoay dọc)
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
