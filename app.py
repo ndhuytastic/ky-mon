@@ -621,7 +621,7 @@ if "init_dt" not in st.session_state: st.session_state.init_dt = get_current_vn_
 
 # --- GIAO DIỆN 7 CỘT (XEM & SINH) ---
 col1, col2, col3, col4, col5, col6, col7 = st.columns([1.2, 0.8, 0.8, 1.2, 0.8, 0.8, 1])
-with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.init_dt.date())
+with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.init_dt.date(), min_value=date(1901, 1, 1), max_value=date(2100, 12, 31))
 with col2: selected_hour = st.selectbox("Giờ Xem", options=list(range(24)), index=st.session_state.init_dt.hour)
 with col3: selected_minute = st.selectbox("Phút Xem", options=list(range(60)), index=st.session_state.init_dt.minute)
 
