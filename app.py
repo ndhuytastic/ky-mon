@@ -378,10 +378,10 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
             rank = FORMATION_RANKS.get(raw_name)
             if rank == 3: continue 
             if rank: 
-                # Đã thêm display: inline-block; margin: 0 auto; padding-top: 3px; để ép nó vào chính giữa cột
-                display_name = f"{raw_name}<span style='display: inline-block; margin: 0 auto; padding-top: 3px; font-size: 0.85em; font-weight: normal; color: #666; writing-mode: horizontal-tb; text-combine-upright: all; -webkit-text-combine: horizontal;'>({rank})</span>"
+                # Đã bọc <span> cho raw_name để dùng Flexbox ép 2 khối này thẳng hàng tâm
+                display_name = f"<span>{raw_name}</span><span style='margin-top: 3px; font-size: 0.85em; font-weight: normal; color: #666; writing-mode: horizontal-tb; text-combine-upright: all; -webkit-text-combine: horizontal;'>({rank})</span>"
             else: 
-                display_name = raw_name
+                display_name = f"<span>{raw_name}</span>"
             formatted_list.append((display_name, color))
         cung_status[p] = formatted_list
 
@@ -517,7 +517,9 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         }
         .formation-item { 
             writing-mode: vertical-rl; 
-            text-align: center; /* Thêm lệnh căn giữa tâm cho toàn bộ cột */
+            display: flex; 
+            align-items: center; /* Khóa chặt chữ và số vào trục tâm ngang */
+            justify-content: flex-start; /* Đẩy chữ bắt đầu từ trên cùng xuống */
             font-weight: bold; letter-spacing: 1px; color: #000; font-size: 10.5px; line-height: 1.2;
         }
         
