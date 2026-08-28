@@ -385,44 +385,20 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
     return cung_status, stem_colors
 
 # --- THUẬT TOÁN CỬU TINH KHÍ HỌC (KIGAKU) ---
-# --- THUẬT TOÁN CỬU TINH KHÍ HỌC (KIGAKU) ---
 def get_bazi_solar_info(dt_date):
-    """ Dùng Ephem lấy chính xác Tiết Lập Xuân thiên văn để chốt Năm Khí Học """
-    import ephem # Đảm bảo gọi thư viện thiên văn
+    """ Nhận diện Tiết Lập Xuân chuẩn xác 100% bằng thư viện sxtwl """
+    d = sxtwl.fromSolar(dt_date.year, dt_date.month, dt_date.day)
     
-    # 1. Tìm thời điểm Lập Xuân của năm đang xét (Solar Longitude = 315 độ)
-    sun = ephem.Sun()
-    # Tìm thời điểm kinh độ mặt trời đạt 315 độ (Khoảng mùng 4/5 tháng 2)
-    lap_xuan_utc = ephem.next_equinox(f"{dt_date.year}-01-01") # Hàm mượn tạm để tìm Xuân Phân
-    # Để chính xác nhất, tìm điểm 315 độ:
-    def find_lap_xuan(year):
-        t1 = ephem.Date(f"{year}-02-01")
-        t2 = ephem.Date(f"{year}-02-06")
-        while t2 - t1 > 0.0001:
-            m = (t1 + t2) / 2
-            sun.compute(m)
-            if sun.hlon < ephem.degrees('315:00:00'):
-                t1 = m
-            else:
-                t2 = m
-        return m.datetime().replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=7)))
-        
-    lap_xuan_dt = find_lap_xuan(dt_date.year)
+    # sxtwl tự động chuyển đổi Địa Chi (dz) của Năm vào chính xác thời khắc Lập Xuân
+    actual_dz = d.getYearGZ().dz
+    expected_dz = (dt_date.year - 4) % 12  # Năm 1984 là Giáp Tý (Tý = 0)
     
-    # 2. So sánh ngày sinh với Lập Xuân để chốt năm
     solar_year = dt_date.year
-    if dt_date < lap_xuan_dt:
+    # Nếu đang là tháng 1 hoặc 2, mà Địa Chi Năm chưa chuyển sang năm mới -> Nghĩa là chưa qua Lập Xuân
+    if dt_date.month <= 2 and actual_dz != expected_dz:
         solar_year -= 1
         
-    # 3. Lấy Can Chi theo Lịch Vạn Niên (sxtwl) để tính tháng/ngày
-    d = sxtwl.fromSolar(dt_date.year, dt_date.month, dt_date.day)
-    y_branch = dia_chi[d.getYearGZ().dz]
-    
-    # Ép đồng bộ Địa Chi của năm Khí Học với lịch
-    if solar_year < dt_date.year:
-        idx = dia_chi.index(y_branch)
-        y_branch = dia_chi[(idx - 1) % 12]
-        
+    y_branch = dia_chi[actual_dz]
     m_branch = dia_chi[d.getMonthGZ().dz]
     d_branch = dia_chi[d.getDayGZ().dz]
     
