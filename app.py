@@ -158,14 +158,19 @@ def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
     ]
     
     anchors.sort(key=lambda x: x[0], reverse=True)
-    
+
     wl_dun = None
     anchor_date = None
+    is_nhuan_period = False # Thêm biến cảnh báo vùng xám Nhuận
     
     for boundary_dt, anch_dt, dun_type in anchors:
         if Input_Date >= boundary_dt:
             wl_dun = dun_type
             anchor_date = anch_dt
+            
+            # Nếu Giáp Tý > Giao tiết (Nhuận) VÀ Ngày hiện tại nằm ở GIỮA 2 mốc này -> Bật cảnh báo
+            if anch_dt > boundary_dt and Input_Date < anch_dt:
+                is_nhuan_period = True
             break
             
     days_passed = (Input_Date - anchor_date).days
@@ -176,7 +181,8 @@ def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
     else:
         final_ju = 9 - index
         
-    return wl_dun, final_ju
+    # Trả về 3 giá trị thay vì 2
+    return wl_dun, final_ju, is_nhuan_period
 
 # ==========================================
 # 3. LẬP BÀN TOÁN HỌC
@@ -515,7 +521,7 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
 # ==========================================
 # 5. GIAO DIỆN HTML RENDER 
 # ==========================================
-def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data):
+def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day=False):
     global_lower_gate = cung_data[cung_phi_tinh]['mon']
     global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
 
@@ -589,7 +595,9 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             """
 
             if p == 5:
-                html += f"""<td class="qmdj-td">{kigaku_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>"""
+                # Nếu là ngày giao Tiết Khí, ép Trung Cung có class bg-gray (màu xám nhạt)
+                center_bg_class = "bg-gray" if is_transition_day else ""
+                html += f"""<td class="qmdj-td {center_bg_class}">{kigaku_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>"""
             else:
                 out_upper_tri = TIEN_THIEN_MAP[p]
                 out_lower_tri = global_lower_tri 
@@ -628,9 +636,9 @@ with col2: selected_hour = st.selectbox("Giờ Xem", options=list(range(24)), in
 with col3: selected_minute = st.selectbox("Phút Xem", options=list(range(60)), index=st.session_state.init_dt.minute)
 
 # Ô Ngày Sinh (Cũng cho phép chọn từ 1901)
-with col4: birth_date = st.date_input("Ngày Sinh", value=date(1990, 1, 1), min_value=date(1901, 1, 1), max_value=date(2100, 12, 31))
-with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=12)
-with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=0)
+with col4: birth_date = st.date_input("Ngày Sinh", value=date(1993, 1, 7), min_value=date(1901, 1, 1), max_value=date(2100, 12, 31))
+with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=8)
+with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
 
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 
@@ -665,8 +673,11 @@ wl_can = thien_can[day_gz.tg]
 wl_chi = dia_chi[day_gz.dz]
 hoa_giap_hien_tai = wl_can + wl_chi
 
-# Tính toán Độn và Cục thiên văn (Truyền 2 tham số tách biệt)
-wl_dun, wl_ju = calculate_exact_daily_ju(user_dt, actual_date, selected_tz)
+# Xác định xem ngày hôm nay có phải là ngày Giao Tiết Khí không (Để tô xám Trung Cung)
+is_transition_day = day_obj.hasJieQi()
+
+# Tính toán Độn và Cục thiên văn (Hứng 3 giá trị, bao gồm cảnh báo vùng Nhuận)
+wl_dun, wl_ju, is_nhuan_period = calculate_exact_daily_ju(user_dt, actual_date, selected_tz)
 
 if manual_hoagiap != "Tùy Chọn":
     wl_can = manual_hoagiap[0]
@@ -676,6 +687,7 @@ if manual_hoagiap != "Tùy Chọn":
 if manual_cucso != "Tùy Chọn":
     wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
     wl_ju = int(manual_cucso.replace("阳遁", "").replace("阴遁", "").replace("局", ""))
+    is_nhuan_period = False # Bỏ cảnh báo nếu user tự chọn tay
 
 # TÍNH TOÁN BÀN LÕI DÙNG CAN CHI NGÀY
 data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, wl_chi)
@@ -684,16 +696,18 @@ data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, w
 can_tuan = get_xun_leader(wl_can, wl_chi)
 cung_st, stem_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 
-# Render Giao Diện
+# Render Giao Diện (Tiêu đề chuyển Vàng Nâu nếu rơi vào vùng Nhuận)
 title = ""
-sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>{hoa_giap_hien_tai}日 | {wl_dun}{wl_ju}局</h4>"
+title_color = "#B8860B" if is_nhuan_period else "#555" 
+font_weight = "bold" if is_nhuan_period else "normal"
+sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>{hoa_giap_hien_tai}日 | {wl_dun}{wl_ju}局</h4>"
 
-# KẾT NỐI VÀ TÍNH KHÍ HỌC (Tất cả viết sát lề trái, không thụt vào)
+# KẾT NỐI VÀ TÍNH KHÍ HỌC
 cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
 
-# RENDER
-qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data)
+# RENDER BẢNG (Truyền thêm biến is_transition_day vào hàm)
+qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
 st.components.v1.html(combined_html, height=550, scrolling=True)
@@ -824,7 +838,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 can_ngay_scan = thien_can[gz_scan.tg]
                 chi_ngay_scan = dia_chi[gz_scan.dz]
                 
-                wl_dun_s, wl_ju_s = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
+                wl_dun_s, wl_ju_s, _ = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
                 scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
                 cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
