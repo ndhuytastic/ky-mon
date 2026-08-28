@@ -435,45 +435,60 @@ def calculate_kigaku_stars(solar_year, y_branch, m_branch):
         cm = 1 if cm == 9 else cm + 1
     return y_stars, m_stars
 
+def calculate_nhan_hoa(month_star, day_star):
+    """ Tính Cửu Tinh đạt tiêu chí Nhân Hòa (Từ Tháng và Ngày) """
+    if day_star == month_star: return []
+    star_se = ((month_star + 7) % 9) + 1
+    star_w  = ((month_star + 1) % 9) + 1
+    if day_star in [star_se, star_w]:
+        return [star for star in range(1, 10) if star not in (month_star, day_star)]
+        
+    base_luoshu = [4, 9, 2, 3, 5, 7, 8, 1, 6]
+    hour_grid = [((val + day_star - 6) % 9) + 1 for val in base_luoshu]
+    index_month_star = hour_grid.index(month_star)
+    opposite_index = 8 - index_month_star 
+    return [hour_grid[opposite_index]]
+
 def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
-    """ Tính toán Cách Cục (Đã sửa logic Bản Mệnh Đích Sát chiếu sang Cung đối diện) """
+    """ Tính toán Cách Cục (Đã tích hợp Nhân Hòa cho Nhật Tinh) """
     v_s_year, v_y_branch, v_m_branch, v_d_branch = get_bazi_solar_info(view_dt)
     y_stars, m_stars = calculate_kigaku_stars(v_s_year, v_y_branch, v_m_branch)
     d_stars = qi_men_day_stars 
     
     k_data = {i: {'y_forms': [], 'm_forms': [], 'd_forms': [], 'stars': {}} for i in range(1, 10)}
     
-    # Xác định Cung chứa Ngũ Hoàng để tính Ám Kiếm Sát
     cung_ngu_hoang_y = [p for p, s in y_stars.items() if s == 5][0]
     cung_ngu_hoang_m = [p for p, s in m_stars.items() if s == 5][0]
     cung_ngu_hoang_d = [p for p, s in d_stars.items() if s == 5][0]
     
-    # Xác định Cung chứa Bản Mệnh để tính Bản Mệnh Đích Sát
     cung_ban_menh_y = [p for p, s in y_stars.items() if s == birth_star][0]
     cung_ban_menh_m = [p for p, s in m_stars.items() if s == birth_star][0]
     cung_ban_menh_d = [p for p, s in d_stars.items() if s == birth_star][0]
+    
+    # Lấy danh sách các sao đạt Nhân Hòa (Sử dụng sao nhập Trung Cung của Tháng và Ngày)
+    nhan_hoa_list = calculate_nhan_hoa(m_stars[5], d_stars[5])
     
     def vert(text, color):
         chars = "<br>".join(list(text))
         return f"<div style='color:{color}; text-align:center;'>{chars}</div>"
     
     for p in range(1, 10):
-        # Đổ màu sao
+        # Đổ màu sao và lưu biến Nhân Hòa cho tầng Ngày (Day)
         for key, s_val in [('y', y_stars[p]), ('m', m_stars[p]), ('d', d_stars[p])]:
             if s_val == 5: color = "#000000"
             elif s_val in KIGAKU_COMPATIBILITY.get(birth_star, []): color = "#CC0000"
             else: color = "#999999"
-            k_data[p]['stars'][key] = (s_val, color)
+            
+            is_nhan_hoa = (key == 'd' and s_val in nhan_hoa_list) # Xác định sao này có Nhân hòa không
+            k_data[p]['stars'][key] = (s_val, color, is_nhan_hoa) # Lưu mảng 3 giá trị
             
         if p == 5: continue 
         
         # --- TẦNG NĂM (YEAR) ---
         if p == cung_ban_menh_y: k_data[p]['y_forms'].append(vert("本命殺", "#000000"))
         if cung_ban_menh_y != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_y]: k_data[p]['y_forms'].append(vert("的殺", "#000000"))
-        
         if p == cung_ngu_hoang_y: k_data[p]['y_forms'].append(vert("五黄殺", "#000000"))
         if cung_ngu_hoang_y != 5 and p == KIGAKU_OPPOSITE[cung_ngu_hoang_y]: k_data[p]['y_forms'].append(vert("暗剣殺", "#000000"))
-        
         if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_y_branch]]: k_data[p]['y_forms'].append(vert("歳破", "#000000"))
         if p in [1, 9] and y_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['y_forms'].append(vert("対冲", "#000000"))
         if p == BRANCH_TO_PALACE[v_y_branch]: k_data[p]['y_forms'].append(vert("太歳", "#0096FF"))
@@ -481,10 +496,8 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
         # --- TẦNG THÁNG (MONTH) ---
         if p == cung_ban_menh_m: k_data[p]['m_forms'].append(vert("本命殺", "#000000"))
         if cung_ban_menh_m != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_m]: k_data[p]['m_forms'].append(vert("的殺", "#000000"))
-        
         if p == cung_ngu_hoang_m: k_data[p]['m_forms'].append(vert("五黄殺", "#000000"))
         if cung_ngu_hoang_m != 5 and p == KIGAKU_OPPOSITE[cung_ngu_hoang_m]: k_data[p]['m_forms'].append(vert("暗剣殺", "#000000"))
-        
         if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_m_branch]]: k_data[p]['m_forms'].append(vert("月破", "#000000"))
         if p in [1, 9] and m_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['m_forms'].append(vert("対冲", "#000000"))
         if p == THIEN_DAO_MAP[v_m_branch]: k_data[p]['m_forms'].append(vert("天道", "#CC0000"))
@@ -492,10 +505,8 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
         # --- TẦNG NGÀY (DAY) ---
         if p == cung_ban_menh_d: k_data[p]['d_forms'].append(vert("本命殺", "#000000"))
         if cung_ban_menh_d != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_d]: k_data[p]['d_forms'].append(vert("的殺", "#000000"))
-        
         if p == cung_ngu_hoang_d: k_data[p]['d_forms'].append(vert("五黄殺", "#000000"))
         if cung_ngu_hoang_d != 5 and p == KIGAKU_OPPOSITE[cung_ngu_hoang_d]: k_data[p]['d_forms'].append(vert("暗剣殺", "#000000"))
-        
         if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_d_branch]]: k_data[p]['d_forms'].append(vert("日破", "#000000"))
         if p in [1, 9] and d_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['d_forms'].append(vert("対冲", "#000000"))
             
@@ -552,15 +563,28 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             t_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
             d_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
-            ys_val, ys_col = k_d['stars']['y']
-            ms_val, ms_col = k_d['stars']['m']
-            ds_val, ds_col = k_d['stars']['d']
+            # Lấy dữ liệu và trạng thái Nhân Hòa
+            ys_val, ys_col, _ = k_d['stars']['y']
+            ms_val, ms_col, _ = k_d['stars']['m']
+            ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
+            
+            # Nếu có Nhân Hòa -> Thêm CSS gạch chân màu đỏ
+            ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: red; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
             
             kigaku_html = f"""
             <div class="kigaku-col">
-                <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
-                <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
-                <div class="k-row"><div class="k-star" style="color:{ds_col}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
+                <div class="k-row">
+                    <div class="k-star" style="color:{ys_col}">{ys_val}</div>
+                    <div class="k-forms">{"".join(k_d['y_forms'])}</div>
+                </div>
+                <div class="k-row">
+                    <div class="k-star" style="color:{ms_col}">{ms_val}</div>
+                    <div class="k-forms">{"".join(k_d['m_forms'])}</div>
+                </div>
+                <div class="k-row">
+                    <div class="k-star" style="{ds_style}">{ds_val}</div>
+                    <div class="k-forms">{"".join(k_d['d_forms'])}</div>
+                </div>
             </div>
             """
 
@@ -889,13 +913,35 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     h_text = f" | Hướng: {cung_str}" if cung_str else ""
                     cach_text = f" | Dùng: **{d_cach}**" if d_cach else ""
                     
+                    # 1. ÉP KỲ MÔN NẰM NGANG (Xóa sạch thẻ HTML rớt dòng)
                     cach_cuc_html = ""
                     if cach_cuc_cua_cung:
-                        list_html = [f"<span style='color:{color}; font-weight:bold;'>{name}</span>" for name, color in cach_cuc_cua_cung]
+                        list_html = []
+                        for name, color in cach_cuc_cua_cung:
+                            clean_name = re.sub(r"<[^>]+>", "", name) # Quét sạch <br> và <div>
+                            list_html.append(f"<span style='color:{color}; font-weight:bold;'>{clean_name}</span>")
                         cach_cuc_html = " ➔ " + ", ".join(list_html)
                         
-                    # Hiển thị Kỳ Môn ở trên, Khí Học ở dòng dưới thụt vào
-                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}{kigaku_html}", unsafe_allow_html=True)
+                    # 2. XỬ LÝ KHÍ HỌC (ÉP NẰM NGANG & GẠCH CHÂN ĐỎ)
+                    # Vì Module 7 không truyền ds_col trực tiếp ở ngoài, chúng ta lấy lại từ kigaku_data_scan
+                    target_p = [v for k,v in huong_list.items() if k == cung_str][0] if cung_str else target_palace
+                    d_val, d_col, is_nhan_hoa = kigaku_data_scan[target_p]['stars']['d']
+                    d_style = f"color:{d_col}; font-weight:bold; font-size:16px; text-decoration:underline; text-decoration-color:red; text-decoration-thickness: 2px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{d_col}; font-weight:bold; font-size:16px;"
+                    
+                    raw_d_forms = kigaku_data_scan[target_p]['d_forms']
+                    flat_d_forms = []
+                    for form_html in raw_d_forms:
+                        color_match = re.search(r"color:(#[0-9a-fA-F]{6})", form_html)
+                        color = color_match.group(1) if color_match else "#000000"
+                        clean_text = re.sub(r"<[^>]+>", "", form_html) # Ép nằm ngang
+                        flat_d_forms.append(f"<span style='color:{color}; font-weight:bold;'>{clean_text}</span>")
+                        
+                    kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='{d_style}'>{d_val}</span>"
+                    if flat_d_forms:
+                        kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
+                        
+                    # IN KẾT QUẢ
+                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}{kigaku_result_html}", unsafe_allow_html=True)
                     st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
             else:
                 st.warning("Không tìm thấy ngày nào thỏa mãn TẤT CẢ các điều kiện trong 1 năm tới.")
