@@ -494,8 +494,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
-        /* Tăng nhẹ chiều cao bảng lên 460px để 3 chữ viết dọc có đủ không gian */
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 460px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 440px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px;}
@@ -505,11 +504,11 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .hex-col { font-size: 20px; line-height: 0.9; text-align: center; }
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         
-        /* CỘT KHÍ HỌC: Sao nằm trên, Cách cục nằm dưới xếp hàng ngang */
-        .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column; width: 65px;}
-        .k-row { height: 33.33%; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; overflow: hidden; padding-top: 2px;}
-        .k-star { font-size: 16px; font-weight: bold; margin-bottom: 2px; padding-left: 2px; line-height: 1;}
-        .k-forms { display: flex; flex-direction: row; gap: 4px; font-size: 10px; font-weight: bold; line-height: 1.05; padding-left: 2px; letter-spacing: 0px;}
+        /* Box Khí Học: Đặt Sao và Cách cục (viết dọc) nằm ngang cạnh nhau */
+        .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column;}
+        .k-row { height: 33.33%; display: flex; flex-direction: row; align-items: flex-start; gap: 4px; overflow: hidden; padding-top: 2px;}
+        .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; }
+        .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px;}
     </style>
     <table class="qmdj-table">
     """
@@ -531,21 +530,11 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             ms_val, ms_col = k_d['stars']['m']
             ds_val, ds_col = k_d['stars']['d']
             
-            # HTML Khí Học: .k-row xếp dọc (sao rồi đến forms)
             kigaku_html = f"""
             <div class="kigaku-col">
-                <div class="k-row">
-                    <div class="k-star" style="color:{ys_col}">{ys_val}</div>
-                    <div class="k-forms">{"".join(k_d['y_forms'])}</div>
-                </div>
-                <div class="k-row">
-                    <div class="k-star" style="color:{ms_col}">{ms_val}</div>
-                    <div class="k-forms">{"".join(k_d['m_forms'])}</div>
-                </div>
-                <div class="k-row">
-                    <div class="k-star" style="color:{ds_col}">{ds_val}</div>
-                    <div class="k-forms">{"".join(k_d['d_forms'])}</div>
-                </div>
+                <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="color:{ds_col}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
             </div>
             """
 
