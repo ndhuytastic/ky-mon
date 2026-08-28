@@ -428,46 +428,59 @@ def calculate_kigaku_stars(solar_year, y_branch, m_branch):
     return y_stars, m_stars
 
 def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
-    """ Tính toán Cách Cục (Đã sửa Đối Xung chỉ áp dụng Trục Bắc - Nam) """
+    """ Tính toán Cách Cục (Đã sửa viết dọc, động hóa Bản Mệnh Sát/Đích Sát) """
     v_s_year, v_y_branch, v_m_branch, v_d_branch = get_bazi_solar_info(view_dt)
     y_stars, m_stars = calculate_kigaku_stars(v_s_year, v_y_branch, v_m_branch)
     d_stars = qi_men_day_stars 
     
-    k_data = {i: {'bg_gray': False, 'y_forms': [], 'm_forms': [], 'd_forms': [], 'stars': {}} for i in range(1, 10)}
-    cung_ban_menh = [p for p, s in y_stars.items() if s == birth_star][0]
+    k_data = {i: {'y_forms': [], 'm_forms': [], 'd_forms': [], 'stars': {}} for i in range(1, 10)}
+    
+    # Xác định vị trí của sao Ngũ Hoàng (để tính Ám Kiếm Sát)
     cung_ngu_hoang = [p for p, s in y_stars.items() if s == 5][0]
     
+    # Hàm hỗ trợ viết dọc chữ (Chèn thẻ <br> giữa các chữ)
+    def vert(text, color):
+        chars = "<br>".join(list(text))
+        return f"<div style='color:{color}; text-align:center;'>{chars}</div>"
+    
     for p in range(1, 10):
-        # Màu sao
+        # 1. Đổ màu sao
         for key, s_val in [('y', y_stars[p]), ('m', m_stars[p]), ('d', d_stars[p])]:
             if s_val == 5: color = "#000000"
             elif s_val in KIGAKU_COMPATIBILITY.get(birth_star, []): color = "#CC0000"
             else: color = "#999999"
             k_data[p]['stars'][key] = (s_val, color)
             
-        if p == 5: continue 
+        if p == 5: continue # Bỏ qua Trung Cung
         
-        # Nền Bản Mệnh
-        if p == cung_ban_menh or p == KIGAKU_OPPOSITE[cung_ban_menh]: k_data[p]['bg_gray'] = True
+        # --- TẦNG NĂM (YEAR) ---
+        if y_stars[p] == birth_star: k_data[p]['y_forms'].append(vert("本命殺", "#000000"))
+        if birth_star != 5 and y_stars[p] == KIGAKU_OPPOSITE[birth_star]: k_data[p]['y_forms'].append(vert("的殺", "#000000"))
+        if y_stars[p] == 5: k_data[p]['y_forms'].append(vert("五黄殺", "#000000"))
+        if p == KIGAKU_OPPOSITE[cung_ngu_hoang]: k_data[p]['y_forms'].append(vert("暗剣殺", "#000000"))
+        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_y_branch]]: k_data[p]['y_forms'].append(vert("歳破", "#000000"))
+        if p in [1, 9] and y_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['y_forms'].append(vert("対冲", "#000000"))
+        if p == BRANCH_TO_PALACE[v_y_branch]: k_data[p]['y_forms'].append(vert("太歳", "#0096FF"))
             
-        # Sát & Phá
-        if p == cung_ngu_hoang: k_data[p]['y_forms'].append(("<span style='color:#000000;'>五黄殺</span>"))
-        if p == KIGAKU_OPPOSITE[cung_ngu_hoang]: k_data[p]['y_forms'].append(("<span style='color:#000000;'>暗剣殺</span>"))
-        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_y_branch]]: k_data[p]['y_forms'].append(("<span style='color:#000000;'>歳破</span>"))
-        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_m_branch]]: k_data[p]['m_forms'].append(("<span style='color:#000000;'>月破</span>"))
-        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_d_branch]]: k_data[p]['d_forms'].append(("<span style='color:#000000;'>日破</span>"))
+        # --- TẦNG THÁNG (MONTH) ---
+        if m_stars[p] == birth_star: k_data[p]['m_forms'].append(vert("本命殺", "#000000"))
+        if birth_star != 5 and m_stars[p] == KIGAKU_OPPOSITE[birth_star]: k_data[p]['m_forms'].append(vert("的殺", "#000000"))
+        if m_stars[p] == 5: k_data[p]['m_forms'].append(vert("五黄殺", "#000000"))
+        # Ám Kiếm Sát tháng (cung đối diện sao 5 của tháng)
+        cung_ngu_hoang_m = [c for c, s in m_stars.items() if s == 5][0]
+        if p == KIGAKU_OPPOSITE[cung_ngu_hoang_m]: k_data[p]['m_forms'].append(vert("暗剣殺", "#000000"))
+        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_m_branch]]: k_data[p]['m_forms'].append(vert("月破", "#000000"))
+        if p in [1, 9] and m_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['m_forms'].append(vert("対冲", "#000000"))
+        if p == THIEN_DAO_MAP[v_m_branch]: k_data[p]['m_forms'].append(vert("天道", "#CC0000"))
             
-        # Đối Xung (CHỈ XÉT CUNG 1 VÀ CUNG 9)
-        if p == 1 and y_stars[p] == 9: k_data[p]['y_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
-        if p == 9 and y_stars[p] == 1: k_data[p]['y_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
-        if p == 1 and m_stars[p] == 9: k_data[p]['m_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
-        if p == 9 and m_stars[p] == 1: k_data[p]['m_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
-        if p == 1 and d_stars[p] == 9: k_data[p]['d_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
-        if p == 9 and d_stars[p] == 1: k_data[p]['d_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
-            
-        # Tuế & Đạo
-        if p == BRANCH_TO_PALACE[v_y_branch]: k_data[p]['y_forms'].append(("<span style='color:#0096FF;'>太歳</span>"))
-        if p == THIEN_DAO_MAP[v_m_branch]: k_data[p]['m_forms'].append(("<span style='color:#CC0000;'>天道</span>"))
+        # --- TẦNG NGÀY (DAY) ---
+        if d_stars[p] == birth_star: k_data[p]['d_forms'].append(vert("本命殺", "#000000"))
+        if birth_star != 5 and d_stars[p] == KIGAKU_OPPOSITE[birth_star]: k_data[p]['d_forms'].append(vert("的殺", "#000000"))
+        if d_stars[p] == 5: k_data[p]['d_forms'].append(vert("五黄殺", "#000000"))
+        cung_ngu_hoang_d = [c for c, s in d_stars.items() if s == 5][0]
+        if p == KIGAKU_OPPOSITE[cung_ngu_hoang_d]: k_data[p]['d_forms'].append(vert("暗剣殺", "#000000"))
+        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_d_branch]]: k_data[p]['d_forms'].append(vert("日破", "#000000"))
+        if p in [1, 9] and d_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['d_forms'].append(vert("対冲", "#000000"))
             
     return k_data
 
@@ -481,9 +494,9 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 440px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        /* Tăng nhẹ chiều cao bảng lên 460px để 3 chữ viết dọc có đủ không gian */
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 460px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
-        .bg-gray { background-color: #f0f0f0 !important; }
         
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px;}
         .formation-item { margin-top: 1px; font-weight: bold; letter-spacing: 1px; color: #000; }
@@ -492,11 +505,11 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .hex-col { font-size: 20px; line-height: 0.9; text-align: center; }
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         
-        /* Box Khí Học: Định vị 3 cột sao cố định và thẳng hàng */
-        .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column; width: 60px;}
-        .k-row { height: 33.33%; display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; }
-        .k-star { font-size: 15px; font-weight: bold; margin-bottom: 1px; padding-left: 2px; }
-        .k-forms { display: flex; flex-direction: column; align-items: flex-start; font-size: 10.5px; line-height: 1.15; font-weight: bold; padding-left: 2px; letter-spacing: -0.2px;}
+        /* CỘT KHÍ HỌC: Sao nằm trên, Cách cục nằm dưới xếp hàng ngang */
+        .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column; width: 65px;}
+        .k-row { height: 33.33%; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; overflow: hidden; padding-top: 2px;}
+        .k-star { font-size: 16px; font-weight: bold; margin-bottom: 2px; padding-left: 2px; line-height: 1;}
+        .k-forms { display: flex; flex-direction: row; gap: 4px; font-size: 10px; font-weight: bold; line-height: 1.05; padding-left: 2px; letter-spacing: 0px;}
     </style>
     <table class="qmdj-table">
     """
@@ -507,7 +520,6 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             d = cung_data[p]
             k_d = kigaku_data[p]
             
-            bg_class = "bg-gray" if k_d['bg_gray'] else ""
             t_can, d_can = d.get('thien', ''), d.get('dia', '')
             base_color = stem_colors.get(p, "#000000") 
             t_decor = "underline" if t_can == can_tuan else "none"
@@ -519,16 +531,26 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             ms_val, ms_col = k_d['stars']['m']
             ds_val, ds_col = k_d['stars']['d']
             
+            # HTML Khí Học: .k-row xếp dọc (sao rồi đến forms)
             kigaku_html = f"""
             <div class="kigaku-col">
-                <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
-                <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
-                <div class="k-row"><div class="k-star" style="color:{ds_col}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
+                <div class="k-row">
+                    <div class="k-star" style="color:{ys_col}">{ys_val}</div>
+                    <div class="k-forms">{"".join(k_d['y_forms'])}</div>
+                </div>
+                <div class="k-row">
+                    <div class="k-star" style="color:{ms_col}">{ms_val}</div>
+                    <div class="k-forms">{"".join(k_d['m_forms'])}</div>
+                </div>
+                <div class="k-row">
+                    <div class="k-star" style="color:{ds_col}">{ds_val}</div>
+                    <div class="k-forms">{"".join(k_d['d_forms'])}</div>
+                </div>
             </div>
             """
 
             if p == 5:
-                html += f"""<td class="qmdj-td {bg_class}">{kigaku_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>"""
+                html += f"""<td class="qmdj-td">{kigaku_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>"""
             else:
                 out_upper_tri = TIEN_THIEN_MAP[p]
                 out_lower_tri = global_lower_tri 
@@ -539,7 +561,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
                 html += f"""
-                <td class="qmdj-td {bg_class}">
+                <td class="qmdj-td">
                     {kigaku_html}
                     {top_right_html}
                     <div class="bottom-right-group">
