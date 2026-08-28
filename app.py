@@ -535,11 +535,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         
         /* KHU VỰC GÓC DƯỚI BÊN PHẢI (Thiên Địa Bàn + Thần Tinh Môn) */
         .bottom-right-group { position: absolute; bottom: 8px; right: 5px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
-        
-        /* Cột Thiên/Địa Bàn (Được đẩy sang trái của cụm) */
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        
-        /* Cột Thần Tinh Môn (Căn phải thẳng tắp, màu xám) */
         .ttm-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13.5px; font-weight: bold; color: #999999; line-height: 1.1; letter-spacing: 0.5px;}
         
         /* Cột Khí Học bên trái */
@@ -557,7 +553,6 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             d = cung_data[p]
             k_d = kigaku_data[p]
             
-            # 1. Trích xuất Can
             t_can, d_can = d.get('thien', ''), d.get('dia', '')
             base_color = stem_colors.get(p, "#000000") 
             t_decor = "underline" if t_can == can_tuan else "none"
@@ -565,12 +560,10 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             t_style = f"font-weight: bold; color: {base_color}; font-size: 16.5px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
             d_style = f"font-weight: bold; color: {base_color}; font-size: 16.5px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
-            # 2. Trích xuất Thần - Tinh - Môn Kỳ Môn
             than_km = d.get('than', '')
             sao_km = d.get('sao', '')
             mon_km = d.get('mon', '')
 
-            # 3. Trích xuất Khí Học
             ys_val, ys_col, _ = k_d['stars']['y']
             ms_val, ms_col, _ = k_d['stars']['m']
             ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
@@ -596,13 +589,12 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                     </div>
                 </td>"""
             else:
-                # CÁC CUNG KHÁC
-                bg_class = "bg-gray" if k_d['bg_gray'] else ""
+                # CÁC CUNG KHÁC (Bỏ hoàn toàn bg_gray cũ gây lỗi)
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
                 html += f"""
-                <td class="qmdj-td {bg_class}">
+                <td class="qmdj-td">
                     {kigaku_html}
                     {top_right_html}
                     <div class="bottom-right-group">
