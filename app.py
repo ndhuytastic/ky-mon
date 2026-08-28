@@ -377,8 +377,11 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
         for raw_name, color in cung_status[p]:
             rank = FORMATION_RANKS.get(raw_name)
             if rank == 3: continue 
-            if rank: display_name = f"<span style='font-size: 0.8em; font-weight: normal; color: #666;'>({rank})</span> {raw_name}"
-            else: display_name = raw_name
+            if rank: 
+                # Đưa rank (2) ra đằng sau raw_name để khi viết dọc nó nằm ở dưới cùng
+                display_name = f"{raw_name}<span style='font-size: 0.8em; font-weight: normal; color: #666; margin-top: 3px;'>({rank})</span>"
+            else: 
+                display_name = raw_name
             formatted_list.append((display_name, color))
         cung_status[p] = formatted_list
 
@@ -428,57 +431,66 @@ def calculate_kigaku_stars(solar_year, y_branch, m_branch):
     return y_stars, m_stars
 
 def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
-    """ Tính toán Cách Cục (Đã sửa viết dọc, động hóa Bản Mệnh Sát/Đích Sát) """
+    """ Tính toán Cách Cục (Đã sửa logic Bản Mệnh Đích Sát chiếu sang Cung đối diện) """
     v_s_year, v_y_branch, v_m_branch, v_d_branch = get_bazi_solar_info(view_dt)
     y_stars, m_stars = calculate_kigaku_stars(v_s_year, v_y_branch, v_m_branch)
     d_stars = qi_men_day_stars 
     
     k_data = {i: {'y_forms': [], 'm_forms': [], 'd_forms': [], 'stars': {}} for i in range(1, 10)}
     
-    # Xác định vị trí của sao Ngũ Hoàng (để tính Ám Kiếm Sát)
-    cung_ngu_hoang = [p for p, s in y_stars.items() if s == 5][0]
+    # Xác định Cung chứa Ngũ Hoàng để tính Ám Kiếm Sát
+    cung_ngu_hoang_y = [p for p, s in y_stars.items() if s == 5][0]
+    cung_ngu_hoang_m = [p for p, s in m_stars.items() if s == 5][0]
+    cung_ngu_hoang_d = [p for p, s in d_stars.items() if s == 5][0]
     
-    # Hàm hỗ trợ viết dọc chữ (Chèn thẻ <br> giữa các chữ)
+    # Xác định Cung chứa Bản Mệnh để tính Bản Mệnh Đích Sát
+    cung_ban_menh_y = [p for p, s in y_stars.items() if s == birth_star][0]
+    cung_ban_menh_m = [p for p, s in m_stars.items() if s == birth_star][0]
+    cung_ban_menh_d = [p for p, s in d_stars.items() if s == birth_star][0]
+    
     def vert(text, color):
         chars = "<br>".join(list(text))
         return f"<div style='color:{color}; text-align:center;'>{chars}</div>"
     
     for p in range(1, 10):
-        # 1. Đổ màu sao
+        # Đổ màu sao
         for key, s_val in [('y', y_stars[p]), ('m', m_stars[p]), ('d', d_stars[p])]:
             if s_val == 5: color = "#000000"
             elif s_val in KIGAKU_COMPATIBILITY.get(birth_star, []): color = "#CC0000"
             else: color = "#999999"
             k_data[p]['stars'][key] = (s_val, color)
             
-        if p == 5: continue # Bỏ qua Trung Cung
+        if p == 5: continue 
         
         # --- TẦNG NĂM (YEAR) ---
-        if y_stars[p] == birth_star: k_data[p]['y_forms'].append(vert("本命殺", "#000000"))
-        if birth_star != 5 and y_stars[p] == KIGAKU_OPPOSITE[birth_star]: k_data[p]['y_forms'].append(vert("的殺", "#000000"))
-        if y_stars[p] == 5: k_data[p]['y_forms'].append(vert("五黄殺", "#000000"))
-        if p == KIGAKU_OPPOSITE[cung_ngu_hoang]: k_data[p]['y_forms'].append(vert("暗剣殺", "#000000"))
+        if p == cung_ban_menh_y: k_data[p]['y_forms'].append(vert("本命殺", "#000000"))
+        if cung_ban_menh_y != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_y]: k_data[p]['y_forms'].append(vert("的殺", "#000000"))
+        
+        if p == cung_ngu_hoang_y: k_data[p]['y_forms'].append(vert("五黄殺", "#000000"))
+        if cung_ngu_hoang_y != 5 and p == KIGAKU_OPPOSITE[cung_ngu_hoang_y]: k_data[p]['y_forms'].append(vert("暗剣殺", "#000000"))
+        
         if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_y_branch]]: k_data[p]['y_forms'].append(vert("歳破", "#000000"))
         if p in [1, 9] and y_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['y_forms'].append(vert("対冲", "#000000"))
         if p == BRANCH_TO_PALACE[v_y_branch]: k_data[p]['y_forms'].append(vert("太歳", "#0096FF"))
             
         # --- TẦNG THÁNG (MONTH) ---
-        if m_stars[p] == birth_star: k_data[p]['m_forms'].append(vert("本命殺", "#000000"))
-        if birth_star != 5 and m_stars[p] == KIGAKU_OPPOSITE[birth_star]: k_data[p]['m_forms'].append(vert("的殺", "#000000"))
-        if m_stars[p] == 5: k_data[p]['m_forms'].append(vert("五黄殺", "#000000"))
-        # Ám Kiếm Sát tháng (cung đối diện sao 5 của tháng)
-        cung_ngu_hoang_m = [c for c, s in m_stars.items() if s == 5][0]
-        if p == KIGAKU_OPPOSITE[cung_ngu_hoang_m]: k_data[p]['m_forms'].append(vert("暗剣殺", "#000000"))
+        if p == cung_ban_menh_m: k_data[p]['m_forms'].append(vert("本命殺", "#000000"))
+        if cung_ban_menh_m != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_m]: k_data[p]['m_forms'].append(vert("的殺", "#000000"))
+        
+        if p == cung_ngu_hoang_m: k_data[p]['m_forms'].append(vert("五黄殺", "#000000"))
+        if cung_ngu_hoang_m != 5 and p == KIGAKU_OPPOSITE[cung_ngu_hoang_m]: k_data[p]['m_forms'].append(vert("暗剣殺", "#000000"))
+        
         if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_m_branch]]: k_data[p]['m_forms'].append(vert("月破", "#000000"))
         if p in [1, 9] and m_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['m_forms'].append(vert("対冲", "#000000"))
         if p == THIEN_DAO_MAP[v_m_branch]: k_data[p]['m_forms'].append(vert("天道", "#CC0000"))
             
         # --- TẦNG NGÀY (DAY) ---
-        if d_stars[p] == birth_star: k_data[p]['d_forms'].append(vert("本命殺", "#000000"))
-        if birth_star != 5 and d_stars[p] == KIGAKU_OPPOSITE[birth_star]: k_data[p]['d_forms'].append(vert("的殺", "#000000"))
-        if d_stars[p] == 5: k_data[p]['d_forms'].append(vert("五黄殺", "#000000"))
-        cung_ngu_hoang_d = [c for c, s in d_stars.items() if s == 5][0]
-        if p == KIGAKU_OPPOSITE[cung_ngu_hoang_d]: k_data[p]['d_forms'].append(vert("暗剣殺", "#000000"))
+        if p == cung_ban_menh_d: k_data[p]['d_forms'].append(vert("本命殺", "#000000"))
+        if cung_ban_menh_d != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_d]: k_data[p]['d_forms'].append(vert("的殺", "#000000"))
+        
+        if p == cung_ngu_hoang_d: k_data[p]['d_forms'].append(vert("五黄殺", "#000000"))
+        if cung_ngu_hoang_d != 5 and p == KIGAKU_OPPOSITE[cung_ngu_hoang_d]: k_data[p]['d_forms'].append(vert("暗剣殺", "#000000"))
+        
         if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_d_branch]]: k_data[p]['d_forms'].append(vert("日破", "#000000"))
         if p in [1, 9] and d_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['d_forms'].append(vert("対冲", "#000000"))
             
@@ -584,9 +596,9 @@ with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.ini
 with col2: selected_hour = st.selectbox("Giờ Xem", options=list(range(24)), index=st.session_state.init_dt.hour)
 with col3: selected_minute = st.selectbox("Phút Xem", options=list(range(60)), index=st.session_state.init_dt.minute)
 
-with col4: birth_date = st.date_input("Ngày Sinh", value=date(1990, 1, 1), min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
-with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=12)
-with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=0)
+with col4: birth_date = st.date_input("Ngày Sinh", value=date(1993, 1, 7), min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
+with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=8)
+with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 
 # TÍNH BẢN MỆNH TINH (ĐÃ FIX LỖI)
