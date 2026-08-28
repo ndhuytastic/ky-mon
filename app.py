@@ -887,17 +887,25 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     cach_cuc_cua_cung = cung_st_scan[target_palace]
                     
                     # --- BÓC TÁCH & ĐỊNH DẠNG LẠI DỮ LIỆU KHÍ HỌC CỦA NGÀY (THÀNH HÀNG NGANG) ---
-                    d_star_val, d_star_col = kigaku_data_scan[target_palace]['stars']['d']
+                    # Hứng đủ 3 giá trị (val, col, is_nhan_hoa) thay vì 2 như trước
+                    d_star_val, d_star_col, is_nhan_hoa = kigaku_data_scan[target_palace]['stars']['d']
                     raw_d_forms = kigaku_data_scan[target_palace]['d_forms']
                     
                     flat_d_forms = []
                     for form_html in raw_d_forms:
-                        # Lấy mã màu từ chuỗi HTML viết dọc
                         color_match = re.search(r"color:(#[0-9a-fA-F]{6})", form_html)
                         color = color_match.group(1) if color_match else "#000000"
-                        # Xóa bỏ các thẻ HTML (<br>, <div>) để lấy chữ gốc
                         text = re.sub(r"<[^>]+>", "", form_html) 
                         flat_d_forms.append(f"<span style='color:{color}; font-weight:bold;'>{text}</span>")
+                    
+                    # Nếu có Nhân hòa, gạch chân đỏ cho kết quả hiển thị
+                    d_style = f"color:{d_star_col}; font-weight:bold; font-size:16px; text-decoration:underline; text-decoration-color:red; text-decoration-thickness: 2px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{d_star_col}; font-weight:bold; font-size:16px;"
+                    
+                    kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='{d_style}'>{d_star_val}</span>"
+                    if flat_d_forms:
+                        kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
+                    
+                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html))
                     
                     # Tạo chuỗi hiển thị Khí Học
                     kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='color:{d_star_col}; font-weight:bold; font-size:16px;'>{d_star_val}</span>"
