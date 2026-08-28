@@ -377,11 +377,16 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
         for raw_name, color in cung_status[p]:
             rank = FORMATION_RANKS.get(raw_name)
             if rank == 3: continue 
+            
+            # Cắt từng chữ Hán và chèn thẻ <br> để ép xuống dòng một cách tự nhiên
+            vert_text = "<br>".join(list(raw_name))
+            
             if rank: 
-                # Đã bọc <span> cho raw_name để dùng Flexbox ép 2 khối này thẳng hàng tâm
-                display_name = f"<span>{raw_name}</span><span style='margin-top: 3px; font-size: 0.85em; font-weight: normal; color: #666; writing-mode: horizontal-tb; text-combine-upright: all; -webkit-text-combine: horizontal;'>({rank})</span>"
+                # Đặt tất cả vào một khối căn giữa (text-align: center), số (rank) nằm dưới cùng
+                display_name = f"<div style='text-align: center; line-height: 1.15;'>{vert_text}<div style='font-size: 0.9em; font-weight: normal; color: #666; margin-top: 3px;'>({rank})</div></div>"
             else: 
-                display_name = f"<span>{raw_name}</span>"
+                display_name = f"<div style='text-align: center; line-height: 1.15;'>{vert_text}</div>"
+                
             formatted_list.append((display_name, color))
         cung_status[p] = formatted_list
 
@@ -509,18 +514,15 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 440px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         
-        /* CÁCH CỤC KỲ MÔN (GÓC TRÊN PHẢI) - Đã chuyển thành viết dọc */
+        /* Khung chứa các cột Cách Cục - Dùng flex-direction: row-reverse để xếp các cột từ phải sang trái */
         .top-right-panel { 
-            position: absolute; top: 5px; right: 5px; 
-            display: flex; flex-direction: row-reverse; /* Xếp cột từ phải qua trái */
-            gap: 4px; align-items: flex-start;
+            position: absolute; top: 4px; right: 5px; 
+            display: flex; flex-direction: row-reverse; 
+            gap: 6px; align-items: flex-start;
         }
+        /* Từng cột Cách Cục - Không dùng writing-mode nữa vì Python đã lo việc xuống dòng */
         .formation-item { 
-            writing-mode: vertical-rl; 
-            display: flex; 
-            align-items: center; /* Khóa chặt chữ và số vào trục tâm ngang */
-            justify-content: flex-start; /* Đẩy chữ bắt đầu từ trên cùng xuống */
-            font-weight: bold; letter-spacing: 1px; color: #000; font-size: 10.5px; line-height: 1.2;
+            font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;
         }
         
         .bottom-right-group { position: absolute; bottom: 8px; right: 8px; display: flex; flex-direction: row; align-items: center; gap: 8px; }
