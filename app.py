@@ -378,8 +378,7 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
             rank = FORMATION_RANKS.get(raw_name)
             if rank == 3: continue 
             if rank: 
-                # Đưa rank (2) ra đằng sau raw_name để khi viết dọc nó nằm ở dưới cùng
-                display_name = f"{raw_name}<span style='font-size: 0.8em; font-weight: normal; color: #666; margin-top: 3px;'>({rank})</span>"
+                display_name = f"{raw_name}<span style='font-size: 0.8em; font-weight: normal; color: #666; margin-top: 2px; writing-mode: horizontal-tb; text-combine-upright: all; -webkit-text-combine: horizontal;'>({rank})</span>"
             else: 
                 display_name = raw_name
             formatted_list.append((display_name, color))
