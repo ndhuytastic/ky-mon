@@ -529,20 +529,20 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         .bg-gray { background-color: #f0f0f0 !important; }
         
-        /* Cột Cách Cục Kỳ Môn */
+        /* CÁCH CỤC KỲ MÔN: Xếp cột dọc từ phải qua trái, chữ rớt dòng bằng thẻ <br> của Python */
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: row-reverse; gap: 6px; align-items: flex-start;}
-        .formation-item { display: flex; align-items: center; justify-content: flex-start; writing-mode: vertical-rl; font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;}
+        .formation-item { font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px; }
         
         /* KHU VỰC GÓC DƯỚI BÊN PHẢI (Thiên Địa Bàn + Thần Tinh Môn) */
         .bottom-right-group { position: absolute; bottom: 8px; right: 5px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .ttm-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13.5px; font-weight: bold; color: #999999; line-height: 1.1; letter-spacing: 0.5px;}
         
-        /* Cột Khí Học bên trái */
+        /* CỘT KHÍ HỌC: Khôi phục cấu trúc nằm ngang, sao bên trái, cách cục bên phải, căn bằng đầu */
         .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column; width: 65px;}
-        .k-row { height: 33.33%; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; overflow: hidden; padding-top: 2px;}
-        .k-star { font-size: 16px; font-weight: bold; margin-bottom: 2px; padding-left: 2px; line-height: 1;}
-        .k-forms { display: flex; flex-direction: row; gap: 4px; font-size: 10px; font-weight: bold; line-height: 1.05; padding-left: 2px; letter-spacing: 0px;}
+        .k-row { height: 33.33%; display: flex; flex-direction: row; align-items: flex-start; gap: 4px; overflow: hidden; padding-top: 2px;}
+        .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; line-height: 1;}
+        .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px; padding-top: 1.5px;}
     </style>
     <table class="qmdj-table">
     """
@@ -589,7 +589,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                     </div>
                 </td>"""
             else:
-                # CÁC CUNG KHÁC (Bỏ hoàn toàn bg_gray cũ gây lỗi)
+                # CÁC CUNG KHÁC (Đã bỏ bg_gray gây lỗi cũ)
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
