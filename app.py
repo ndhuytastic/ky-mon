@@ -60,7 +60,7 @@ HEX_NAME_DICT = {
     ("风","泽"): "T.Phu", ("雷","山"): "Tiểu Quá", ("水","火"): "Ký Tế", ("火","水"): "Vị Tế"
 }
 
-# --- HẰNG SỐ KHÍ HỌC NHẬT BẢN (KIGAKU) ---
+# --- HẰNG SỐ KHÍ HỌC ---
 KIGAKU_OPPOSITE = {1: 9, 2: 8, 3: 7, 4: 6, 6: 4, 7: 3, 8: 2, 9: 1, 5: 5}
 KIGAKU_HOME = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9}
 KIGAKU_COMPATIBILITY = {
@@ -378,7 +378,8 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
             rank = FORMATION_RANKS.get(raw_name)
             if rank == 3: continue 
             if rank: 
-                display_name = f"{raw_name}<span style='font-size: 0.85em; font-weight: normal; color: #666; margin-top: 2px; writing-mode: horizontal-tb; text-combine-upright: all; -webkit-text-combine: horizontal;'>({rank})</span>"
+                # Đã thêm display: inline-block; margin: 0 auto; padding-top: 3px; để ép nó vào chính giữa cột
+                display_name = f"{raw_name}<span style='display: inline-block; margin: 0 auto; padding-top: 3px; font-size: 0.85em; font-weight: normal; color: #666; writing-mode: horizontal-tb; text-combine-upright: all; -webkit-text-combine: horizontal;'>({rank})</span>"
             else: 
                 display_name = raw_name
             formatted_list.append((display_name, color))
@@ -386,7 +387,7 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
 
     return cung_status, stem_colors
 
-# --- THUẬT TOÁN CỬU TINH KHÍ HỌC (KIGAKU) ---
+# --- THUẬT TOÁN CỬU TINH KHÍ HỌC ---
 def get_bazi_solar_info(dt_date):
     """ Nhận diện Tiết Lập Xuân chuẩn xác 100% bằng thư viện sxtwl """
     d = sxtwl.fromSolar(dt_date.year, dt_date.month, dt_date.day)
@@ -515,7 +516,8 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             gap: 4px; align-items: flex-start;
         }
         .formation-item { 
-            writing-mode: vertical-rl; /* Lệnh xoay dọc chữ */
+            writing-mode: vertical-rl; 
+            text-align: center; /* Thêm lệnh căn giữa tâm cho toàn bộ cột */
             font-weight: bold; letter-spacing: 1px; color: #000; font-size: 10.5px; line-height: 1.2;
         }
         
