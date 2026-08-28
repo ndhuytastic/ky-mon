@@ -627,12 +627,12 @@ cung_st, stem_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 title = ""
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>{hoa_giap_hien_tai}日 | {wl_dun}{wl_ju}局</h4>"
 
-# KẾT NỐI VÀ TÍNH KHÍ HỌC
-    cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
-    kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
+# KẾT NỐI VÀ TÍNH KHÍ HỌC (Tất cả viết sát lề trái, không thụt vào)
+cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
+kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
 
-    # RENDER
-    qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data)
+# RENDER
+qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
 st.components.v1.html(combined_html, height=550, scrolling=True)
