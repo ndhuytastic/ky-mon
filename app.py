@@ -569,7 +569,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
             
             # Nếu có Nhân Hòa -> Thêm CSS gạch chân màu đỏ
-            ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: red; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
+            ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: #CC0000; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
             
             kigaku_html = f"""
             <div class="kigaku-col">
@@ -802,21 +802,20 @@ if st.button("TÌM KIẾM", use_container_width=True):
         st.error("Vui lòng không chọn cùng lúc Trấn Hung và Thôi Cát.")
     else:
         with st.spinner('Đang quét dữ liệu tương lai (Quét từng ngày một)...'):
-            import re # Import thư viện xử lý chuỗi
+            import re
             results = []
-            max_limit = 365 # Quét trong 365 ngày
+            max_limit = 365 
             current_scan_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
             
             loops = 0
             while loops < max_limit: 
-                if len(results) >= 10: break # Dừng khi tìm đủ 10 kết quả
+                if len(results) >= 10: break 
                 
                 loops += 1
                 current_scan_dt += timedelta(days=1)
                 s_date = current_scan_dt.date()
                 s_obj = sxtwl.fromSolar(s_date.year, s_date.month, s_date.day)
                 
-                # Trích xuất Can Chi Ngày
                 gz_scan = s_obj.getDayGZ()
                 can_ngay_scan = thien_can[gz_scan.tg]
                 chi_ngay_scan = dia_chi[gz_scan.dz]
@@ -826,16 +825,16 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
                 cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
-                # TÍNH TOÁN KHÍ HỌC CHO NGÀY ĐANG SCAN
                 cung_day_stars_scan = {p: scan_data[p]['hour_star'] for p in range(1, 10)}
                 kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, current_scan_dt, cung_day_stars_scan)
                 
                 time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
                 c_str = f"{wl_dun_s} {wl_ju_s}局 | Ngày {can_ngay_scan}{chi_ngay_scan}"
-                target_palace = huong_list[loc_huong]
                 val_cat_cach = extract_raw_name(loc_cat_cach)
 
-                # --- HÀM KIỂM TRA ĐIỀU KIỆN KỲ MÔN ---
+                # >>> FIX LỖI: Bắt buộc reset target_palace MỖI NGÀY <<<
+                target_palace = huong_list[loc_huong] 
+
                 def check_match(p):
                     d = scan_data[p]
                     t_chk = '甲' if d['thien'] == can_tuan_scan else d['thien']
@@ -867,7 +866,6 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         
                     return True, dung_cach
 
-                # --- BẮT ĐẦU DÒ TÌM TRONG CUNG ---
                 is_match = False
                 matched_cach = ""
                 
@@ -879,15 +877,13 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         if p == 5: continue
                         is_match, matched_cach = check_match(p)
                         if is_match:
-                            target_palace = p
+                            target_palace = p # Chỉ lưu cho ngày hôm nay
                             break
                             
                 if is_match:
                     ten_cung = [k for k, v in huong_list.items() if v == target_palace][0]
                     cach_cuc_cua_cung = cung_st_scan[target_palace]
                     
-                    # --- BÓC TÁCH & ĐỊNH DẠNG LẠI DỮ LIỆU KHÍ HỌC CỦA NGÀY (THÀNH HÀNG NGANG) ---
-                    # Hứng đủ 3 giá trị (val, col, is_nhan_hoa) thay vì 2 như trước
                     d_star_val, d_star_col, is_nhan_hoa = kigaku_data_scan[target_palace]['stars']['d']
                     raw_d_forms = kigaku_data_scan[target_palace]['d_forms']
                     
@@ -898,58 +894,30 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         text = re.sub(r"<[^>]+>", "", form_html) 
                         flat_d_forms.append(f"<span style='color:{color}; font-weight:bold;'>{text}</span>")
                     
-                    # Nếu có Nhân hòa, gạch chân đỏ cho kết quả hiển thị
-                    d_style = f"color:{d_star_col}; font-weight:bold; font-size:16px; text-decoration:underline; text-decoration-color:red; text-decoration-thickness: 2px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{d_star_col}; font-weight:bold; font-size:16px;"
+                    # Đổi text-decoration-color từ red sang #CC0000
+                    d_style = f"color:{d_star_col}; font-weight:bold; font-size:16px; text-decoration:underline; text-decoration-color:#CC0000; text-decoration-thickness: 2px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{d_star_col}; font-weight:bold; font-size:16px;"
                     
                     kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='{d_style}'>{d_star_val}</span>"
                     if flat_d_forms:
                         kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
                     
                     results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html))
-                    
-                    # Tạo chuỗi hiển thị Khí Học
-                    kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='color:{d_star_col}; font-weight:bold; font-size:16px;'>{d_star_val}</span>"
-                    if flat_d_forms:
-                        kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
-                    
-                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html))
 
-            # --- IN KẾT QUẢ ĐÃ GỘP ---
             if results:
                 st.success(f"**TÌM THẤY {len(results)} KẾT QUẢ:**")
                 for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung, kigaku_html) in enumerate(results):
                     h_text = f" | Hướng: {cung_str}" if cung_str else ""
                     cach_text = f" | Dùng: **{d_cach}**" if d_cach else ""
                     
-                    # 1. ÉP KỲ MÔN NẰM NGANG (Xóa sạch thẻ HTML rớt dòng)
                     cach_cuc_html = ""
                     if cach_cuc_cua_cung:
                         list_html = []
                         for name, color in cach_cuc_cua_cung:
-                            clean_name = re.sub(r"<[^>]+>", "", name) # Quét sạch <br> và <div>
+                            clean_name = re.sub(r"<[^>]+>", "", name)
                             list_html.append(f"<span style='color:{color}; font-weight:bold;'>{clean_name}</span>")
                         cach_cuc_html = " ➔ " + ", ".join(list_html)
                         
-                    # 2. XỬ LÝ KHÍ HỌC (ÉP NẰM NGANG & GẠCH CHÂN ĐỎ)
-                    # Vì Module 7 không truyền ds_col trực tiếp ở ngoài, chúng ta lấy lại từ kigaku_data_scan
-                    target_p = [v for k,v in huong_list.items() if k == cung_str][0] if cung_str else target_palace
-                    d_val, d_col, is_nhan_hoa = kigaku_data_scan[target_p]['stars']['d']
-                    d_style = f"color:{d_col}; font-weight:bold; font-size:16px; text-decoration:underline; text-decoration-color:red; text-decoration-thickness: 2px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{d_col}; font-weight:bold; font-size:16px;"
-                    
-                    raw_d_forms = kigaku_data_scan[target_p]['d_forms']
-                    flat_d_forms = []
-                    for form_html in raw_d_forms:
-                        color_match = re.search(r"color:(#[0-9a-fA-F]{6})", form_html)
-                        color = color_match.group(1) if color_match else "#000000"
-                        clean_text = re.sub(r"<[^>]+>", "", form_html) # Ép nằm ngang
-                        flat_d_forms.append(f"<span style='color:{color}; font-weight:bold;'>{clean_text}</span>")
-                        
-                    kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='{d_style}'>{d_val}</span>"
-                    if flat_d_forms:
-                        kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
-                        
-                    # IN KẾT QUẢ
-                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}{kigaku_result_html}", unsafe_allow_html=True)
+                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}{kigaku_html}", unsafe_allow_html=True)
                     st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
             else:
                 st.warning("Không tìm thấy ngày nào thỏa mãn TẤT CẢ các điều kiện trong 1 năm tới.")
