@@ -621,16 +621,20 @@ if "init_dt" not in st.session_state: st.session_state.init_dt = get_current_vn_
 
 # --- GIAO DIỆN 7 CỘT (XEM & SINH) ---
 col1, col2, col3, col4, col5, col6, col7 = st.columns([1.2, 0.8, 0.8, 1.2, 0.8, 0.8, 1])
+
+# Ô Ngày Xem (Cho phép chọn từ 1901)
 with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.init_dt.date(), min_value=date(1901, 1, 1), max_value=date(2100, 12, 31))
 with col2: selected_hour = st.selectbox("Giờ Xem", options=list(range(24)), index=st.session_state.init_dt.hour)
 with col3: selected_minute = st.selectbox("Phút Xem", options=list(range(60)), index=st.session_state.init_dt.minute)
 
-with col4: birth_date = st.date_input("Ngày Sinh", value=date(1993, 1, 7), min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
-with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=8)
-with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
+# Ô Ngày Sinh (Cũng cho phép chọn từ 1901)
+with col4: birth_date = st.date_input("Ngày Sinh", value=date(1990, 1, 1), min_value=date(1901, 1, 1), max_value=date(2100, 12, 31))
+with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=12)
+with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=0)
+
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 
-# TÍNH BẢN MỆNH TINH (ĐÃ FIX LỖI)
+# TÍNH BẢN MỆNH TINH
 user_birth_dt = datetime.combine(birth_date, time(birth_hour, birth_minute))
 birth_s_year, _, _, _ = get_bazi_solar_info(user_birth_dt)
 rem_b = birth_s_year % 9
