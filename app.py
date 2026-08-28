@@ -60,6 +60,16 @@ HEX_NAME_DICT = {
     ("风","泽"): "T.Phu", ("雷","山"): "Tiểu Quá", ("水","火"): "Ký Tế", ("火","水"): "Vị Tế"
 }
 
+# --- HẰNG SỐ KHÍ HỌC NHẬT BẢN (KIGAKU) ---
+KIGAKU_OPPOSITE = {1: 9, 2: 8, 3: 7, 4: 6, 6: 4, 7: 3, 8: 2, 9: 1, 5: 5}
+KIGAKU_HOME = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9}
+KIGAKU_COMPATIBILITY = {
+    1: [3, 4, 6, 7], 2: [6, 7, 8, 9], 3: [1, 4, 9], 4: [1, 3, 9], 5: [2, 6, 7, 8, 9],
+    6: [1, 2, 7, 8], 7: [1, 2, 6, 8], 8: [2, 6, 7, 9], 9: [2, 3, 4, 8]
+}
+BRANCH_TO_PALACE = {"子": 1, "丑": 8, "寅": 8, "卯": 3, "辰": 4, "巳": 4, "午": 9, "未": 2, "申": 2, "酉": 7, "戌": 6, "亥": 6}
+THIEN_DAO_MAP = {"寅": 9, "卯": 2, "辰": 1, "巳": 7, "午": 6, "未": 3, "申": 1, "酉": 8, "戌": 9, "亥": 3, "子": 4, "丑": 7}
+
 # ==========================================
 # 2. LOGIC LỊCH (NHẬT BÀN BẰNG THIÊN VĂN)
 # ==========================================
@@ -374,49 +384,120 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
 
     return cung_status, stem_colors
 
+# --- THUẬT TOÁN CỬU TINH KHÍ HỌC (KIGAKU) ---
+def get_bazi_solar_info(dt_date):
+    """ Dùng sxtwl để lấy chính xác Năm, Tháng, Ngày theo Tiết Khí Lập Xuân """
+    d = sxtwl.fromSolar(dt_date.year, dt_date.month, dt_date.day)
+    y_branch = dia_chi[d.getYearGZ().dz]
+    m_branch = dia_chi[d.getMonthGZ().dz]
+    d_branch = dia_chi[d.getDayGZ().dz]
+    
+    # Xác định số năm Khí Học (Nếu tháng 1,2 Dương lịch mà chưa qua Lập Xuân thì lùi 1 năm)
+    solar_year = dt_date.year
+    if dt_date.month <= 2 and y_branch != dia_chi[(dt_date.year - 4) % 12]:
+        solar_year -= 1
+    return solar_year, y_branch, m_branch, d_branch
+
+def calculate_kigaku_stars(solar_year, y_branch, m_branch):
+    """ Phi Tinh Năm và Tháng (Bay thuận Lạc Thư) """
+    # Niên Tinh
+    digits = sum(int(d) for d in str(solar_year))
+    while digits > 9: digits = sum(int(d) for d in str(digits))
+    y_center = 11 - digits
+    if y_center < 1: y_center += 9
+    
+    # Nguyệt Tinh
+    if y_branch in ['子','午','卯','酉']: base_m = 8
+    elif y_branch in ['辰','戌','丑','未']: base_m = 5
+    else: base_m = 2
+    idx = (dia_chi.index(m_branch) - dia_chi.index('寅')) % 12
+    m_center = base_m - idx
+    while m_center < 1: m_center += 9
+        
+    path = [5, 6, 7, 8, 9, 1, 2, 3, 4]
+    y_stars, m_stars = {}, {}
+    cy, cm = y_center, m_center
+    for p in path:
+        y_stars[p], m_stars[p] = cy, cm
+        cy = 1 if cy == 9 else cy + 1
+        cm = 1 if cm == 9 else cm + 1
+    return y_stars, m_stars
+
+def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
+    """ Tính toán toàn bộ Cách Cục, Màu sắc, Nền cho Khí Học """
+    v_s_year, v_y_branch, v_m_branch, v_d_branch = get_bazi_solar_info(view_dt)
+    y_stars, m_stars = calculate_kigaku_stars(v_s_year, v_y_branch, v_m_branch)
+    d_stars = qi_men_day_stars # Dùng chung Phi tinh ngày của Kỳ Môn
+    
+    k_data = {i: {'bg_gray': False, 'y_forms': [], 'm_forms': [], 'd_forms': [], 'stars': {}} for i in range(1, 10)}
+    
+    # Xác định các Cung Sát (Bản Mệnh, Bản Mệnh Đích, Ngũ Hoàng, Ám Kiếm)
+    cung_ban_menh = [p for p, s in y_stars.items() if s == birth_star][0]
+    cung_ngu_hoang = [p for p, s in y_stars.items() if s == 5][0]
+    
+    for p in range(1, 10):
+        # 1. Đổ màu sao
+        for key, s_val in [('y', y_stars[p]), ('m', m_stars[p]), ('d', d_stars[p])]:
+            if s_val == 5: color = "#000000" # Số 5 luôn Đen
+            elif s_val in KIGAKU_COMPATIBILITY.get(birth_star, []): color = "#CC0000" # Tương sinh -> Đỏ
+            else: color = "#999999" # Khắc/Bình -> Xám nhạt
+            k_data[p]['stars'][key] = (s_val, color)
+            
+        if p == 5: continue # Trung cung không ghi cách cục, không tô nền
+        
+        # 2. Tô nền Bản Mệnh
+        if p == cung_ban_menh or p == KIGAKU_OPPOSITE[cung_ban_menh]:
+            k_data[p]['bg_gray'] = True
+            
+        # 3. Ngũ Hoàng & Ám Kiếm Sát (Chữ đen)
+        if p == cung_ngu_hoang: k_data[p]['y_forms'].append(("<span style='color:#000000;'>五黄殺</span>"))
+        if p == KIGAKU_OPPOSITE[cung_ngu_hoang]: k_data[p]['y_forms'].append(("<span style='color:#000000;'>暗剣殺</span>"))
+            
+        # 4. Phá (Tuế, Nguyệt, Nhật) (Chữ đen)
+        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_y_branch]]: k_data[p]['y_forms'].append(("<span style='color:#000000;'>歳破</span>"))
+        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_m_branch]]: k_data[p]['m_forms'].append(("<span style='color:#000000;'>月破</span>"))
+        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[v_d_branch]]: k_data[p]['d_forms'].append(("<span style='color:#000000;'>日破</span>"))
+            
+        # 5. Đối Xung (Chữ đen)
+        if p == KIGAKU_OPPOSITE[y_stars[p]]: k_data[p]['y_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
+        if p == KIGAKU_OPPOSITE[m_stars[p]]: k_data[p]['m_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
+        if p == KIGAKU_OPPOSITE[d_stars[p]]: k_data[p]['d_forms'].append(("<span style='color:#000000;'>定位対冲</span>"))
+            
+        # 6. Thái Tuế (Chữ Xanh Da Trời)
+        if p == BRANCH_TO_PALACE[v_y_branch]: k_data[p]['y_forms'].append(("<span style='color:#0096FF;'>太歳</span>"))
+            
+        # 7. Thiên Đạo (Chữ Đỏ)
+        if p == THIEN_DAO_MAP[v_m_branch]: k_data[p]['m_forms'].append(("<span style='color:#CC0000;'>天道</span>"))
+            
+    return k_data
+
 # ==========================================
 # 5. GIAO DIỆN HTML RENDER 
 # ==========================================
-def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, user_birth_star):
+def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data):
     global_lower_gate = cung_data[cung_phi_tinh]['mon']
     global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
 
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
-        /* Tăng kích thước bảng lên mức trung bình (không quá to, không quá nhỏ) */
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 450px; min-width: 350px; height: 380px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 440px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
-        
-        .bottom-left-phitinh { position: absolute; bottom: 5px; left: 5px; font-size: 15px; color: #555; font-weight: bold; }
-        .star-highlight { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px solid #0000FF; border-radius: 50%; color: #0000FF; background-color: rgba(0,0,255,0.05); }
+        .bg-gray { background-color: #f0f0f0 !important; }
         
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-size: 11px;}
         .formation-item { margin-top: 1px; font-weight: bold; letter-spacing: 1px; color: #000; }
         
-        /* Box chứa Quẻ Dịch và Can sát nhau */
-        .bottom-right-group {
-            position: absolute; 
-            bottom: 8px; 
-            right: 8px; 
-            display: flex; 
-            flex-direction: row; 
-            align-items: center; 
-            gap: 8px; /* Khoảng cách ngang giữa Quẻ và Can */
-        }
-        /* Cột chứa Quẻ Dịch - Chỉnh size tương xứng với Can */
-        .hex-col {
-            font-size: 20px; 
-            line-height: 0.9;
-            text-align: center;
-        }
-        /* Cột chứa Thiên Can và Địa Can */
-        .stem-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px; /* TẠO KHOẢNG TRỐNG GIỮA 2 CAN ĐỂ GẠCH CHÂN KHÔNG BỊ DÍNH */
-        }
+        /* Box Kỳ Môn: Quẻ Dịch và Can (Góc dưới phải) */
+        .bottom-right-group { position: absolute; bottom: 8px; right: 8px; display: flex; flex-direction: row; align-items: center; gap: 8px; }
+        .hex-col { font-size: 20px; line-height: 0.9; text-align: center; }
+        .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        
+        /* Box Khí Học: Bên trái */
+        .kigaku-col { position: absolute; top: 6px; left: 6px; display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: bold; width: 60%; }
+        .k-row { display: flex; flex-direction: column; align-items: flex-start; }
+        .k-star { font-size: 16px; margin-bottom: 2px; }
+        .k-forms { display: flex; flex-direction: column; line-height: 1.2; letter-spacing: 0.5px;}
     </style>
     <table class="qmdj-table">
     """
@@ -425,62 +506,50 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         html += "<tr>"
         for p in row:
             d = cung_data[p]
-            h_star_val = d['hour_star']
-            if h_star_val == user_birth_star:
-                phi_tinh_html = f"<div class='bottom-left-phitinh'><span class='star-highlight'>{h_star_val}</span></div>"
-            else:
-                phi_tinh_html = f"<div class='bottom-left-phitinh'>{h_star_val}</div>"
-
+            k_d = kigaku_data[p]
+            
+            # Xử lý Nền (Bản mệnh sát)
+            bg_class = "bg-gray" if k_d['bg_gray'] else ""
+            
+            # Xử lý Can Kỳ Môn
             t_can, d_can = d.get('thien', ''), d.get('dia', '')
             base_color = stem_colors.get(p, "#000000") 
-            
-            # Cấu hình gạch chân tách biệt
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
-            
-            # CSS Style cho Can (Giảm cỡ chữ xuống 16px, căn chỉnh offset gạch chân)
             t_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
             d_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
+            # Render HTML Khí Học (Bên Trái)
+            ys_val, ys_col = k_d['stars']['y']
+            ms_val, ms_col = k_d['stars']['m']
+            ds_val, ds_col = k_d['stars']['d']
+            
+            kigaku_html = f"""
+            <div class="kigaku-col">
+                <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="color:{ds_col}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
+            </div>
+            """
+
             if p == 5:
-                # Cung Trung Cung (Chỉ có Can nằm ở góc phải dưới)
-                html += f"""
-                <td class="qmdj-td" style="background-color: transparent;">
-                    {phi_tinh_html}
-                    <div class="bottom-right-group">
-                        <div class="stem-col">
-                            <div style="{t_style}">{t_can}</div>
-                            <div style="{d_style}">{d_can}</div>
-                        </div>
-                    </div>
-                </td>"""
+                html += f"""<td class="qmdj-td {bg_class}">{kigaku_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>"""
             else:
-                # Tính Quẻ Dịch cho các Cung ngoài
                 out_upper_tri = TIEN_THIEN_MAP[p]
                 out_lower_tri = global_lower_tri 
                 out_eval = EVAL_DICT.get(out_upper_tri, {}).get(out_lower_tri, "△")
+                out_hex_color = "#CC0000" if out_eval == "〇" else ("#B8860B" if out_eval == "△" else "#000000")
                 
-                if out_eval == "〇": out_hex_color = "#CC0000"  
-                elif out_eval == "△": out_hex_color = "#B8860B"  
-                else: out_hex_color = "#000000"  
-                
-                # Cát Hung Cách nằm góc trên phải
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
-                # HTML render cả Quẻ và Can
                 html += f"""
-                <td class="qmdj-td" style="background-color: transparent;">
-                    {phi_tinh_html}
+                <td class="qmdj-td {bg_class}">
+                    {kigaku_html}
                     {top_right_html}
                     <div class="bottom-right-group">
-                        <div class="hex-col" style="color: {out_hex_color};">
-                            {TRIGRAM_UNICODE[out_upper_tri]}<br>{TRIGRAM_UNICODE[out_lower_tri]}
-                        </div>
-                        <div class="stem-col">
-                            <div style="{t_style}">{t_can}</div>
-                            <div style="{d_style}">{d_can}</div>
-                        </div>
+                        <div class="hex-col" style="color: {out_hex_color};">{TRIGRAM_UNICODE[out_upper_tri]}<br>{TRIGRAM_UNICODE[out_lower_tri]}</div>
+                        <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
                     </div>
                 </td>"""
         html += "</tr>"
@@ -493,11 +562,24 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
 def get_current_vn_time(): return datetime.now(timezone(timedelta(hours=7)))
 if "init_dt" not in st.session_state: st.session_state.init_dt = get_current_vn_time()
 
-col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.init_dt.date(), min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
+# --- GIAO DIỆN 7 CỘT (XEM & SINH) ---
+col1, col2, col3, col4, col5, col6, col7 = st.columns([1.2, 0.8, 0.8, 1.2, 0.8, 0.8, 1])
+with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.init_dt.date())
 with col2: selected_hour = st.selectbox("Giờ Xem", options=list(range(24)), index=st.session_state.init_dt.hour)
 with col3: selected_minute = st.selectbox("Phút Xem", options=list(range(60)), index=st.session_state.init_dt.minute)
-with col4: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}") # Index 19 = UTC+7
+
+with col4: birth_date = st.date_input("Ngày Sinh", value=date(1990, 1, 1), min_value=date(1900, 1, 1), max_value=date(2100, 12, 31))
+with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=12)
+with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=0)
+with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
+
+# TÍNH BẢN MỆNH TINH
+user_birth_dt = datetime.combine(birth_date, time(birth_hour, birth_minute))
+birth_s_year, _, _, _ = get_bazi_solar_info(user_birth_dt)
+digits = sum(int(d) for d in str(birth_s_year))
+while digits > 9: digits = sum(int(d) for d in str(digits))
+user_birth_star = 11 - digits
+if user_birth_star < 1: user_birth_star += 9
 
 hoa_giap_60 = [thien_can[i%10] + dia_chi[i%12] for i in range(60)]
 cuc_so_list = [f"阳遁{i}局" for i in range(1, 10)] + [f"阴遁{i}局" for i in range(1, 10)]
@@ -545,8 +627,12 @@ cung_st, stem_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 title = ""
 sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>{hoa_giap_hien_tai}日 | {wl_dun}{wl_ju}局</h4>"
 
-user_birth_star = 0 # Loại bỏ Vòng tròn xanh Giờ Sinh (Báo giá trị 0)
-qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, user_birth_star)
+# KẾT NỐI VÀ TÍNH KHÍ HỌC
+    cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
+    kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
+
+    # RENDER
+    qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
 st.components.v1.html(combined_html, height=550, scrolling=True)
