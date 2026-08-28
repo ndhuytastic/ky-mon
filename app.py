@@ -522,36 +522,31 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
 # 5. GIAO DIỆN HTML RENDER 
 # ==========================================
 def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day=False):
-    global_lower_gate = cung_data[cung_phi_tinh]['mon']
-    global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
-
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 440px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 460px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
+        .bg-gray { background-color: #f0f0f0 !important; }
         
-        /* Khung chứa các cột Cách Cục - Dùng flex-direction: row-reverse để xếp các cột từ phải sang trái */
-        .top-right-panel { 
-            position: absolute; top: 4px; right: 5px; 
-            display: flex; flex-direction: row-reverse; 
-            gap: 6px; align-items: flex-start;
-        }
-        /* Từng cột Cách Cục - Không dùng writing-mode nữa vì Python đã lo việc xuống dòng */
-        .formation-item { 
-            font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;
-        }
+        /* Cột Cách Cục Kỳ Môn */
+        .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: row-reverse; gap: 6px; align-items: flex-start;}
+        .formation-item { display: flex; align-items: center; justify-content: flex-start; writing-mode: vertical-rl; font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;}
         
-        .bottom-right-group { position: absolute; bottom: 8px; right: 8px; display: flex; flex-direction: row; align-items: center; gap: 8px; }
-        .hex-col { font-size: 20px; line-height: 0.9; text-align: center; }
+        /* KHU VỰC GÓC DƯỚI BÊN PHẢI (Thiên Địa Bàn + Thần Tinh Môn) */
+        .bottom-right-group { position: absolute; bottom: 8px; right: 5px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
+        
+        /* Cột Thiên/Địa Bàn (Được đẩy sang trái của cụm) */
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         
-        /* CỘT KHÍ HỌC: Sao và chữ nằm ngang sát nhau, căn bằng đầu */
-        .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column;}
-        .k-row { height: 33.33%; display: flex; flex-direction: row; align-items: flex-start; gap: 4px; overflow: hidden; padding-top: 2px;}
-        .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; line-height: 1;}
-        /* Thêm padding-top 1.5px để hạ đỉnh chữ xuống cho bằng với đỉnh của số (Sao) */
-        .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px; padding-top: 1.5px;}
+        /* Cột Thần Tinh Môn (Căn phải thẳng tắp, màu xám) */
+        .ttm-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 13.5px; font-weight: bold; color: #999999; line-height: 1.1; letter-spacing: 0.5px;}
+        
+        /* Cột Khí Học bên trái */
+        .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column; width: 65px;}
+        .k-row { height: 33.33%; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; overflow: hidden; padding-top: 2px;}
+        .k-star { font-size: 16px; font-weight: bold; margin-bottom: 2px; padding-left: 2px; line-height: 1;}
+        .k-forms { display: flex; flex-direction: row; gap: 4px; font-size: 10px; font-weight: bold; line-height: 1.05; padding-left: 2px; letter-spacing: 0px;}
     </style>
     <table class="qmdj-table">
     """
@@ -562,59 +557,57 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             d = cung_data[p]
             k_d = kigaku_data[p]
             
+            # 1. Trích xuất Can
             t_can, d_can = d.get('thien', ''), d.get('dia', '')
             base_color = stem_colors.get(p, "#000000") 
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
-            t_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
-            d_style = f"font-weight: bold; color: {base_color}; font-size: 16px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            t_style = f"font-weight: bold; color: {base_color}; font-size: 16.5px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            d_style = f"font-weight: bold; color: {base_color}; font-size: 16.5px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
-            # Lấy dữ liệu và trạng thái Nhân Hòa
+            # 2. Trích xuất Thần - Tinh - Môn Kỳ Môn
+            than_km = d.get('than', '')
+            sao_km = d.get('sao', '')
+            mon_km = d.get('mon', '')
+
+            # 3. Trích xuất Khí Học
             ys_val, ys_col, _ = k_d['stars']['y']
             ms_val, ms_col, _ = k_d['stars']['m']
             ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
-            
-            # Nếu có Nhân Hòa -> Thêm CSS gạch chân màu đỏ
             ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: #CC0000; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
             
             kigaku_html = f"""
             <div class="kigaku-col">
-                <div class="k-row">
-                    <div class="k-star" style="color:{ys_col}">{ys_val}</div>
-                    <div class="k-forms">{"".join(k_d['y_forms'])}</div>
-                </div>
-                <div class="k-row">
-                    <div class="k-star" style="color:{ms_col}">{ms_val}</div>
-                    <div class="k-forms">{"".join(k_d['m_forms'])}</div>
-                </div>
-                <div class="k-row">
-                    <div class="k-star" style="{ds_style}">{ds_val}</div>
-                    <div class="k-forms">{"".join(k_d['d_forms'])}</div>
-                </div>
+                <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="{ds_style}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
             </div>
             """
 
             if p == 5:
-                # Nếu là ngày giao Tiết Khí, ép Trung Cung có class bg-gray (màu xám nhạt)
-                center_bg_class = "bg-gray" if is_transition_day else ""
-                html += f"""<td class="qmdj-td {center_bg_class}">{kigaku_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>"""
+                # TRUNG CUNG (Ép màu xám nếu giao tiết)
+                center_bg = "bg-gray" if is_transition_day else ""
+                html += f"""
+                <td class="qmdj-td {center_bg}">
+                    {kigaku_html}
+                    <div class="bottom-right-group">
+                        <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
+                        <div class="ttm-col"><div>{than_km}</div><div>{sao_km}</div><div>{mon_km}</div></div>
+                    </div>
+                </td>"""
             else:
-                out_upper_tri = TIEN_THIEN_MAP[p]
-                out_lower_tri = global_lower_tri 
-                out_eval = EVAL_DICT.get(out_upper_tri, {}).get(out_lower_tri, "△")
-                out_hex_color = "#CC0000" if out_eval == "〇" else ("#B8860B" if out_eval == "△" else "#000000")
-                
-                # Render Cách cục Kỳ Môn (CSS vertical-rl sẽ lo việc xoay dọc)
+                # CÁC CUNG KHÁC
+                bg_class = "bg-gray" if k_d['bg_gray'] else ""
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
                 html += f"""
-                <td class="qmdj-td">
+                <td class="qmdj-td {bg_class}">
                     {kigaku_html}
                     {top_right_html}
                     <div class="bottom-right-group">
-                        <div class="hex-col" style="color: {out_hex_color};">{TRIGRAM_UNICODE[out_upper_tri]}<br>{TRIGRAM_UNICODE[out_lower_tri]}</div>
                         <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
+                        <div class="ttm-col"><div>{than_km}</div><div>{sao_km}</div><div>{mon_km}</div></div>
                     </div>
                 </td>"""
         html += "</tr>"
@@ -676,7 +669,22 @@ hoa_giap_hien_tai = wl_can + wl_chi
 # Xác định xem ngày hôm nay có phải là ngày Giao Tiết Khí không (Để tô xám Trung Cung)
 is_transition_day = day_obj.hasJieQi()
 
-# Tính toán Độn và Cục thiên văn (Hứng 3 giá trị, bao gồm cảnh báo vùng Nhuận)
+import math
+
+# Xác định ngày Giao Tiết Khí chính xác 100% theo múi giờ địa phương bằng Thiên Văn (Ephem)
+sun = ephem.Sun()
+dt_start = datetime.combine(actual_date, time(0,0,0)).replace(tzinfo=timezone(timedelta(hours=selected_tz))).astimezone(timezone.utc)
+dt_end = datetime.combine(actual_date, time(23,59,59)).replace(tzinfo=timezone(timedelta(hours=selected_tz))).astimezone(timezone.utc)
+
+sun.compute(ephem.Date(dt_start))
+lon_start = math.degrees(sun.hlon)
+sun.compute(ephem.Date(dt_end))
+lon_end = math.degrees(sun.hlon)
+
+# Nếu kinh độ Mặt trời cắt ngang một bội số của 15 độ -> Đích thị là ngày Giao Tiết Khí
+is_transition_day = int(lon_start / 15) != int(lon_end / 15)
+
+# Tính toán Độn và Cục thiên văn 
 wl_dun, wl_ju, is_nhuan_period = calculate_exact_daily_ju(user_dt, actual_date, selected_tz)
 
 if manual_hoagiap != "Tùy Chọn":
@@ -687,7 +695,7 @@ if manual_hoagiap != "Tùy Chọn":
 if manual_cucso != "Tùy Chọn":
     wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
     wl_ju = int(manual_cucso.replace("阳遁", "").replace("阴遁", "").replace("局", ""))
-    is_nhuan_period = False # Bỏ cảnh báo nếu user tự chọn tay
+    is_nhuan_period = False 
 
 # TÍNH TOÁN BÀN LÕI DÙNG CAN CHI NGÀY
 data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, wl_chi)
@@ -696,7 +704,7 @@ data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, w
 can_tuan = get_xun_leader(wl_can, wl_chi)
 cung_st, stem_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 
-# Render Giao Diện (Tiêu đề chuyển Vàng Nâu nếu rơi vào vùng Nhuận)
+# Render Giao Diện 
 title = ""
 title_color = "#B8860B" if is_nhuan_period else "#555" 
 font_weight = "bold" if is_nhuan_period else "normal"
@@ -706,7 +714,7 @@ sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-se
 cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
 
-# RENDER BẢNG (Truyền thêm biến is_transition_day vào hàm)
+# RENDER BẢNG 
 qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
