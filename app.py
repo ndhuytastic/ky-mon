@@ -400,11 +400,11 @@ def get_bazi_solar_info(dt_date):
 
 def calculate_kigaku_stars(solar_year, y_branch, m_branch):
     """ Phi Tinh Năm và Tháng (Bay thuận Lạc Thư) """
-    # Niên Tinh
-    digits = sum(int(d) for d in str(solar_year))
-    while digits > 9: digits = sum(int(d) for d in str(digits))
-    y_center = 11 - digits
-    if y_center < 1: y_center += 9
+    # FIX LỖI TOÁN HỌC: Công thức chuẩn tính Niên Tinh không bao giờ tràn số
+    rem = solar_year % 9
+    rem = 9 if rem == 0 else rem
+    y_center = 11 - rem
+    if y_center > 9: y_center -= 9
     
     # Nguyệt Tinh
     if y_branch in ['子','午','卯','酉']: base_m = 8
@@ -573,13 +573,13 @@ with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), inde
 with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=0)
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 
-# TÍNH BẢN MỆNH TINH
+# TÍNH BẢN MỆNH TINH (ĐÃ FIX LỖI)
 user_birth_dt = datetime.combine(birth_date, time(birth_hour, birth_minute))
 birth_s_year, _, _, _ = get_bazi_solar_info(user_birth_dt)
-digits = sum(int(d) for d in str(birth_s_year))
-while digits > 9: digits = sum(int(d) for d in str(digits))
-user_birth_star = 11 - digits
-if user_birth_star < 1: user_birth_star += 9
+rem_b = birth_s_year % 9
+rem_b = 9 if rem_b == 0 else rem_b
+user_birth_star = 11 - rem_b
+if user_birth_star > 9: user_birth_star -= 9
 
 hoa_giap_60 = [thien_can[i%10] + dia_chi[i%12] for i in range(60)]
 cuc_so_list = [f"阳遁{i}局" for i in range(1, 10)] + [f"阴遁{i}局" for i in range(1, 10)]
