@@ -772,6 +772,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
         st.error("Vui lòng không chọn cùng lúc Trấn Hung và Thôi Cát.")
     else:
         with st.spinner('Đang quét dữ liệu tương lai (Quét từng ngày một)...'):
+            import re # Import thư viện xử lý chuỗi
             results = []
             max_limit = 365 # Quét trong 365 ngày
             current_scan_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
@@ -791,26 +792,25 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 chi_ngay_scan = dia_chi[gz_scan.dz]
                 
                 wl_dun_s, wl_ju_s = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
-                
-                # Khôi phục biến cung_phi_tinh_scan để tính Địa Lợi
                 scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
-                
-                # Khôi phục biến stem_colors_scan để tính Thiên Thời
                 cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
+                
+                # TÍNH TOÁN KHÍ HỌC CHO NGÀY ĐANG SCAN
+                cung_day_stars_scan = {p: scan_data[p]['hour_star'] for p in range(1, 10)}
+                kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, current_scan_dt, cung_day_stars_scan)
                 
                 time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
                 c_str = f"{wl_dun_s} {wl_ju_s}局 | Ngày {can_ngay_scan}{chi_ngay_scan}"
                 target_palace = huong_list[loc_huong]
                 val_cat_cach = extract_raw_name(loc_cat_cach)
 
-                # --- HÀM KIỂM TRA ĐỒNG THỜI TẤT CẢ ĐIỀU KIỆN ---
+                # --- HÀM KIỂM TRA ĐIỀU KIỆN KỲ MÔN ---
                 def check_match(p):
                     d = scan_data[p]
                     t_chk = '甲' if d['thien'] == can_tuan_scan else d['thien']
                     d_chk = '甲' if d['dia'] == can_tuan_scan else d['dia']
                     
-                    # 1. Quét các điều kiện cơ bản
                     if loc_thien_can and t_chk != loc_thien_can: return False, ""
                     if loc_dia_can and d_chk != loc_dia_can: return False, ""
                     if loc_mon and d['mon'] != loc_mon: return False, ""
@@ -818,31 +818,22 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     if loc_than and d['than'] != loc_than: return False, ""
                     if val_cat_cach:
                         if not any(val_cat_cach in item[0] for item in cung_st_scan[p]): return False, ""
-                        
-                    # 2. Quét điều kiện THIÊN THỜI (Màu đỏ #CC0000 từ đánh giá Can-Can)
                     if loc_thien_thoi == "Có":
-                        if stem_colors_scan.get(p, "#000000") == "#000000": # Nếu hung (màu đen) -> Loại
-                            return False, ""
-                            
-                    # 3. Quét điều kiện ĐỊA LỢI (Đánh giá quẻ phải là 〇)
+                        if stem_colors_scan.get(p, "#000000") == "#000000": return False, ""
                     if loc_dia_loi == "Có":
                         global_lower_gate = scan_data[cung_phi_tinh_scan]['mon']
                         global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
                         out_upper_tri = TIEN_THIEN_MAP[p]
                         out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "△")
-                        if out_eval != "〇": # Nếu không phải Đại Cát (〇) -> Loại
-                            return False, ""
+                        if out_eval != "〇": return False, ""
                         
-                    # 4. Quét tiếp điều kiện Trấn Hung / Thôi Cát
                     dung_cach = ""
                     if val_tran_hung or val_thoi_cat:
                         pa1_reqs, pa2_reqs = TRAN_HUNG_DICT[val_tran_hung] if val_tran_hung else THOI_CAT_DICT[val_thoi_cat]
-                        
                         f1 = find_fulfilled_plan(pa1_reqs, d, cung_st_scan[p], can_tuan_scan) if pa1_reqs else None
                         f2 = find_fulfilled_plan(pa2_reqs, d, cung_st_scan[p], can_tuan_scan) if pa2_reqs else None
-                        
-                        if not f1 and not f2: return False, "" # Rớt điều kiện Trấn Hung/Thôi Cát
-                        dung_cach = f1 if f1 else f2 # Ưu tiên lưu tên phương án 1, nếu ko có thì lấy PA2
+                        if not f1 and not f2: return False, "" 
+                        dung_cach = f1 if f1 else f2 
                         
                     return True, dung_cach
 
@@ -863,27 +854,42 @@ if st.button("TÌM KIẾM", use_container_width=True):
                             
                 if is_match:
                     ten_cung = [k for k, v in huong_list.items() if v == target_palace][0]
-                    # LẤY THÊM DỮ LIỆU: Toàn bộ danh sách Cát/Hung cách của cung này
                     cach_cuc_cua_cung = cung_st_scan[target_palace]
                     
-                    # Nạp thêm cach_cuc_cua_cung vào danh sách kết quả
-                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung))
+                    # --- BÓC TÁCH & ĐỊNH DẠNG LẠI DỮ LIỆU KHÍ HỌC CỦA NGÀY (THÀNH HÀNG NGANG) ---
+                    d_star_val, d_star_col = kigaku_data_scan[target_palace]['stars']['d']
+                    raw_d_forms = kigaku_data_scan[target_palace]['d_forms']
+                    
+                    flat_d_forms = []
+                    for form_html in raw_d_forms:
+                        # Lấy mã màu từ chuỗi HTML viết dọc
+                        color_match = re.search(r"color:(#[0-9a-fA-F]{6})", form_html)
+                        color = color_match.group(1) if color_match else "#000000"
+                        # Xóa bỏ các thẻ HTML (<br>, <div>) để lấy chữ gốc
+                        text = re.sub(r"<[^>]+>", "", form_html) 
+                        flat_d_forms.append(f"<span style='color:{color}; font-weight:bold;'>{text}</span>")
+                    
+                    # Tạo chuỗi hiển thị Khí Học
+                    kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='color:{d_star_col}; font-weight:bold; font-size:16px;'>{d_star_val}</span>"
+                    if flat_d_forms:
+                        kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
+                    
+                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html))
 
             # --- IN KẾT QUẢ ĐÃ GỘP ---
             if results:
                 st.success(f"**TÌM THẤY {len(results)} KẾT QUẢ:**")
-                for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung) in enumerate(results):
+                for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung, kigaku_html) in enumerate(results):
                     h_text = f" | Hướng: {cung_str}" if cung_str else ""
                     cach_text = f" | Dùng: **{d_cach}**" if d_cach else ""
                     
-                    # TẠO CHUỖI HIỂN THỊ CÁCH CỤC (Kèm màu sắc và cấp độ)
                     cach_cuc_html = ""
                     if cach_cuc_cua_cung:
-                        # name đã chứa sẵn cấp độ (1,2), color đã chứa mã màu Đỏ/Đen từ hàm phân tích
                         list_html = [f"<span style='color:{color}; font-weight:bold;'>{name}</span>" for name, color in cach_cuc_cua_cung]
                         cach_cuc_html = " ➔ " + ", ".join(list_html)
                         
-                    # Dùng st.markdown với unsafe_allow_html=True để hiển thị được màu sắc
-                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}", unsafe_allow_html=True)
+                    # Hiển thị Kỳ Môn ở trên, Khí Học ở dòng dưới thụt vào
+                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}{kigaku_html}", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
             else:
                 st.warning("Không tìm thấy ngày nào thỏa mãn TẤT CẢ các điều kiện trong 1 năm tới.")
