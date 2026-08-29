@@ -696,11 +696,18 @@ day_obj = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
 lunar_m = day_obj.getLunarMonth()
 lunar_d = day_obj.getLunarDay()
 
-# Trích xuất Can Chi Ngày
+# Trích xuất Can Chi Năm, Tháng, Ngày
+year_gz = day_obj.getYearGZ()
+month_gz = day_obj.getMonthGZ()
 day_gz = day_obj.getDayGZ()
+
+nam_can_chi = thien_can[year_gz.tg] + dia_chi[year_gz.dz]
+thang_can_chi = thien_can[month_gz.tg] + dia_chi[month_gz.dz]
+ngay_can_chi = thien_can[day_gz.tg] + dia_chi[day_gz.dz]
+
+# Giữ nguyên Can Chi ngày để nạp vào thuật toán lập bàn
 wl_can = thien_can[day_gz.tg]
 wl_chi = dia_chi[day_gz.dz]
-hoa_giap_hien_tai = wl_can + wl_chi
 
 # Xác định xem ngày hôm nay có phải là ngày Giao Tiết Khí không (Để tô xám Trung Cung)
 is_transition_day = day_obj.hasJieQi()
@@ -726,7 +733,7 @@ wl_dun, wl_ju, is_nhuan_period = calculate_exact_daily_ju(user_dt, actual_date, 
 if manual_hoagiap != "Tùy Chọn":
     wl_can = manual_hoagiap[0]
     wl_chi = manual_hoagiap[1]
-    hoa_giap_hien_tai = manual_hoagiap
+    ngay_can_chi = manual_hoagiap # Cập nhật chữ hiển thị nếu chọn tay
 
 if manual_cucso != "Tùy Chọn":
     wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
@@ -740,11 +747,11 @@ data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, w
 can_tuan = get_xun_leader(wl_can, wl_chi)
 cung_st, stem_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 
-# Render Giao Diện 
+# Render Giao Diện (Hiển thị đầy đủ Năm Tháng Ngày)
 title = ""
 title_color = "#B8860B" if is_nhuan_period else "#555" 
 font_weight = "bold" if is_nhuan_period else "normal"
-sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>{hoa_giap_hien_tai}日 | {wl_dun}{wl_ju}局</h4>"
+sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>{nam_can_chi}年 {thang_can_chi}月 {ngay_can_chi}日 | {wl_dun}{wl_ju}局</h4>"
 
 # KẾT NỐI VÀ TÍNH KHÍ HỌC
 cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
