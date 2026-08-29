@@ -256,8 +256,6 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay):
         for i in range(8):
             cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
 
-    # Khóa cứng Trung Cung (Cung 5)
-    cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"
 
     curr_star = ju_num  # Lấy chính Cục số làm sao nhập Trung Cung (Phi Tinh Ngày)
     for cung in WOLONG_FLYING_PATH:
@@ -815,7 +813,6 @@ with st.container():
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
     # Thêm 2 lựa chọn mới
     loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
-    loc_dia_loi = c12.selectbox("地利 (Địa Lợi)", options=["", "Có"])
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
     for req in plan_list:
@@ -877,16 +874,12 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     if loc_mon and d['mon'] != loc_mon: return False, ""
                     if loc_tinh and d['sao'] != loc_tinh: return False, ""
                     if loc_than and d['than'] != loc_than: return False, ""
+                    
                     if val_cat_cach:
                         if not any(val_cat_cach in item[0] for item in cung_st_scan[p]): return False, ""
+                        
                     if loc_thien_thoi == "Có":
                         if stem_colors_scan.get(p, "#000000") == "#000000": return False, ""
-                    if loc_dia_loi == "Có":
-                        global_lower_gate = scan_data[cung_phi_tinh_scan]['mon']
-                        global_lower_tri = GATE_TO_TRIGRAM.get(global_lower_gate, "天")
-                        out_upper_tri = TIEN_THIEN_MAP[p]
-                        out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "△")
-                        if out_eval != "〇": return False, ""
                         
                     dung_cach = ""
                     if val_tran_hung or val_thoi_cat:
