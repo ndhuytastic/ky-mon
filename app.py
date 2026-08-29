@@ -212,9 +212,11 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay):
     p_hour_stem = p_hour_stem_list[0] if p_hour_stem_list else 5
 
     if p_circle == 5:
-        for i in WOLONG_OUTER_PALACES: cung_data[i]['thien'] = dia_ban[i] 
-        if p_hour_stem != 5: cung_data[p_hour_stem]['thien'] = luc_nghi_gio 
-        cung_data[5]['thien'] = can_gio 
+        # Trường hợp Giáp rơi vào Trung Cung (Dù Can xét ở Trung Cung hay ở Cung Khác)
+        # -> Trả về Phục Ngâm Thiên Bàn - Địa Bàn toàn cục 100%
+        for i in WOLONG_OUTER_PALACES: 
+            cung_data[i]['thien'] = dia_ban[i] 
+        cung_data[5]['thien'] = dia_ban[5] 
     elif p_hour_stem == 5:
         for i in WOLONG_OUTER_PALACES: cung_data[i]['thien'] = dia_ban[i] 
         cung_data[5]['thien'] = dia_ban[5] 
