@@ -857,13 +857,19 @@ with st.container():
     loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
     loc_cat_cach = c12.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
 
+import re # Đảm bảo gọi thư viện xử lý chuỗi
+
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
+    # Gọt sạch các thẻ HTML (<br>, <div>...) để ghép chữ lại thành chuỗi gốc
+    clean_status = [re.sub(r"<[^>]+>", "", item[0]) for item in status_cung]
+    
     for req in plan_list:
         if req == "天盤丙":
             t_chk = '甲' if d_cung['thien'] == can_tuan_scan else d_cung['thien']
             if t_chk == '丙': return "Thiên Bàn Bính"
         else:
-            if any(req in item[0] for item in status_cung): return req
+            # So sánh với chuỗi đã được gọt sạch HTML
+            if any(req in clean_name for clean_name in clean_status): return req
     return None
 
 if st.button("TÌM KIẾM", use_container_width=True):
@@ -919,7 +925,9 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     if loc_than and d['than'] != loc_than: return False, ""
                     
                     if val_cat_cach:
-                        if not any(val_cat_cach in item[0] for item in cung_st_scan[p]): return False, ""
+                        # Gọt sạch HTML trước khi so sánh Cát Cách
+                        clean_status_scan = [re.sub(r"<[^>]+>", "", item[0]) for item in cung_st_scan[p]]
+                        if not any(val_cat_cach in clean_name for clean_name in clean_status_scan): return False, ""
                         
                     if loc_thien_thoi == "Có":
                         if stem_colors_scan.get(p, "#000000") == "#000000": return False, ""
