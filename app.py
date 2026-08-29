@@ -129,7 +129,7 @@ def get_closest_giap_ty(target_date):
     else:
         return GT_after
 
-# --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC (ĐÃ FIX LỖI YEAR-BOUNDARY) ---
+# --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC ---
 def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
     """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số (Bảo toàn 100% cơ chế nhận diện Nhuận của code gốc) """
     local_tz = timezone(timedelta(hours=tz_hours))
@@ -408,24 +408,52 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
     return cung_status, stem_colors
 
 # --- THUẬT TOÁN CỬU TINH KHÍ HỌC ---
+import math
+
 def get_bazi_solar_info(dt_date):
     """ Nhận diện Tiết Lập Xuân chuẩn xác 100% bằng thư viện sxtwl """
     d = sxtwl.fromSolar(dt_date.year, dt_date.month, dt_date.day)
     
-    # sxtwl tự động chuyển đổi Địa Chi (dz) của Năm vào chính xác thời khắc Lập Xuân
     actual_dz = d.getYearGZ().dz
-    expected_dz = (dt_date.year - 4) % 12  # Năm 1984 là Giáp Tý (Tý = 0)
+    actual_tg = d.getYearGZ().tg
+    expected_dz = (dt_date.year - 4) % 12  
     
     solar_year = dt_date.year
-    # Nếu đang là tháng 1 hoặc 2, mà Địa Chi Năm chưa chuyển sang năm mới -> Nghĩa là chưa qua Lập Xuân
     if dt_date.month <= 2 and actual_dz != expected_dz:
         solar_year -= 1
         
     y_branch = dia_chi[actual_dz]
+    y_stem = thien_can[actual_tg] # Lấy thêm Thiên Can của Năm
     m_branch = dia_chi[d.getMonthGZ().dz]
     d_branch = dia_chi[d.getDayGZ().dz]
     
-    return solar_year, y_branch, m_branch, d_branch
+    return solar_year, y_stem, y_branch, m_branch, d_branch
+
+def calculate_monthly_ju(y_stem_str, y_branch_str, m_branch_str):
+    """ Công thức 3 bước tính Cục Số Nguyệt Bàn """
+    # Bước 1: Tính Nguyên (Y)
+    Sy = thien_can.index(y_stem_str) + 1
+    By = dia_chi.index(y_branch_str) + 1
+    
+    if Sy in [1, 2, 9, 10]: Vs = 0
+    elif Sy in [5, 6, 7, 8]: Vs = 1
+    else: Vs = 2 # Sy in [3, 4]
+    
+    Vb = (math.ceil(By / 2) - 1) % 3
+    Y = (Vs + Vb) % 3 + 1
+    
+    # Bước 2: Tìm Khối 10 tháng (k)
+    m = (dia_chi.index(m_branch_str) - 2) % 12 + 1 # Đưa Dần về 1, Sửu về 12
+    Yoff = (Sy - 1) % 5
+    Mabs = Yoff * 12 + m
+    k = math.ceil(Mabs / 10)
+    
+    # Bước 3: Tính Cục số
+    Justart = (Y - 1) * 3 + 1
+    Ju = (Justart - k + 1) % 9
+    Ju = 9 if Ju == 0 else Ju # Xử lý Modulo cho 0 -> 9
+    
+    return f"阴{Ju}局"
 
 def calculate_kigaku_stars(solar_year, y_branch, m_branch):
     """ Phi Tinh Năm và Tháng (Bay thuận Lạc Thư) """
@@ -465,10 +493,13 @@ def calculate_nhan_hoa(month_star, day_star):
     return [hour_grid[opposite_index]]
 
 def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
-    """ Tính toán Cách Cục (Đã tích hợp Nhân Hòa cho Nhật Tinh) """
-    v_s_year, v_y_branch, v_m_branch, v_d_branch = get_bazi_solar_info(view_dt)
+    """ Tính toán Cách Cục (Thêm tính năng Cục Số Nguyệt Bàn) """
+    v_s_year, v_y_stem, v_y_branch, v_m_branch, v_d_branch = get_bazi_solar_info(view_dt)
     y_stars, m_stars = calculate_kigaku_stars(v_s_year, v_y_branch, v_m_branch)
     d_stars = qi_men_day_stars 
+    
+    # Tính Cục số Nguyệt bàn
+    monthly_ju_str = calculate_monthly_ju(v_y_stem, v_y_branch, v_m_branch)
     
     k_data = {i: {'y_forms': [], 'm_forms': [], 'd_forms': [], 'stars': {}} for i in range(1, 10)}
     
@@ -480,7 +511,6 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
     cung_ban_menh_m = [p for p, s in m_stars.items() if s == birth_star][0]
     cung_ban_menh_d = [p for p, s in d_stars.items() if s == birth_star][0]
     
-    # Lấy danh sách các sao đạt Nhân Hòa (Sử dụng sao nhập Trung Cung của Tháng và Ngày)
     nhan_hoa_list = calculate_nhan_hoa(m_stars[5], d_stars[5])
     
     def vert(text, color):
@@ -488,16 +518,18 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
         return f"<div style='color:{color}; text-align:center;'>{chars}</div>"
     
     for p in range(1, 10):
-        # Đổ màu sao và lưu biến Nhân Hòa cho tầng Ngày (Day)
         for key, s_val in [('y', y_stars[p]), ('m', m_stars[p]), ('d', d_stars[p])]:
             if s_val == 5: color = "#000000"
             elif s_val in KIGAKU_COMPATIBILITY.get(birth_star, []): color = "#CC0000"
             else: color = "#999999"
             
-            is_nhan_hoa = (key == 'd' and s_val in nhan_hoa_list) # Xác định sao này có Nhân hòa không
-            k_data[p]['stars'][key] = (s_val, color, is_nhan_hoa) # Lưu mảng 3 giá trị
+            is_nhan_hoa = (key == 'd' and s_val in nhan_hoa_list) 
+            k_data[p]['stars'][key] = (s_val, color, is_nhan_hoa) 
             
-        if p == 5: continue 
+        if p == 5: 
+            # In Cục Nguyệt bàn ra Trung Cung (Màu xám, chữ viết dọc)
+            k_data[5]['m_forms'].append(vert(monthly_ju_str, "#999999"))
+            continue 
         
         # --- TẦNG NĂM (YEAR) ---
         if p == cung_ban_menh_y: k_data[p]['y_forms'].append(vert("本命殺", "#000000"))
@@ -641,7 +673,7 @@ with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15))
 
 # TÍNH BẢN MỆNH TINH
 user_birth_dt = datetime.combine(birth_date, time(birth_hour, birth_minute))
-birth_s_year, _, _, _ = get_bazi_solar_info(user_birth_dt)
+birth_s_year, _, _, _, _ = get_bazi_solar_info(user_birth_dt) # Thêm 1 dấu gạch dưới
 rem_b = birth_s_year % 9
 rem_b = 9 if rem_b == 0 else rem_b
 user_birth_star = 11 - rem_b
@@ -798,21 +830,25 @@ tran_hung_list = format_ui_list(list(TRAN_HUNG_DICT.keys()))
 thoi_cat_list = format_ui_list(list(THOI_CAT_DICT.keys()))
 
 with st.container():
-    c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    
+    # Hàng 1 (6 lựa chọn) - Đã chèn 2 cột rỗng ở 2 đầu để đẩy form vào chính giữa
+    _, c1, c2, c3, c4, c5, c6, _ = st.columns([0.5, 1, 1, 1, 1, 1, 1, 0.5])
     loc_huong = c1.selectbox("方向 (Hướng)", options=list(huong_list.keys()))
     loc_thien_can = c2.selectbox("天盤 (Thiên Bàn)", options=can_list)
     loc_dia_can = c3.selectbox("地盤 (Địa Bàn)", options=can_list)
     loc_mon = c4.selectbox("八门 (Bát Môn)", options=mon_list)
     loc_tinh = c5.selectbox("九星 (Cửu Tinh)", options=tinh_list)
     loc_than = c6.selectbox("八神 (Bát Thần)", options=than_list)
-    loc_cat_cach = c7.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
     
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-    c9, c10, c11, c12 = st.columns(4)
+    
+    # Hàng 2 (4 lựa chọn) - Kéo Cát Cách xuống và ép vào giữa
+    _, c9, c10, c11, c12, _ = st.columns([1.5, 1, 1, 1, 1, 1.5])
     loc_tran_hung = c9.selectbox("鎮凶 (Trấn Hung)", options=tran_hung_list)
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
-    # Thêm 2 lựa chọn mới
     loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
+    loc_cat_cach = c12.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
     for req in plan_list:
@@ -861,7 +897,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 c_str = f"{wl_dun_s} {wl_ju_s}局 | Ngày {can_ngay_scan}{chi_ngay_scan}"
                 val_cat_cach = extract_raw_name(loc_cat_cach)
 
-                # >>> FIX LỖI: Bắt buộc reset target_palace MỖI NGÀY <<<
+                # >>> Bắt buộc reset target_palace MỖI NGÀY <<<
                 target_palace = huong_list[loc_huong] 
 
                 def check_match(p):
