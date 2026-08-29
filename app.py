@@ -229,26 +229,35 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay):
         cung_data[5]['thien'] = dia_ban[5]
 
     # BÁT MÔN (Lưu p_land để dùng cho Ngọc Nữ Thủ Môn)
-    p_land = 5
-    if p_circle != 5:
-        s_steps = thien_can.index(can_gio) + 1
-        seq = [1,2,3,4,5,6,7,8,9] if dun_type == "阳遁" else [9,8,7,6,5,4,3,2,1]
-        p_land = seq[(seq.index(p_circle) + s_steps - 1) % 9]
-
+    s_steps = thien_can.index(can_gio)
+    
+    # BÍ TRUYỀN: Nếu Tuần Thủ ở Trung Cung, ép quỹ đạo bay thuận. Còn lại bay theo Âm/Dương.
     if p_circle == 5:
-        for p, door in WOLONG_ORIGINAL_GATES.items(): cung_data[p]['mon'] = door
+        seq = [1, 2, 3, 4, 5, 6, 7, 8, 9] 
+    else:
+        seq = [1, 2, 3, 4, 5, 6, 7, 8, 9] if dun_type == "阳遁" else [9, 8, 7, 6, 5, 4, 3, 2, 1]
+        
+    p_land = seq[(seq.index(p_circle) + s_steps) % 9]
+
+    # 1. Xác định Trực Sử
+    if p_circle == 5:
+        g_start = "死门" 
     else:
         g_start = WOLONG_ORIGINAL_GATES[p_circle]
-        if p_land == 5:
-            for p, door in WOLONG_ORIGINAL_GATES.items(): cung_data[p]['mon'] = door
-        else:
-            idx_land = WOLONG_OUTER_PALACES.index(p_land)
-            idx_gate = WOLONG_CLOCKWISE_GATES.index(g_start)
-            for i in range(8):
-                cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
 
-    # Khóa cứng Trung Cung (Cung 5) tạo Hạ Quái Đoài/Cấn theo chuẩn Lập Hướng
-    cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"
+    # 2. Rải Bát Môn
+    if s_steps == 0 or p_land == 5: 
+        # Khóa Phục Ngâm khi ngày Giáp hoặc bay trúng Trung Cung
+        for p, door in WOLONG_ORIGINAL_GATES.items(): cung_data[p]['mon'] = door
+    else:
+        # Rải thuận kim đồng hồ vòng ngoài
+        idx_land = WOLONG_OUTER_PALACES.index(p_land)
+        idx_gate = WOLONG_CLOCKWISE_GATES.index(g_start)
+        for i in range(8):
+            cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
+
+    # Khóa cứng Trung Cung (Cung 5)
+    cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"s
 
     curr_star = ju_num  # Lấy chính Cục số làm sao nhập Trung Cung (Phi Tinh Ngày)
     for cung in WOLONG_FLYING_PATH:
