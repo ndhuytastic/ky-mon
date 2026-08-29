@@ -257,7 +257,7 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay):
             cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
 
     # Khóa cứng Trung Cung (Cung 5)
-    cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"s
+    cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"
 
     curr_star = ju_num  # Lấy chính Cục số làm sao nhập Trung Cung (Phi Tinh Ngày)
     for cung in WOLONG_FLYING_PATH:
