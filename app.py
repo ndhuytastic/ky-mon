@@ -187,7 +187,7 @@ def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
 # ==========================================
 # 3. LẬP BÀN TOÁN HỌC
 # ==========================================
-def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay):
+def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay, daily_star):
     # Ghi chú: Biến can_gio, chi_gio được dùng để giữ logic cũ, thực chất truyền vào là Can Ngày, Chi Ngày.
     cung_data = {i: {'dia': '', 'mon': '', 'thien': '', 'sao': '', 'than': '', 'hour_star': ''} for i in range(1, 10)}
     
@@ -257,7 +257,7 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay):
             cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
 
 
-    curr_star = ju_num  # Lấy chính Cục số làm sao nhập Trung Cung (Phi Tinh Ngày)
+    curr_star = daily_star  # Dùng biến Cửu Tinh độc lập thay vì ép cứng bằng Cục Số
     for cung in WOLONG_FLYING_PATH:
         cung_data[cung]['hour_star'] = curr_star
         curr_star = 1 if curr_star == 9 else curr_star + 1
@@ -683,18 +683,19 @@ hoa_giap_60 = [thien_can[i%10] + dia_chi[i%12] for i in range(60)]
 cuc_so_list = [f"阳遁{i}局" for i in range(1, 10)] + [f"阴遁{i}局" for i in range(1, 10)]
 
 st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
-_, col_opt1, col_opt2, _ = st.columns([3, 2.5, 2.5, 3])
+
+# THÊM CỘT CỬU TINH VÀ CĂN GIỮA
+_, col_opt1, col_opt2, col_opt3, _ = st.columns([1.5, 2, 2, 2, 1.5])
 with col_opt1: manual_hoagiap = st.selectbox("Hoa Giáp", options=["Tùy Chọn"] + hoa_giap_60)
 with col_opt2: manual_cucso = st.selectbox("Cục Số", options=["Tùy Chọn"] + cuc_so_list)
+with col_opt3: manual_cuutinh = st.selectbox("Cửu Tinh", options=["Tùy Chọn"] + [str(i) for i in range(1, 10)])
 
 # Lấy chính xác Thời Gian Vật Lý
 user_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
 
-# Tính toán lịch cho Ngày Can Chi (Cộng 1 ngày nếu là Giờ Tý)
+# Tính toán lịch cho Ngày Can Chi
 actual_date = user_dt.date() + timedelta(days=1) if user_dt.hour >= 23 else user_dt.date()
 day_obj = sxtwl.fromSolar(actual_date.year, actual_date.month, actual_date.day)
-lunar_m = day_obj.getLunarMonth()
-lunar_d = day_obj.getLunarDay()
 
 # Trích xuất Can Chi Năm, Tháng, Ngày
 year_gz = day_obj.getYearGZ()
@@ -705,16 +706,12 @@ nam_can_chi = thien_can[year_gz.tg] + dia_chi[year_gz.dz]
 thang_can_chi = thien_can[month_gz.tg] + dia_chi[month_gz.dz]
 ngay_can_chi = thien_can[day_gz.tg] + dia_chi[day_gz.dz]
 
-# Giữ nguyên Can Chi ngày để nạp vào thuật toán lập bàn
 wl_can = thien_can[day_gz.tg]
 wl_chi = dia_chi[day_gz.dz]
 
-# Xác định xem ngày hôm nay có phải là ngày Giao Tiết Khí không (Để tô xám Trung Cung)
 is_transition_day = day_obj.hasJieQi()
 
 import math
-
-# Xác định ngày Giao Tiết Khí chính xác 100% theo múi giờ địa phương bằng Thiên Văn (Ephem)
 sun = ephem.Sun()
 dt_start = datetime.combine(actual_date, time(0,0,0)).replace(tzinfo=timezone(timedelta(hours=selected_tz))).astimezone(timezone.utc)
 dt_end = datetime.combine(actual_date, time(23,59,59)).replace(tzinfo=timezone(timedelta(hours=selected_tz))).astimezone(timezone.utc)
@@ -724,24 +721,30 @@ lon_start = math.degrees(sun.hlon)
 sun.compute(ephem.Date(dt_end))
 lon_end = math.degrees(sun.hlon)
 
-# Nếu kinh độ Mặt trời cắt ngang một bội số của 15 độ -> Đích thị là ngày Giao Tiết Khí
 is_transition_day = int(lon_start / 15) != int(lon_end / 15)
 
 # Tính toán Độn và Cục thiên văn 
 wl_dun, wl_ju, is_nhuan_period = calculate_exact_daily_ju(user_dt, actual_date, selected_tz)
 
+# >>> TÁCH BIẾN: LƯU LẠI CỬU TINH THỰC TẾ TRƯỚC KHI CỤC SỐ BỊ OVERRIDE <<<
+actual_daily_star = wl_ju
+
+# XỬ LÝ OVERRIDE BẰNG TAY TỪ GIAO DIỆN
 if manual_hoagiap != "Tùy Chọn":
     wl_can = manual_hoagiap[0]
     wl_chi = manual_hoagiap[1]
-    ngay_can_chi = manual_hoagiap # Cập nhật chữ hiển thị nếu chọn tay
+    ngay_can_chi = manual_hoagiap 
 
 if manual_cucso != "Tùy Chọn":
     wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
     wl_ju = int(manual_cucso.replace("阳遁", "").replace("阴遁", "").replace("局", ""))
     is_nhuan_period = False 
 
-# TÍNH TOÁN BÀN LÕI DÙNG CAN CHI NGÀY
-data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, wl_chi)
+if manual_cuutinh != "Tùy Chọn":
+    actual_daily_star = int(manual_cuutinh) # Ép Cửu Tinh chạy theo menu tự chọn
+
+# TÍNH TOÁN BÀN LÕI (Truyền thêm biến actual_daily_star vào cuối)
+data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, wl_chi, actual_daily_star)
 
 # XỬ LÝ CÁCH CỤC
 can_tuan = get_xun_leader(wl_can, wl_chi)
@@ -899,7 +902,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 chi_ngay_scan = dia_chi[gz_scan.dz]
                 
                 wl_dun_s, wl_ju_s, _ = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
-                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan)
+                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan, wl_ju_s)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
                 cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
