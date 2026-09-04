@@ -653,8 +653,8 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
         .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; line-height: 1;}
         .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px; padding-top: 1.5px;}
         
-        /* CỤM ĐẶC BIỆT CỦA TRUNG CUNG (LẬP HƯỚNG BÀN & TỌA SƠN BÀN NẰM CẠNH NHAU Ở GIỮA) */
-        .center-extra-boards { position: absolute; top: 0; left: 65px; right: 0; bottom: 0; display: flex; flex-direction: row; gap: 15px; align-items: center; justify-content: center; }
+        /* LẬP HƯỚNG BÀN & TỌA SƠN BÀN NẰM CẠNH NHAU Ở GIỮA */
+        .center-extra-boards { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; gap: 20px; align-items: center; justify-content: center; }
         .board-block { display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; color: #999999; font-size: 12px; line-height: 1.2; }
     </style>
     <table class="qmdj-table">
@@ -1043,6 +1043,13 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     ten_cung = [k for k, v in huong_list.items() if v == target_palace][0]
                     cach_cuc_cua_cung = cung_st_scan[target_palace]
                     
+                    # Lấy Thần và Môn (kèm màu đỏ/đen) của cung kết quả
+                    res_than_name = scan_data[target_palace]['than']
+                    res_mon_name = scan_data[target_palace]['mon']
+                    res_than_col = than_colors_scan.get(target_palace, "#999999")
+                    res_mon_col = mon_colors_scan.get(target_palace, "#999999")
+                    
+                    # BÓC TÁCH KHÍ HỌC CỦA NGÀY
                     d_star_val, d_star_col, is_nhan_hoa = kigaku_data_scan[target_palace]['stars']['d']
                     raw_d_forms = kigaku_data_scan[target_palace]['d_forms']
                     
@@ -1053,21 +1060,26 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         text = re.sub(r"<[^>]+>", "", form_html) 
                         flat_d_forms.append(f"<span style='color:{color}; font-weight:bold;'>{text}</span>")
                     
-                    # Đổi text-decoration-color từ red sang #CC0000
                     d_style = f"color:{d_star_col}; font-weight:bold; font-size:16px; text-decoration:underline; text-decoration-color:#CC0000; text-decoration-thickness: 2px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{d_star_col}; font-weight:bold; font-size:16px;"
                     
                     kigaku_result_html = f"<br>↳ <i>Khí Học Nhật Tinh:</i> <span style='{d_style}'>{d_star_val}</span>"
                     if flat_d_forms:
                         kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
                     
-                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html))
+                    # Truyền thêm biến Thần và Môn vào list results
+                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html, res_than_name, res_than_col, res_mon_name, res_mon_col))
 
+            # --- IN KẾT QUẢ ĐÃ GỘP ---
             if results:
                 st.success(f"**TÌM THẤY {len(results)} KẾT QUẢ:**")
-                for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung, kigaku_html) in enumerate(results):
+                for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung, kigaku_html, t_name, t_col, m_name, m_col) in enumerate(results):
                     h_text = f" | Hướng: {cung_str}" if cung_str else ""
                     cach_text = f" | Dùng: **{d_cach}**" if d_cach else ""
                     
+                    # Tạo HTML cho Thần và Môn (In đậm, kèm màu chuẩn)
+                    than_mon_html = f" | <span style='color:{t_col}; font-weight:bold;'>{t_name}</span> - <span style='color:{m_col}; font-weight:bold;'>{m_name}</span>"
+                    
+                    # Ép Cách cục Kỳ Môn nằm ngang
                     cach_cuc_html = ""
                     if cach_cuc_cua_cung:
                         list_html = []
@@ -1076,7 +1088,8 @@ if st.button("TÌM KIẾM", use_container_width=True):
                             list_html.append(f"<span style='color:{color}; font-weight:bold;'>{clean_name}</span>")
                         cach_cuc_html = " ➔ " + ", ".join(list_html)
                         
-                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{cach_text}{cach_cuc_html}{kigaku_html}", unsafe_allow_html=True)
+                    # IN TOÀN BỘ LÊN MÀN HÌNH
+                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{than_mon_html}{cach_text}{cach_cuc_html}{kigaku_html}", unsafe_allow_html=True)
                     st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
             else:
                 st.warning("Không tìm thấy ngày nào thỏa mãn TẤT CẢ các điều kiện trong 1 năm tới.")
