@@ -377,14 +377,51 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
             if mon == sao_mon_goc[sao]: cung_status[p].append(("星門伏吟", "#000000"))
             elif mon == mon_doi_xung[sao_mon_goc[sao]]: cung_status[p].append(("星門反吟", "#000000"))
 
+# --- CÁT HUNG MÔN/THẦN ---
+    tinh_mon_cat = {
+        "天蓬": ["生门", "开门"],
+        "天芮": ["休门", "景门", "开门"],
+        "天冲": ["休门", "生门", "景门", "开门"],
+        "天辅": ["休门", "生门", "景门"],
+        "天禽": [], # Toàn hung
+        "天心": ["休门", "生门", "景门", "开门"],
+        "天柱": ["休门", "生门", "景门", "开门"],
+        "天任": ["休门", "景门", "开门"],
+        "天英": ["生门", "开门"]
+    }
+    than_cat_chung = ["值符", "太阴", "六合", "九地", "九天"]
+
     stem_colors = {i: "#000000" for i in range(1, 10)} 
+    mon_colors = {i: "#000000" for i in range(1, 10)}
+    than_colors = {i: "#000000" for i in range(1, 10)}
+    
     for p in range(1, 10):
         if p == 5 or p not in cung_data: continue
+        
+        # 1. Tính màu Can
         t_can = '甲' if cung_data[p]['thien'] == can_tuan else cung_data[p]['thien']
         d_can = '甲' if cung_data[p]['dia'] == can_tuan else cung_data[p]['dia']
         if t_can in can_can_data and d_can in can_can_data[t_can]:
             eval_res = can_can_data[t_can][d_can]
             stem_colors[p] = "#000000" if "凶" in eval_res else "#CC0000"
+            
+        # 2. Tính màu Môn (Môn kết hợp với Tinh Kỳ Môn)
+        sao_hien_tai = cung_data[p]['sao']
+        mon_hien_tai = cung_data[p]['mon']
+        if sao_hien_tai in tinh_mon_cat and mon_hien_tai in tinh_mon_cat[sao_hien_tai]:
+            mon_colors[p] = "#CC0000" # Cát -> Đỏ
+        else:
+            mon_colors[p] = "#000000" # Hung -> Đen
+            
+        # 3. Tính màu Thần (Thần kết hợp với Phi Tinh Ngày)
+        than_hien_tai = cung_data[p]['than']
+        phi_tinh_ngay = cung_data[p]['hour_star'] # Lấy số Phi tinh ngày tại cung này
+        
+        # Nếu Phi tinh ngày là 5 -> Toàn Hung (Đen). Khác 5 -> Xét theo than_cat_chung
+        if phi_tinh_ngay != 5 and than_hien_tai in than_cat_chung:
+            than_colors[p] = "#CC0000" # Cát -> Đỏ
+        else:
+            than_colors[p] = "#000000" # Hung -> Đen
 
     for p in cung_status:
         cung_status[p].sort(key=lambda x: FORMATION_RANKS.get(x[0], 99))
@@ -405,7 +442,7 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
             formatted_list.append((display_name, color))
         cung_status[p] = formatted_list
 
-    return cung_status, stem_colors
+    return cung_status, stem_colors, mon_colors, than_colors
 
 # --- THUẬT TOÁN CỬU TINH KHÍ HỌC ---
 import math
@@ -562,7 +599,7 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
 # ==========================================
 # 5. GIAO DIỆN HTML RENDER 
 # ==========================================
-def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day=False):
+def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day=False):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
@@ -608,6 +645,9 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             than_km = d.get('than', '')
             sao_km = d.get('sao', '')
             mon_km = d.get('mon', '')
+            
+            than_col = than_colors.get(p, "#999999")
+            mon_col = mon_colors.get(p, "#999999")
 
             ys_val, ys_col, _ = k_d['stars']['y']
             ms_val, ms_col, _ = k_d['stars']['m']
@@ -643,8 +683,11 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                     {top_right_html}
                     <div class="bottom-right-group">
                         <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
-                        <div class="ttm-col"><div>{than_km}</div><div>{sao_km}</div><div>{mon_km}</div></div>
-                    </div>
+                        <div class="ttm-col">
+                            <div style="color:{than_col};">{than_km}</div>
+                            <div style="color:#999999;">{sao_km}</div>
+                            <div style="color:{mon_col};">{mon_km}</div>
+                        </div>
                 </td>"""
         html += "</tr>"
     html += "</table>"
@@ -748,7 +791,7 @@ data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, w
 
 # XỬ LÝ CÁCH CỤC
 can_tuan = get_xun_leader(wl_can, wl_chi)
-cung_st, stem_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
+cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 
 # Render Giao Diện (Hiển thị đầy đủ Năm Tháng Ngày)
 title = ""
@@ -761,7 +804,7 @@ cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
 
 # RENDER BẢNG 
-qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day)
+qimen_board_html = render_html_table(data, cung_st, stem_colors, mon_colors, than_colors, can_tuan, cung_phi_tinh, kigaku_data, is_transition_day)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
 st.components.v1.html(combined_html, height=550, scrolling=True)
@@ -904,7 +947,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 wl_dun_s, wl_ju_s, _ = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
                 scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan, wl_ju_s)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
-                cung_st_scan, stem_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
+                cung_st_scan, stem_colors_scan, _, _ = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
                 cung_day_stars_scan = {p: scan_data[p]['hour_star'] for p in range(1, 10)}
                 kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, current_scan_dt, cung_day_stars_scan)
