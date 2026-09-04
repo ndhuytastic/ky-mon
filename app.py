@@ -529,14 +529,34 @@ def calculate_nhan_hoa(month_star, day_star):
     opposite_index = 8 - index_month_star 
     return [hour_grid[opposite_index]]
 
+def calculate_zuo_shan_monthly_board(solar_year, m_branch_str):
+    """ THUẬT TOÁN ĐỘC LẬP: Tính Tọa Sơn Nguyệt Bàn (Cục và Sao Trung Cung) """
+    # 1. Tính Cục Số
+    JU_SEQUENCE = [1, 7, 4, 2, 8, 5, 3, 9, 6]
+    epoch_year = 1999
+    blocks = (solar_year - epoch_year) // 5 
+    index = blocks % 9 
+    ju_number = JU_SEQUENCE[index]
+
+    # 2. Tính Sao Trung Cung
+    month = (dia_chi.index(m_branch_str) - 2) % 12 + 1 # Đưa Dần=1, Sửu=12
+    branch_index = (solar_year - 3) % 12
+    if branch_index == 0: branch_index = 12
+        
+    group = branch_index % 3
+    start_star = group * 3
+    if start_star == 0: start_star = 9
+        
+    center_star = (start_star + (month - 1)) % 9
+    if center_star == 0: center_star = 9
+
+    return ju_number, center_star
+
 def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
-    """ Tính toán Cách Cục (Thêm tính năng Cục Số Nguyệt Bàn) """
+    """ Tính toán Cách Cục (Cập nhật hiển thị Lập Hướng & Tọa Sơn tại Trung Cung) """
     v_s_year, v_y_stem, v_y_branch, v_m_branch, v_d_branch = get_bazi_solar_info(view_dt)
     y_stars, m_stars = calculate_kigaku_stars(v_s_year, v_y_branch, v_m_branch)
     d_stars = qi_men_day_stars 
-    
-    # Tính Cục số Nguyệt bàn
-    monthly_ju_str = calculate_monthly_ju(v_y_stem, v_y_branch, v_m_branch)
     
     k_data = {i: {'y_forms': [], 'm_forms': [], 'd_forms': [], 'stars': {}} for i in range(1, 10)}
     
@@ -549,6 +569,17 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
     cung_ban_menh_d = [p for p, s in d_stars.items() if s == birth_star][0]
     
     nhan_hoa_list = calculate_nhan_hoa(m_stars[5], d_stars[5])
+    
+    # Lấy thông tin Lập Hướng (Khí Học Nguyệt Bàn)
+    monthly_ju_str = calculate_monthly_ju(v_y_stem, v_y_branch, v_m_branch) # Trả về vd: "阴4局"
+    lh_dun = monthly_ju_str[0]
+    lh_ju = monthly_ju_str[1]
+    lh_star = m_stars[5]
+    lh_formatted = f"{lh_dun}<br>{lh_ju}<br>局<br>{lh_star}"
+    
+    # Lấy thông tin Tọa Sơn (Thuật toán mới tách biệt)
+    zs_ju, zs_star = calculate_zuo_shan_monthly_board(v_s_year, v_m_branch)
+    zs_formatted = f"阳<br>{zs_ju}<br>局<br>{zs_star}"
     
     def vert(text, color):
         chars = "<br>".join(list(text))
@@ -564,8 +595,8 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
             k_data[p]['stars'][key] = (s_val, color, is_nhan_hoa) 
             
         if p == 5: 
-            # In Cục Nguyệt bàn ra Trung Cung (Màu xám, chữ viết dọc)
-            k_data[5]['m_forms'].append(vert(monthly_ju_str, "#999999"))
+            # Đóng gói thông tin Lập Hướng và Tọa Sơn truyền sang UI
+            k_data[5]['center_info'] = (lh_formatted, zs_formatted)
             continue 
         
         # --- TẦNG NĂM (YEAR) ---
@@ -607,24 +638,21 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         .bg-gray { background-color: #f0f0f0 !important; }
         
-        /* CÁCH CỤC KỲ MÔN */
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: row-reverse; gap: 6px; align-items: flex-start;}
-        .formation-item { font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px; }
+        .formation-item { display: flex; align-items: center; justify-content: flex-start; writing-mode: vertical-rl; font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;}
         
-        /* KHU VỰC GÓC DƯỚI BÊN PHẢI (Thiên Địa Bàn + Thần Tinh Môn) */
         .bottom-right-group { position: absolute; bottom: 8px; right: 5px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
-        
-        /* Cột Thiên/Địa Bàn */
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        
-        /* Cột Thần Tinh Môn - TĂNG CỠ CHỮ LÊN 16.5px ĐỂ BẰNG VỚI CAN */
         .ttm-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 16.5px; font-weight: bold; color: #999999; line-height: 1; letter-spacing: 0px;}
         
-        /* CỘT KHÍ HỌC */
         .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column; width: 65px;}
         .k-row { height: 33.33%; display: flex; flex-direction: row; align-items: flex-start; gap: 4px; overflow: hidden; padding-top: 2px;}
         .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; line-height: 1;}
         .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px; padding-top: 1.5px;}
+        
+        /* CLASS MỚI CHO LẬP HƯỚNG BÀN VÀ TỌA SƠN BÀN TẠI TRUNG CUNG */
+        .center-boards { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; gap: 20px; align-items: center; justify-content: center; }
+        .center-boards div { color: #999999; font-weight: bold; font-size: 14.5px; text-align: center; line-height: 1.3; }
     </style>
     <table class="qmdj-table">
     """
@@ -645,35 +673,38 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
             than_km = d.get('than', '')
             sao_km = d.get('sao', '')
             mon_km = d.get('mon', '')
-            
             than_col = than_colors.get(p, "#999999")
             mon_col = mon_colors.get(p, "#999999")
 
-            ys_val, ys_col, _ = k_d['stars']['y']
-            ms_val, ms_col, _ = k_d['stars']['m']
-            ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
-            ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: #CC0000; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
-            
-            kigaku_html = f"""
-            <div class="kigaku-col">
-                <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
-                <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
-                <div class="k-row"><div class="k-star" style="{ds_style}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
-            </div>
-            """
-
             if p == 5:
-                # TRUNG CUNG: Đã xóa cột Thần/Tinh/Môn, Can tự động ép về góc phải
+                # HIỂN THỊ ĐẶC BIỆT CHO TRUNG CUNG (Lập Hướng và Tọa Sơn)
+                lh_str, zs_str = k_d.get('center_info', ("", ""))
                 center_bg = "bg-gray" if is_transition_day else ""
                 html += f"""
                 <td class="qmdj-td {center_bg}">
-                    {kigaku_html}
+                    <div class="center-boards">
+                        <div>{lh_str}</div>
+                        <div>{zs_str}</div>
+                    </div>
                     <div class="bottom-right-group">
                         <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
                     </div>
                 </td>"""
             else:
-                # CÁC CUNG KHÁC: Giữ nguyên Thần/Tinh/Môn
+                # CÁC CUNG KHÁC (Giữ nguyên cấu trúc)
+                ys_val, ys_col, _ = k_d['stars']['y']
+                ms_val, ms_col, _ = k_d['stars']['m']
+                ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
+                ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: #CC0000; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
+                
+                kigaku_html = f"""
+                <div class="kigaku-col">
+                    <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
+                    <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
+                    <div class="k-row"><div class="k-star" style="{ds_style}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
+                </div>
+                """
+                
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
@@ -688,6 +719,7 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
                             <div style="color:#999999;">{sao_km}</div>
                             <div style="color:{mon_col};">{mon_km}</div>
                         </div>
+                    </div>
                 </td>"""
         html += "</tr>"
     html += "</table>"
