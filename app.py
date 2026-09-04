@@ -984,7 +984,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 wl_dun_s, wl_ju_s, _ = calculate_exact_daily_ju(current_scan_dt, s_date, selected_tz)
                 scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan, wl_ju_s)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
-                cung_st_scan, stem_colors_scan, _, _ = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
+                cung_st_scan, stem_colors_scan, mon_colors_scan, than_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
                 cung_day_stars_scan = {p: scan_data[p]['hour_star'] for p in range(1, 10)}
                 kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, current_scan_dt, cung_day_stars_scan)
