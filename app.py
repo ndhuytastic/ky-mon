@@ -638,21 +638,24 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         .bg-gray { background-color: #f0f0f0 !important; }
         
+        /* CÁCH CỤC KỲ MÔN: KHÔI PHỤC CSS VIẾT DỌC NHƯ CŨ */
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: row-reverse; gap: 6px; align-items: flex-start;}
-        .formation-item { display: flex; align-items: center; justify-content: flex-start; writing-mode: vertical-rl; font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;}
+        .formation-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;}
         
+        /* KHU VỰC GÓC DƯỚI BÊN PHẢI */
         .bottom-right-group { position: absolute; bottom: 8px; right: 5px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .ttm-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 16.5px; font-weight: bold; color: #999999; line-height: 1; letter-spacing: 0px;}
         
+        /* CỘT KHÍ HỌC TRÁI (HIỂN THỊ CẢ Ở TRUNG CUNG NHƯ CŨ) */
         .kigaku-col { position: absolute; top: 4px; left: 4px; bottom: 4px; display: flex; flex-direction: column; width: 65px;}
         .k-row { height: 33.33%; display: flex; flex-direction: row; align-items: flex-start; gap: 4px; overflow: hidden; padding-top: 2px;}
         .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; line-height: 1;}
         .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px; padding-top: 1.5px;}
         
-        /* CLASS MỚI CHO LẬP HƯỚNG BÀN VÀ TỌA SƠN BÀN TẠI TRUNG CUNG */
-        .center-boards { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; gap: 20px; align-items: center; justify-content: center; }
-        .center-boards div { color: #999999; font-weight: bold; font-size: 14.5px; text-align: center; line-height: 1.3; }
+        /* CỤM ĐẶC BIỆT CỦA TRUNG CUNG (LẬP HƯỚNG BÀN & TỌA SƠN BÀN NẰM CẠNH NHAU Ở GIỮA) */
+        .center-extra-boards { position: absolute; top: 0; left: 65px; right: 0; bottom: 0; display: flex; flex-direction: row; gap: 15px; align-items: center; justify-content: center; }
+        .board-block { display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; color: #999999; font-size: 12px; line-height: 1.2; }
     </style>
     <table class="qmdj-table">
     """
@@ -676,35 +679,37 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
             than_col = than_colors.get(p, "#999999")
             mon_col = mon_colors.get(p, "#999999")
 
+            # KHÍ HỌC: HIỂN THỊ CẢ 9 CUNG (BAO GỒM CẢ TRUNG CUNG NHƯ CŨ)
+            ys_val, ys_col, _ = k_d['stars']['y']
+            ms_val, ms_col, _ = k_d['stars']['m']
+            ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
+            ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: #CC0000; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
+            
+            kigaku_html = f"""
+            <div class="kigaku-col">
+                <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
+                <div class="k-row"><div class="k-star" style="{ds_style}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
+            </div>
+            """
+
             if p == 5:
-                # HIỂN THỊ ĐẶC BIỆT CHO TRUNG CUNG (Lập Hướng và Tọa Sơn)
+                # TRUNG CUNG: GIỮ NGUYÊN KIGAKU_HTML NHƯ CŨ, CHỈ CHÈN THÊM CENTER-EXTRA-BOARDS
                 lh_str, zs_str = k_d.get('center_info', ("", ""))
                 center_bg = "bg-gray" if is_transition_day else ""
                 html += f"""
                 <td class="qmdj-td {center_bg}">
-                    <div class="center-boards">
-                        <div>{lh_str}</div>
-                        <div>{zs_str}</div>
+                    {kigaku_html}
+                    <div class="center-extra-boards">
+                        <div class="board-block">{lh_str}</div>
+                        <div class="board-block">{zs_str}</div>
                     </div>
                     <div class="bottom-right-group">
                         <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
                     </div>
                 </td>"""
             else:
-                # CÁC CUNG KHÁC (Giữ nguyên cấu trúc)
-                ys_val, ys_col, _ = k_d['stars']['y']
-                ms_val, ms_col, _ = k_d['stars']['m']
-                ds_val, ds_col, is_nhan_hoa = k_d['stars']['d']
-                ds_style = f"color:{ds_col}; text-decoration: underline; text-decoration-color: #CC0000; text-decoration-thickness: 2.5px; text-underline-offset: 3px;" if is_nhan_hoa else f"color:{ds_col};"
-                
-                kigaku_html = f"""
-                <div class="kigaku-col">
-                    <div class="k-row"><div class="k-star" style="color:{ys_col}">{ys_val}</div><div class="k-forms">{"".join(k_d['y_forms'])}</div></div>
-                    <div class="k-row"><div class="k-star" style="color:{ms_col}">{ms_val}</div><div class="k-forms">{"".join(k_d['m_forms'])}</div></div>
-                    <div class="k-row"><div class="k-star" style="{ds_style}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
-                </div>
-                """
-                
+                # CÁC CUNG KHÁC: Giữ nguyên y như cũ, Cách cục Kỳ Môn được thả tự do xuống dòng
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
