@@ -129,6 +129,38 @@ def get_closest_giap_ty(target_date):
     else:
         return GT_after
 
+def get_closest_giap_ngo(target_date):
+    """ Tìm Trạm Giáp Ngọ gần nhất để làm ranh giới cho năm Nhuận """
+    # 1. Tìm Giáp Ngọ lùi về quá khứ (Can Giáp = 0, Chi Ngọ = 6)
+    GN_before = None
+    dist_before = 0
+    for i in range(60):
+        test_date = target_date - timedelta(days=i)
+        test_obj = sxtwl.fromSolar(test_date.year, test_date.month, test_date.day)
+        gz = test_obj.getDayGZ()
+        if gz.tg == 0 and gz.dz == 6: # 0, 6 là Giáp Ngọ
+            GN_before = test_date
+            dist_before = i
+            break
+
+    # 2. Tìm Giáp Ngọ tiến về tương lai
+    GN_after = None
+    dist_after = 0
+    for i in range(60):
+        test_date = target_date + timedelta(days=i)
+        test_obj = sxtwl.fromSolar(test_date.year, test_date.month, test_date.day)
+        gz = test_obj.getDayGZ()
+        if gz.tg == 0 and gz.dz == 6:
+            GN_after = test_date
+            dist_after = i
+            break
+
+    # 3. Lấy ngày gần nhất
+    if dist_before < dist_after:
+        return GN_before
+    else:
+        return GN_after
+
 # --- LUỒNG XỬ LÝ CHÍNH TÌM ĐỘN VÀ CỤC ---
 def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
     """ Hàm cốt lõi: Tính Âm/Dương Độn và Cục Số (Bảo toàn 100% cơ chế nhận diện Nhuận của code gốc) """
@@ -144,9 +176,10 @@ def calculate_exact_daily_ju(physical_dt, can_chi_date, tz_hours):
     
     def get_boundary_and_anchor(solstice_dt):
         anchor = get_closest_giap_ty(solstice_dt)
-        # BÁM SÁT CODE CŨ: Code gốc phát hiện Nhuận khi hàm trả về Giáp Tý ở tương lai.
         if anchor > solstice_dt:
-            return solstice_dt, anchor # Năm Nhuận: Cắt ranh giới tại đúng ngày Tiết Khí
+            # CHỈ THAY ĐỔI Ở ĐÂY: Năm Nhuận -> Cắt ranh giới tại ngày Giáp Ngọ gần nhất thay vì Tiết Khí
+            boundary_giap_ngo = get_closest_giap_ngo(solstice_dt)
+            return boundary_giap_ngo, anchor 
         return anchor, anchor          # Năm Thường: Ranh giới vẫn là ngày Giáp Tý y hệt code cũ
 
     anchors = [
