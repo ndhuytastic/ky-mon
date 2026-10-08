@@ -89,22 +89,19 @@ def get_custom_lunar_day_data(solar_date):
     l_day = day_obj.getLunarDay()
     is_leap = day_obj.isLunarLeap()
     
-    # Tính số thứ tự của ngày trong năm giả định 360 ngày
     L = (l_month - 1) * 30 + l_day
     
-    # ÂM ĐỘN: Từ 16/05 (Ngày thứ 136) đến 15/11 (Ngày thứ 315)
     if 136 <= L <= 315:
         dun_type = "阴遁"
         offset = L - 136
         star = 9 - (offset % 9)
         if star == 0: star = 9
-    # DƯƠNG ĐỘN: Từ 16/11 (Ngày 316) vòng qua năm mới đến 15/05 (Ngày 135)
     else:
         dun_type = "阳遁"
         if L >= 316:
             offset = L - 316
         else:
-            offset = 44 + L # Khoảng cách từ 316 đến 360 là 44 ngày
+            offset = 44 + L 
         star = (offset % 9) + 1
         
     can_idx = offset % 10
@@ -115,10 +112,10 @@ def get_custom_lunar_day_data(solar_date):
     return l_month, l_day, is_leap, can, chi, dun_type, star
 
 # ==========================================
-# 3. LẬP BÀN TOÁN HỌC (GIỮ NGUYÊN 100%)
+# 3. LẬP BÀN TOÁN HỌC (ĐÃ ĐỔI TÊN BIẾN THÀNH NGÀY)
 # ==========================================
-def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay, daily_star):
-    cung_data = {i: {'dia': '', 'mon': '', 'thien': '', 'sao': '', 'than': '', 'hour_star': ''} for i in range(1, 10)}
+def lap_que_wolong(can_ngay, chi_ngay, dun_type, ju_num, daily_star):
+    cung_data = {i: {'dia': '', 'mon': '', 'thien': '', 'sao': '', 'than': '', 'day_star': ''} for i in range(1, 10)}
     
     current_val = (10 - ju_num) if dun_type == "阳遁" else ju_num
     step_dir = 1 if dun_type == "阳遁" else -1
@@ -131,30 +128,30 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay, daily_star):
         if current_val > 9: current_val = 1
         elif current_val < 1: current_val = 9
 
-    luc_nghi_gio = get_xun_leader(can_gio, chi_gio)
+    luc_nghi_ngay = get_xun_leader(can_ngay, chi_ngay)
     
-    p_circle_list = [c for c, can in dia_ban.items() if can == luc_nghi_gio] 
+    p_circle_list = [c for c, can in dia_ban.items() if can == luc_nghi_ngay] 
     p_circle = p_circle_list[0] if p_circle_list else 5
 
-    target_stem = luc_nghi_gio if can_gio == '甲' else can_gio
-    p_hour_stem_list = [c for c, can in dia_ban.items() if can == target_stem]
-    p_hour_stem = p_hour_stem_list[0] if p_hour_stem_list else 5
+    target_stem = luc_nghi_ngay if can_ngay == '甲' else can_ngay
+    p_day_stem_list = [c for c, can in dia_ban.items() if can == target_stem]
+    p_day_stem = p_day_stem_list[0] if p_day_stem_list else 5
 
     if p_circle == 5:
         for i in WOLONG_OUTER_PALACES: cung_data[i]['thien'] = dia_ban[i] 
         cung_data[5]['thien'] = dia_ban[5] 
-    elif p_hour_stem == 5:
+    elif p_day_stem == 5:
         for i in WOLONG_OUTER_PALACES: cung_data[i]['thien'] = dia_ban[i] 
         cung_data[5]['thien'] = dia_ban[5] 
     else:
         idx_source = WOLONG_OUTER_PALACES.index(p_circle)
-        idx_target = WOLONG_OUTER_PALACES.index(p_hour_stem)
+        idx_target = WOLONG_OUTER_PALACES.index(p_day_stem)
         offset = (idx_target - idx_source) % 8
         for i in range(8):
             cung_data[WOLONG_OUTER_PALACES[i]]['thien'] = dia_ban[WOLONG_OUTER_PALACES[(i - offset) % 8]]
         cung_data[5]['thien'] = dia_ban[5]
 
-    s_steps = thien_can.index(can_gio)
+    s_steps = thien_can.index(can_ngay)
     if p_circle == 5: seq = [1, 2, 3, 4, 5, 6, 7, 8, 9] 
     else: seq = [1, 2, 3, 4, 5, 6, 7, 8, 9] if dun_type == "阳遁" else [9, 8, 7, 6, 5, 4, 3, 2, 1]
         
@@ -172,19 +169,19 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay, daily_star):
 
     curr_star = daily_star 
     for cung in WOLONG_FLYING_PATH:
-        cung_data[cung]['hour_star'] = curr_star
+        cung_data[cung]['day_star'] = curr_star
         curr_star = 1 if curr_star == 9 else curr_star + 1
 
     luoshu_9 = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     idx_base_star = luoshu_9.index(p_circle)
-    idx_target_star = luoshu_9.index(p_hour_stem)
+    idx_target_star = luoshu_9.index(p_day_stem)
     shift_for_star = (idx_target_star - idx_base_star) % 9
     for i in range(1, 10):
         idx_new = (luoshu_9.index(i) + shift_for_star) % 9
         cung_data[luoshu_9[idx_new]]['sao'] = ORIGINAL_STARS[i]
     cung_data[5]['sao'] = "" 
 
-    anchor_palace = p_hour_stem
+    anchor_palace = p_day_stem
     if anchor_palace == 5: anchor_palace = 8 if dun_type == "阳遁" else 7
         
     idx_anchor = WOLONG_OUTER_PALACES.index(anchor_palace)
@@ -193,11 +190,11 @@ def lap_que_wolong(can_gio, chi_gio, dun_type, ju_num, chi_ngay, daily_star):
         else: cung_data[WOLONG_OUTER_PALACES[(idx_anchor - i) % 8]]['than'] = DEITIES[i]
     cung_data[5]['than'] = ""
 
-    cung_phi_tinh = cung_data[5]['hour_star']
+    cung_phi_tinh = cung_data[5]['day_star']
     return cung_data, p_circle, cung_phi_tinh, p_land
 
 # ==========================================
-# 4. MODULE PHÂN TÍCH CÁCH CỤC (GIỮ NGUYÊN 100%)
+# 4. MODULE PHÂN TÍCH CÁCH CỤC
 # ==========================================
 def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
     FORMATION_RANKS = {
@@ -306,7 +303,7 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
         if sao_hien_tai in tinh_mon_cat and mon_hien_tai in tinh_mon_cat[sao_hien_tai]: mon_colors[p] = "#CC0000" 
         else: mon_colors[p] = "#000000" 
             
-        than_hien_tai, phi_tinh_ngay = cung_data[p]['than'], cung_data[p]['hour_star'] 
+        than_hien_tai, phi_tinh_ngay = cung_data[p]['than'], cung_data[p]['day_star'] 
         if phi_tinh_ngay != 5 and than_hien_tai in than_cat_chung: than_colors[p] = "#CC0000"
         else: than_colors[p] = "#000000"
 
@@ -325,19 +322,17 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
     return cung_status, stem_colors, mon_colors, than_colors
 
 def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
-    """ Tính toán Cách Cục (Chỉ giữ lại Nhật Tinh) """
     d_stars = qi_men_day_stars 
     k_data = {i: {'d_forms': [], 'stars': {}} for i in range(1, 10)}
     
     cung_ngu_hoang_d = [p for p, s in d_stars.items() if s == 5][0]
     cung_ban_menh_d = [p for p, s in d_stars.items() if s == birth_star][0]
     
-    # Lấy Chi của ngày để tìm Nhật Phá
     _, _, _, _, d_chi, _, _ = get_custom_lunar_day_data(view_dt.date())
     
     def vert(text, color):
         chars = "<br>".join(list(text))
-        return f"<div style='color:{color}; text-align:center;'>{chars}</div>"
+        return f"<div style='color:{color}; text-align:center; font-size: 10.5px; line-height: 1.15;'>{chars}</div>"
     
     for p in range(1, 10):
         s_val = d_stars[p]
@@ -349,7 +344,6 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
             
         if p == 5: continue 
             
-        # --- TẦNG NGÀY (DAY) ---
         if p == cung_ban_menh_d: k_data[p]['d_forms'].append(vert("本命殺", "#000000"))
         if cung_ban_menh_d != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_d]: k_data[p]['d_forms'].append(vert("的殺", "#000000"))
         if p == cung_ngu_hoang_d: k_data[p]['d_forms'].append(vert("五黄殺", "#000000"))
@@ -360,7 +354,7 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
     return k_data
 
 # ==========================================
-# 5. GIAO DIỆN HTML RENDER (CỬU CUNG LÊN GÓC TRÁI)
+# 5. GIAO DIỆN HTML RENDER 
 # ==========================================
 def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colors, can_tuan, cung_phi_tinh, kigaku_data):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
@@ -376,11 +370,10 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .ttm-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 16.5px; font-weight: bold; color: #999999; line-height: 1; letter-spacing: 0px;}
         
-        /* CỘT KHÍ HỌC: ĐẨY LÊN GÓC TRÊN CÙNG BÊN TRÁI */
         .kigaku-col { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; width: 65px;}
         .k-row { display: flex; flex-direction: row; align-items: flex-start; gap: 4px; padding-top: 2px;}
-        .k-star { font-size: 16px; font-weight: bold; width: 12px; text-align: center; line-height: 1;}
-        .k-forms { display: flex; flex-direction: row; gap: 3px; font-size: 10px; font-weight: bold; line-height: 1.1; letter-spacing: 0px; padding-top: 1.5px;}
+        .k-star { font-size: 20px; font-weight: bold; width: 15px; text-align: center; line-height: 1;}
+        .k-forms { display: flex; flex-direction: row; gap: 3px; font-weight: bold; padding-top: 1.5px;}
     </style>
     <table class="qmdj-table">
     """
@@ -401,7 +394,6 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
             than_km, sao_km, mon_km = d.get('than', ''), d.get('sao', ''), d.get('mon', '')
             than_col, mon_col = than_colors.get(p, "#999999"), mon_colors.get(p, "#999999")
 
-            # KHÍ HỌC: CHỈ HIỂN THỊ NHẬT TINH Ở GÓC TRÁI (BỎ GẠCH CHÂN)
             ds_val, ds_col = k_d['stars']['d']
             ds_style = f"color:{ds_col};" 
             
@@ -457,7 +449,6 @@ with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), inde
 with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 
-# TÍNH BẢN MỆNH TINH BẰNG CÔNG THỨC ÂM LỊCH CỦA NGÀY SINH
 _, _, _, _, _, _, user_birth_star = get_custom_lunar_day_data(birth_date)
 
 hoa_giap_60 = [thien_can[i%10] + dia_chi[i%12] for i in range(60)]
@@ -473,7 +464,6 @@ with col_opt3: manual_cuutinh = st.selectbox("Cửu Tinh", options=["Tùy Chọn
 user_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
 actual_date = user_dt.date() + timedelta(days=1) if user_dt.hour >= 23 else user_dt.date()
 
-# ÁP DỤNG THUẬT TOÁN 360 NGÀY CHO NGÀY XEM MÀN HÌNH
 l_month, l_day, is_leap, wl_can, wl_chi, wl_dun, wl_ju = get_custom_lunar_day_data(actual_date)
 actual_daily_star = wl_ju
 ngay_can_chi = wl_can + wl_chi
@@ -491,19 +481,18 @@ if manual_cucso != "Tùy Chọn":
 if manual_cuutinh != "Tùy Chọn":
     actual_daily_star = int(manual_cuutinh) 
 
-data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, wl_chi, actual_daily_star)
+data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, actual_daily_star)
 
 can_tuan = get_xun_leader(wl_can, wl_chi)
 cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 
-# RENDER HEADER MỚI (MÀU VÀNG NẾU NHUẬN)
 title = ""
-title_color = "#D4AF37" if is_nhuan_period else "#555" # Vàng gold nếu là tháng nhuận
+title_color = "#D4AF37" if is_nhuan_period else "#555" 
 font_weight = "bold" if is_nhuan_period else "normal"
 nhuan_str = "Nhuận " if is_nhuan_period else ""
-sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: Ngày {nhuan_str}{l_day} tháng {l_month} | {ngay_can_chi}日 | {wl_dun}{wl_ju}局</h4>"
+sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_dun}{wl_ju}局</h4>"
 
-cung_day_stars = {p: data[p]['hour_star'] for p in range(1, 10)}
+cung_day_stars = {p: data[p]['day_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
 
 qimen_board_html = render_html_table(data, cung_st, stem_colors, mon_colors, than_colors, can_tuan, cung_phi_tinh, kigaku_data)
@@ -631,19 +620,18 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 current_scan_dt += timedelta(days=1)
                 s_date = current_scan_dt.date()
                 
-                # THUẬT TOÁN 360 SCAN MỖI NGÀY
                 l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s = get_custom_lunar_day_data(s_date)
                 
-                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, chi_ngay_scan, wl_ju_s)
+                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_ju_s)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
                 cung_st_scan, stem_colors_scan, mon_colors_scan, than_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 
-                cung_day_stars_scan = {p: scan_data[p]['hour_star'] for p in range(1, 10)}
+                cung_day_stars_scan = {p: scan_data[p]['day_star'] for p in range(1, 10)}
                 kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, current_scan_dt, cung_day_stars_scan)
                 
                 time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
                 nhuan_s_str = "Nhuận " if is_leap_s else ""
-                c_str = f"{wl_dun_s} {wl_ju_s}局 | ÂL: {nhuan_s_str}{l_day_s}/{l_month_s} ({can_ngay_scan}{chi_ngay_scan})"
+                c_str = f"阴历: {nhuan_s_str}{l_day_s}/{l_month_s} | {can_ngay_scan}{chi_ngay_scan}日 | {wl_dun_s}{wl_ju_s}局"
                 val_cat_cach = extract_raw_name(loc_cat_cach)
 
                 target_palace = huong_list[loc_huong] 
@@ -699,7 +687,6 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     res_than_col = than_colors_scan.get(target_palace, "#999999")
                     res_mon_col = mon_colors_scan.get(target_palace, "#999999")
                     
-                    # BÓC TÁCH KHÍ HỌC CỦA NGÀY (BỎ NHÂN HÒA)
                     d_star_val, d_star_col = kigaku_data_scan[target_palace]['stars']['d']
                     raw_d_forms = kigaku_data_scan[target_palace]['d_forms']
                     
