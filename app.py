@@ -112,7 +112,7 @@ def get_custom_lunar_day_data(solar_date):
     return l_month, l_day, is_leap, can, chi, dun_type, star
 
 # ==========================================
-# 3. LẬP BÀN TOÁN HỌC (ĐÃ ĐỔI TÊN BIẾN THÀNH NGÀY)
+# 3. LẬP BÀN TOÁN HỌC
 # ==========================================
 def lap_que_wolong(can_ngay, chi_ngay, dun_type, ju_num, daily_star):
     cung_data = {i: {'dia': '', 'mon': '', 'thien': '', 'sao': '', 'than': '', 'day_star': ''} for i in range(1, 10)}
@@ -138,11 +138,17 @@ def lap_que_wolong(can_ngay, chi_ngay, dun_type, ju_num, daily_star):
     p_day_stem = p_day_stem_list[0] if p_day_stem_list else 5
 
     if p_circle == 5:
-        for i in WOLONG_OUTER_PALACES: cung_data[i]['thien'] = dia_ban[i] 
-        cung_data[5]['thien'] = dia_ban[5] 
+        for i in range(1, 10): 
+            cung_data[i]['thien'] = dia_ban[i]
+        
+        if p_day_stem != 5:
+            cung_data[p_day_stem]['thien'] = dia_ban[5]
+            cung_data[5]['thien'] = dia_ban[p_day_stem]
+
     elif p_day_stem == 5:
         for i in WOLONG_OUTER_PALACES: cung_data[i]['thien'] = dia_ban[i] 
         cung_data[5]['thien'] = dia_ban[5] 
+        
     else:
         idx_source = WOLONG_OUTER_PALACES.index(p_circle)
         idx_target = WOLONG_OUTER_PALACES.index(p_day_stem)
