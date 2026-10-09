@@ -158,20 +158,25 @@ def lap_que_wolong(can_ngay, chi_ngay, dun_type, ju_num, daily_star):
         cung_data[5]['thien'] = dia_ban[5]
 
     s_steps = thien_can.index(can_ngay)
-    if p_circle == 5: seq = [1, 2, 3, 4, 5, 6, 7, 8, 9] 
-    else: seq = [1, 2, 3, 4, 5, 6, 7, 8, 9] if dun_type == "阳遁" else [9, 8, 7, 6, 5, 4, 3, 2, 1]
-        
-    p_land = seq[(seq.index(p_circle) + s_steps) % 9]
-    if p_circle == 5: g_start = "死门" 
-    else: g_start = WOLONG_ORIGINAL_GATES[p_circle]
+    p_land = 5
+    if p_circle != 5:
+        s_steps = thien_can.index(can_ngay) + 1
+        seq = [1, 2, 3, 4, 5, 6, 7, 8, 9] if dun_type == "阳遁" else [9, 8, 7, 6, 5, 4, 3, 2, 1]
+        p_land = seq[(seq.index(p_circle) + s_steps - 1) % 9]
 
-    if s_steps == 0 or p_land == 5: 
+    if p_circle == 5:
         for p, door in WOLONG_ORIGINAL_GATES.items(): cung_data[p]['mon'] = door
     else:
-        idx_land = WOLONG_OUTER_PALACES.index(p_land)
-        idx_gate = WOLONG_CLOCKWISE_GATES.index(g_start)
-        for i in range(8):
-            cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
+        g_start = WOLONG_ORIGINAL_GATES[p_circle]
+        if p_land == 5:
+            for p, door in WOLONG_ORIGINAL_GATES.items(): cung_data[p]['mon'] = door
+        else:
+            idx_land = WOLONG_OUTER_PALACES.index(p_land)
+            idx_gate = WOLONG_CLOCKWISE_GATES.index(g_start)
+            for i in range(8):
+                cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
+
+    cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"
 
     curr_star = daily_star 
     for cung in WOLONG_FLYING_PATH:
@@ -362,7 +367,7 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
 # ==========================================
 # 5. GIAO DIỆN HTML RENDER 
 # ==========================================
-def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colors, can_tuan, cung_phi_tinh, kigaku_data):
+def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     html = """
     <style>
@@ -374,12 +379,14 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
         
         .bottom-right-group { position: absolute; bottom: 8px; right: 5px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
         .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .ttm-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 16.5px; font-weight: bold; color: #999999; line-height: 1; letter-spacing: 0px;}
         
         .kigaku-col { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; width: 65px;}
         .k-row { display: flex; flex-direction: row; align-items: flex-start; gap: 4px; padding-top: 2px;}
         .k-star { font-size: 20px; font-weight: bold; width: 15px; text-align: center; line-height: 1;}
         .k-forms { display: flex; flex-direction: row; gap: 3px; font-weight: bold; padding-top: 1.5px;}
+        
+        /* CSS CHO HEXAGRAM GÓC TRÁI DƯỚI */
+        .bottom-left-hex { position: absolute; bottom: 5px; left: 5px; display: flex; flex-direction: column; align-items: center; width: 44px; }
     </style>
     <table class="qmdj-table">
     """
@@ -394,11 +401,9 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
             base_color = stem_colors.get(p, "#000000") 
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
-            t_style = f"font-weight: bold; color: {base_color}; font-size: 16.5px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
-            d_style = f"font-weight: bold; color: {base_color}; font-size: 16.5px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
-
-            than_km, sao_km, mon_km = d.get('than', ''), d.get('sao', ''), d.get('mon', '')
-            than_col, mon_col = than_colors.get(p, "#999999"), mon_colors.get(p, "#999999")
+            
+            t_style = f"font-weight: bold; color: {base_color}; font-size: 24px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            d_style = f"font-weight: bold; color: {base_color}; font-size: 24px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
             ds_val, ds_col = k_d['stars']['d']
             ds_style = f"color:{ds_col};" 
@@ -418,6 +423,26 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
                     </div>
                 </td>"""
             else:
+                # TẠO MÃ HTML CHO QUẺ (HEXAGRAM)
+                outer_hex_html = ""
+                global_lower_tri = final_hex_data.get(p)
+                if global_lower_tri:
+                    out_upper_tri = TIEN_THIEN_MAP[p]
+                    out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "△")
+                    if out_eval == "〇": out_hex_color = "#CC0000"
+                    elif out_eval == "△": out_hex_color = "#B8860B"
+                    else: out_hex_color = "#000000"
+                    out_hex_name = HEX_NAME_DICT.get((out_upper_tri, global_lower_tri), "Không rõ")
+                    
+                    outer_hex_html = f"""
+                    <div class="bottom-left-hex" style="z-index: 1;">
+                        <div style="font-size:26px; line-height:0.85; color:{out_hex_color}; margin-bottom: 2px; text-align: center;">
+                            {TRIGRAM_UNICODE[out_upper_tri]}<br>{TRIGRAM_UNICODE[global_lower_tri]}
+                        </div>
+                        <div style="width: 100%; font-size:10.5px; font-weight:normal; color:#999999; letter-spacing: -0.5px; text-align: center;">{out_hex_name}</div>
+                    </div>
+                    """
+
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
                 
@@ -425,13 +450,9 @@ def render_html_table(cung_data, cung_status, stem_colors, mon_colors, than_colo
                 <td class="qmdj-td">
                     {kigaku_html}
                     {top_right_html}
+                    {outer_hex_html}
                     <div class="bottom-right-group">
                         <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
-                        <div class="ttm-col">
-                            <div style="color:{than_col};">{than_km}</div>
-                            <div style="color:#999999;">{sao_km}</div>
-                            <div style="color:{mon_col};">{mon_km}</div>
-                        </div>
                     </div>
                 </td>"""
         html += "</tr>"
@@ -501,7 +522,14 @@ sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-se
 cung_day_stars = {p: data[p]['day_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
 
-qimen_board_html = render_html_table(data, cung_st, stem_colors, mon_colors, than_colors, can_tuan, cung_phi_tinh, kigaku_data)
+# Lấy quẻ theo Phi Tinh Ngày
+global_lower_gate_final = data[cung_phi_tinh]['mon']
+global_lower_tri_final = GATE_TO_TRIGRAM.get(global_lower_gate_final, "天")
+final_hex_data = {}
+for p in range(1, 10):
+    if p != 5: final_hex_data[p] = global_lower_tri_final
+
+qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
 st.components.v1.html(combined_html, height=550, scrolling=True)
@@ -687,11 +715,18 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 if is_match:
                     ten_cung = [k for k, v in huong_list.items() if v == target_palace][0]
                     cach_cuc_cua_cung = cung_st_scan[target_palace]
+
+                    global_lower_gate_scan = scan_data[cung_phi_tinh_scan]['mon']
+                    global_lower_tri_scan = GATE_TO_TRIGRAM.get(global_lower_gate_scan, "天")
                     
-                    res_than_name = scan_data[target_palace]['than']
-                    res_mon_name = scan_data[target_palace]['mon']
-                    res_than_col = than_colors_scan.get(target_palace, "#999999")
-                    res_mon_col = mon_colors_scan.get(target_palace, "#999999")
+                    out_upper_tri = TIEN_THIEN_MAP.get(target_palace, "天")
+                    out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri_scan, "△")
+                    if out_eval == "〇": out_hex_color = "#CC0000"
+                    elif out_eval == "△": out_hex_color = "#B8860B"
+                    else: out_hex_color = "#000000"
+                    out_hex_name = HEX_NAME_DICT.get((out_upper_tri, global_lower_tri_scan), "Không rõ")
+                    
+                    hex_html = f" | <span style='color:{out_hex_color}; font-weight:bold;'>Quẻ: {TRIGRAM_UNICODE[out_upper_tri]}/{TRIGRAM_UNICODE[global_lower_tri_scan]} {out_hex_name}</span>"
                     
                     d_star_val, d_star_col = kigaku_data_scan[target_palace]['stars']['d']
                     raw_d_forms = kigaku_data_scan[target_palace]['d_forms']
@@ -709,15 +744,13 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     if flat_d_forms:
                         kigaku_result_html += " (" + ", ".join(flat_d_forms) + ")"
                     
-                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html, res_than_name, res_than_col, res_mon_name, res_mon_col))
+                    results.append((time_str, c_str, ten_cung, matched_cach, cach_cuc_cua_cung, kigaku_result_html, hex_html))
 
             if results:
                 st.success(f"**TÌM THẤY {len(results)} KẾT QUẢ:**")
-                for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung, kigaku_html, t_name, t_col, m_name, m_col) in enumerate(results):
+                for idx, (t_str, canchi_str, cung_str, d_cach, cach_cuc_cua_cung, kigaku_html, hex_html) in enumerate(results):
                     h_text = f" | Hướng: {cung_str}" if cung_str else ""
                     cach_text = f" | Dùng: **{d_cach}**" if d_cach else ""
-                    
-                    than_mon_html = f" | <span style='color:{t_col}; font-weight:bold;'>{t_name}</span> - <span style='color:{m_col}; font-weight:bold;'>{m_name}</span>"
                     
                     cach_cuc_html = ""
                     if cach_cuc_cua_cung:
@@ -727,7 +760,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                             list_html.append(f"<span style='color:{color}; font-weight:bold;'>{clean_name}</span>")
                         cach_cuc_html = " ➔ " + ", ".join(list_html)
                         
-                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{than_mon_html}{cach_text}{cach_cuc_html}{kigaku_html}", unsafe_allow_html=True)
+                    st.markdown(f"{idx+1}. {t_str} | {canchi_str}{h_text}{hex_html}{cach_text}{cach_cuc_html}{kigaku_html}", unsafe_allow_html=True)
                     st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
             else:
                 st.warning("Không tìm thấy ngày nào thỏa mãn TẤT CẢ các điều kiện trong 1 năm tới.")
