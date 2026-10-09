@@ -32,33 +32,33 @@ BIN_TO_TRIGRAM = {tuple(v): k for k, v in TRIGRAM_BIN.items()}
 TRIGRAM_UNICODE = {"天": "☰", "泽": "☱", "火": "☲", "雷": "☳", "风": "☴", "水": "☵", "山": "☶", "地": "☷"}
 
 EVAL_DICT = {
-    "风": {"泽":"〇", "天":"✕", "风":"✕", "火":"〇", "水":"〇", "雷":"〇", "地":"✕", "山":"〇"},
-    "天": {"泽":"✕", "天":"✕", "风":"✕", "火":"〇", "水":"✕", "雷":"△", "地":"✕", "山":"✕"},
-    "水": {"泽":"△", "天":"✕", "风":"✕", "火":"〇", "水":"✕", "雷":"✕", "地":"〇", "山":"✕"},
-    "泽": {"泽":"✕", "天":"✕", "风":"✕", "火":"✕", "水":"✕", "雷":"✕", "地":"〇", "山":"〇"},
-    "山": {"泽":"✕", "天":"〇", "风":"✕", "火":"✕", "水":"✕", "雷":"△", "地":"✕", "山":"✕"},
-    "火": {"泽":"✕", "天":"〇", "风":"✕", "火":"✕", "水":"✕", "雷":"✕", "地":"〇", "山":"✕"},
-    "地": {"泽":"〇", "天":"〇", "风":"✕", "火":"✕", "水":"✕", "雷":"〇", "地":"✕", "山":"△"},
-    "雷": {"泽":"✕", "天":"✕", "风":"〇", "火":"〇", "水":"〇", "雷":"〇", "地":"〇", "山":"✕"}
+    "天": {"天":"✕", "泽":"✕", "火":"△", "雷":"〇", "风":"✕", "水":"✕", "山":"△", "地":"✕"},
+    "泽": {"天":"〇", "泽":"✕", "火":"✕", "雷":"✕", "风":"△", "水":"〇", "山":"✕", "地":"✕"},
+    "火": {"天":"✕", "泽":"✕", "火":"〇", "雷":"✕", "风":"✕", "水":"〇", "山":"△", "地":"〇"},
+    "雷": {"天":"✕", "泽":"〇", "火":"△", "雷":"〇", "风":"✕", "水":"〇", "山":"△", "地":"〇"},
+    "风": {"天":"〇", "泽":"△", "火":"△", "雷":"〇", "风":"〇", "水":"✕", "山":"〇", "地":"✕"},
+    "水": {"天":"✕", "泽":"✕", "火":"✕", "雷":"〇", "风":"✕", "水":"〇", "山":"✕", "地":"✕"},
+    "山": {"天":"✕", "泽":"✕", "火":"〇", "雷":"✕", "风":"△", "水":"✕", "山":"〇", "地":"✕"},
+    "地": {"天":"△", "泽":"✕", "火":"〇", "雷":"✕", "风":"〇", "水":"△", "山":"〇", "地":"〇"}
 }
 
 HEX_NAME_DICT = {
     ("天","天"): "Càn", ("地","地"): "Khôn", ("水","雷"): "Truân", ("山","水"): "Mông",
     ("水","天"): "Nhu", ("天","水"): "Tụng", ("地","水"): "Sư", ("水","地"): "Tỷ",
     ("风","天"): "Tiểu Súc", ("天","泽"): "Lý", ("地","天"): "Thái", ("天","地"): "Bĩ",
-    ("天","火"): "Đ.Nhân", ("火","天"): "Đại Hữu", ("地","山"): "Khiêm", ("雷","地"): "Dự",
+    ("天","火"): "Đồng Nhân", ("火","天"): "Đại Hữu", ("地","山"): "Khiêm", ("雷","地"): "Dự",
     ("泽","雷"): "Tùy", ("山","风"): "Cổ", ("地","泽"): "Lâm", ("风","地"): "Quan",
     ("火","雷"): "Phệ Hạp", ("山","火"): "Bí", ("山","地"): "Bác", ("地","雷"): "Phục",
     ("天","雷"): "Vô Vọng", ("山","天"): "Đại Súc", ("山","雷"): "Di", ("泽","风"): "Đại Quá",
     ("水","水"): "Khảm", ("火","火"): "Ly", ("泽","山"): "Hàm", ("雷","风"): "Hằng",
-    ("天","山"): "Độn", ("雷","天"): "Đ.Tráng", ("火","地"): "Tấn", ("地","火"): "Minh Di",
+    ("天","山"): "Độn", ("雷","天"): "Đại Tráng", ("火","地"): "Tấn", ("地","火"): "Minh Di",
     ("风","火"): "Gia Nhân", ("火","泽"): "Khuê", ("水","山"): "Kiển", ("雷","水"): "Giải",
     ("山","泽"): "Tổn", ("风","雷"): "Ích", ("泽","天"): "Quải", ("天","风"): "Cấu",
     ("泽","地"): "Tụy", ("地","风"): "Thăng", ("泽","水"): "Khốn", ("水","风"): "Tỉnh",
     ("泽","火"): "Cách", ("火","风"): "Đỉnh", ("雷","雷"): "Chấn", ("山","山"): "Cấn",
     ("风","山"): "Tiệm", ("雷","泽"): "Quy Muội", ("雷","火"): "Phong", ("火","山"): "Lữ",
     ("风","风"): "Tốn", ("泽","泽"): "Đoài", ("风","水"): "Hoán", ("水","泽"): "Tiết",
-    ("风","泽"): "T.Phu", ("雷","山"): "Tiểu Quá", ("水","火"): "Ký Tế", ("火","水"): "Vị Tế"
+    ("风","泽"): "Trung Phu", ("雷","山"): "Tiểu Quá", ("水","火"): "Ký Tế", ("火","水"): "Vị Tế"
 }
 
 KIGAKU_OPPOSITE = {1: 9, 2: 8, 3: 7, 4: 6, 6: 4, 7: 3, 8: 2, 9: 1, 5: 5}
@@ -386,7 +386,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .k-forms { display: flex; flex-direction: row; gap: 3px; font-weight: bold; padding-top: 1.5px;}
         
         /* CSS CHO HEXAGRAM GÓC TRÁI DƯỚI */
-        .bottom-left-hex { position: absolute; bottom: 5px; left: 5px; display: flex; flex-direction: column; align-items: center; width: 44px; }
+        .bottom-left-hex { position: absolute; bottom: 8px; left: 5px; display: flex; flex-direction: row; align-items: center; width: auto; gap: 4px; }
     </style>
     <table class="qmdj-table">
     """
@@ -423,7 +423,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                     </div>
                 </td>"""
             else:
-                # TẠO MÃ HTML CHO QUẺ (HEXAGRAM)
+                # TẠO MÃ HTML CHO QUẺ (KÝ HIỆU BÊN TRÁI, CHỮ HÁN BÊN PHẢI)
                 outer_hex_html = ""
                 global_lower_tri = final_hex_data.get(p)
                 if global_lower_tri:
@@ -432,14 +432,19 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                     if out_eval == "〇": out_hex_color = "#CC0000"
                     elif out_eval == "△": out_hex_color = "#B8860B"
                     else: out_hex_color = "#000000"
-                    out_hex_name = HEX_NAME_DICT.get((out_upper_tri, global_lower_tri), "Không rõ")
                     
                     outer_hex_html = f"""
-                    <div class="bottom-left-hex" style="z-index: 1;">
-                        <div style="font-size:26px; line-height:0.85; color:{out_hex_color}; margin-bottom: 2px; text-align: center;">
-                            {TRIGRAM_UNICODE[out_upper_tri]}<br>{TRIGRAM_UNICODE[global_lower_tri]}
+                    <div class="bottom-left-hex" style="z-index: 1; color:{out_hex_color};">
+                        <!-- Cột Trái: Hình ảnh Hexagram -->
+                        <div style="display: flex; flex-direction: column; font-size:28px; line-height:0.85; text-align: center;">
+                            <div>{TRIGRAM_UNICODE[out_upper_tri]}</div>
+                            <div>{TRIGRAM_UNICODE[global_lower_tri]}</div>
                         </div>
-                        <div style="width: 100%; font-size:10.5px; font-weight:normal; color:#999999; letter-spacing: -0.5px; text-align: center;">{out_hex_name}</div>
+                        <!-- Cột Phải: Chữ Hán (Thiên, Trạch, Hỏa...) -->
+                        <div style="display: flex; flex-direction: column; font-size:22px; font-weight:bold; line-height:1.1;">
+                            <div>{out_upper_tri}</div>
+                            <div>{global_lower_tri}</div>
+                        </div>
                     </div>
                     """
 
@@ -726,7 +731,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     else: out_hex_color = "#000000"
                     out_hex_name = HEX_NAME_DICT.get((out_upper_tri, global_lower_tri_scan), "Không rõ")
                     
-                    hex_html = f" | <span style='color:{out_hex_color}; font-weight:bold;'>Quẻ: {TRIGRAM_UNICODE[out_upper_tri]}/{TRIGRAM_UNICODE[global_lower_tri_scan]} {out_hex_name}</span>"
+                    hex_html = f" | <span style='color:{out_hex_color}; font-weight:bold;'> {TRIGRAM_UNICODE[out_upper_tri]}/{TRIGRAM_UNICODE[global_lower_tri_scan]} {out_hex_name}</span>"
                     
                     d_star_val, d_star_col = kigaku_data_scan[target_palace]['stars']['d']
                     raw_d_forms = kigaku_data_scan[target_palace]['d_forms']
