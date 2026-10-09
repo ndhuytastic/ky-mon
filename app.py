@@ -484,7 +484,7 @@ with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), inde
 with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 
-_, _, _, _, _, _, user_birth_star = get_custom_lunar_day_data(birth_date)
+_, _, _, _, _, _, user_birth_star, _, _ = get_custom_lunar_day_data(birth_date)
 
 hoa_giap_60 = [thien_can[i%10] + dia_chi[i%12] for i in range(60)]
 cuc_so_list = [f"阳遁{i}局" for i in range(1, 10)] + [f"阴遁{i}局" for i in range(1, 10)]
