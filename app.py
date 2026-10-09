@@ -342,7 +342,7 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
     cung_ngu_hoang_d = [p for p, s in d_stars.items() if s == 5][0]
     cung_ban_menh_d = [p for p, s in d_stars.items() if s == birth_star][0]
     
-    _, _, _, _, d_chi, _, _ = get_custom_lunar_day_data(view_dt.date())
+    _, _, _, _, d_chi, _, _, _, _ = get_custom_lunar_day_data(view_dt.date())
     
     def vert(text, color):
         chars = "<br>".join(list(text))
