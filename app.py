@@ -24,6 +24,8 @@ WOLONG_CLOCKWISE_GATES = ["景门", "死门", "惊门", "开门", "休门", "生
 ORIGINAL_STARS = {1: "天蓬", 2: "天芮", 3: "天冲", 4: "天辅", 5: "天禽", 6: "天心", 7: "天柱", 8: "天任", 9: "天英"}
 DEITIES = ["值符", "螣蛇", "太阴", "六合", "勾陈", "朱雀", "九地", "九天"] 
 
+wolong_jq_order = ["大雪", "冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪"]
+
 GATE_TO_TRIGRAM = {"休门": "地", "生门": "雷", "伤门": "火", "杜门": "泽", "景门": "天", "死门": "风", "惊门": "水", "开门": "山"}
 TIEN_THIEN_MAP = {9: "天", 1: "地", 3: "火", 7: "水", 6: "山", 2: "风", 8: "雷", 4: "泽"}
 
@@ -83,7 +85,7 @@ def get_hour_nine_star(day_branch, hour_branch, dun_type):
     return 9 if res == 0 else res
 
 def get_custom_lunar_day_data(solar_date):
-    """ THUẬT TOÁN ĐỘC QUYỀN 360 NGÀY ÂM LỊCH """
+    """ THUẬT TOÁN ĐỘC QUYỀN 360 NGÀY ÂM LỊCH TÍNH CẢ TIẾT KHÍ """
     day_obj = sxtwl.fromSolar(solar_date.year, solar_date.month, solar_date.day)
     l_month = day_obj.getLunarMonth()
     l_day = day_obj.getLunarDay()
@@ -98,18 +100,19 @@ def get_custom_lunar_day_data(solar_date):
         if star == 0: star = 9
     else:
         dun_type = "阳遁"
-        if L >= 316:
-            offset = L - 316
-        else:
-            offset = 44 + L 
+        offset = L - 316 if L >= 316 else 44 + L 
         star = (offset % 9) + 1
         
-    can_idx = offset % 10
-    chi_idx = offset % 12
-    can = thien_can[can_idx]
-    chi = dia_chi[chi_idx]
+    can = thien_can[offset % 10]
+    chi = dia_chi[offset % 12]
     
-    return l_month, l_day, is_leap, can, chi, dun_type, star
+    # --- TÍNH TIẾT KHÍ & TAM NGUYÊN (TOÁN HỌC) ---
+    abs_day = ((l_month - 11) % 12) * 30 + (l_day - 1)
+    wl_jieqi = wolong_jq_order[abs_day // 15 % 24]
+    day_in_jq = abs_day % 15
+    wl_yuan = "上" if day_in_jq < 5 else "中" if day_in_jq < 10 else "下"
+    
+    return l_month, l_day, is_leap, can, chi, dun_type, star, wl_jieqi, wl_yuan
 
 # ==========================================
 # 3. LẬP BÀN TOÁN HỌC
@@ -496,7 +499,7 @@ with col_opt3: manual_cuutinh = st.selectbox("Cửu Tinh", options=["Tùy Chọn
 user_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
 actual_date = user_dt.date() + timedelta(days=1) if user_dt.hour >= 23 else user_dt.date()
 
-l_month, l_day, is_leap, wl_can, wl_chi, wl_dun, wl_ju = get_custom_lunar_day_data(actual_date)
+l_month, l_day, is_leap, wl_can, wl_chi, wl_dun, wl_ju, wl_jieqi, wl_yuan = get_custom_lunar_day_data(actual_date)
 actual_daily_star = wl_ju
 ngay_can_chi = wl_can + wl_chi
 is_nhuan_period = is_leap 
@@ -522,7 +525,8 @@ title = ""
 title_color = "#D4AF37" if is_nhuan_period else "#555" 
 font_weight = "bold" if is_nhuan_period else "normal"
 nhuan_str = "Nhuận " if is_nhuan_period else ""
-sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_dun}{wl_ju}局</h4>"
+
+sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
 
 cung_day_stars = {p: data[p]['day_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
@@ -659,7 +663,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                 current_scan_dt += timedelta(days=1)
                 s_date = current_scan_dt.date()
                 
-                l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s = get_custom_lunar_day_data(s_date)
+                l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_jieqi_s, wl_yuan_s = get_custom_lunar_day_data(s_date)
                 
                 scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_ju_s)
                 can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
