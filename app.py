@@ -513,51 +513,51 @@ user_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
 actual_date = user_dt.date() + timedelta(days=1) if user_dt.hour >= 23 else user_dt.date()
 
 l_month, l_day, is_leap, can_ngay_str, chi_ngay_str, wl_dun, wl_ju, wl_jieqi, wl_yuan = get_custom_lunar_day_data(actual_date)
-    ngay_can_chi = can_ngay_str + chi_ngay_str
+ngay_can_chi = can_ngay_str + chi_ngay_str
+
+# Tính Can Chi Giờ
+chi_gio_idx = 0 if user_dt.hour >= 23 else (user_dt.hour + 1) // 2 % 12
+chi_gio_str = dia_chi[chi_gio_idx]
+can_gio_str = get_wushu_dun(can_ngay_str, chi_gio_str)
+
+if loai_ban == "日家":
+    # LOGIC NHẬT BÀN (Giữ nguyên gốc 100%)
+    wl_can = can_ngay_str
+    wl_chi = chi_ngay_str
+    actual_daily_star = wl_ju
+    is_nhuan_period = is_leap 
     
-    # Tính Can Chi Giờ
-    chi_gio_idx = 0 if user_dt.hour >= 23 else (user_dt.hour + 1) // 2 % 12
-    chi_gio_str = dia_chi[chi_gio_idx]
-    can_gio_str = get_wushu_dun(can_ngay_str, chi_gio_str)
+    title_color = "#D4AF37" if is_nhuan_period else "#555" 
+    font_weight = "bold" if is_nhuan_period else "normal"
+    nhuan_str = "Nhuận " if is_nhuan_period else ""
+    sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
+else:
+    # LOGIC THỜI BÀN
+    wl_can = can_gio_str
+    wl_chi = chi_gio_str
+    wl_ju = calculate_correct_ju(wl_yuan, wl_can, wl_chi, wl_jieqi)
+    actual_daily_star = get_hour_nine_star(chi_ngay_str, wl_chi, wl_dun)
+    
+    sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>阴历: {l_day}/{l_month} | {ngay_can_chi}日 {wl_can}{wl_chi}时 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
 
-    if loai_ban == "日家":
-        # LOGIC NHẬT BÀN (Giữ nguyên gốc 100%)
-        wl_can = can_ngay_str
-        wl_chi = chi_ngay_str
-        actual_daily_star = wl_ju
-        is_nhuan_period = is_leap 
-        
-        title_color = "#D4AF37" if is_nhuan_period else "#555" 
-        font_weight = "bold" if is_nhuan_period else "normal"
-        nhuan_str = "Nhuận " if is_nhuan_period else ""
-        sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
-    else:
-        # LOGIC THỜI BÀN
-        wl_can = can_gio_str
-        wl_chi = chi_gio_str
-        wl_ju = calculate_correct_ju(wl_yuan, wl_can, wl_chi, wl_jieqi)
-        actual_daily_star = get_hour_nine_star(chi_ngay_str, wl_chi, wl_dun)
-        
-        sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>阴历: {l_day}/{l_month} | {ngay_can_chi}日 {wl_can}{wl_chi}时 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
+# Lựa chọn Ghi đè bằng tay (Giữ nguyên)
+if manual_hoagiap != "Tùy Chọn":
+    wl_can = manual_hoagiap[0]
+    wl_chi = manual_hoagiap[1]
 
-    # Lựa chọn Ghi đè bằng tay (Giữ nguyên)
-    if manual_hoagiap != "Tùy Chọn":
-        wl_can = manual_hoagiap[0]
-        wl_chi = manual_hoagiap[1]
+if manual_cucso != "Tùy Chọn":
+    wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
+    wl_ju = int(manual_cucso.replace("阳遁", "").replace("阴遁", "").replace("局", ""))
 
-    if manual_cucso != "Tùy Chọn":
-        wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
-        wl_ju = int(manual_cucso.replace("阳遁", "").replace("阴遁", "").replace("局", ""))
+if manual_cuutinh != "Tùy Chọn":
+    actual_daily_star = int(manual_cuutinh) 
 
-    if manual_cuutinh != "Tùy Chọn":
-        actual_daily_star = int(manual_cuutinh) 
+# Lập bàn 
+data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, actual_daily_star)
 
-    # Lập bàn 
-    data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, actual_daily_star)
-
-    can_tuan = get_xun_leader(wl_can, wl_chi)
-    cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
-    title = ""
+can_tuan = get_xun_leader(wl_can, wl_chi)
+cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
+title = ""
 
 cung_day_stars = {p: data[p]['day_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
