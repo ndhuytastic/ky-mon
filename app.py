@@ -126,6 +126,64 @@ def get_custom_lunar_day_data(solar_date):
     
     return l_month, l_day, is_leap, can, chi, dun_type, star, wl_jieqi, wl_yuan
 
+# ================= LOGIC THIÊN ĐỊA NHÂN =================
+def get_tdn_data(lunar_month, lunar_day, chi_gio_idx):
+    # 1. TÍNH NGŨ ĐỘN (NHÂN)
+    ss_base_ch = ['贵人', '印财', '退财', '五鬼', '阳虎', '阴虎']
+    hour_num = chi_gio_idx + 1
+    base_month = (lunar_month - 2) % 6
+    e1_day = (base_month + lunar_day) % 6
+    e2_hour = (e1_day + hour_num) % 6
+    e3_month = (e2_hour + lunar_month) % 6
+    e4_day = (e3_month + lunar_day) % 6
+    e5_hour = (e4_day + hour_num) % 6
+    
+    raw_ss = [ss_base_ch[e1_day], ss_base_ch[e2_hour], ss_base_ch[e3_month], ss_base_ch[e4_day], ss_base_ch[e5_hour]]
+    has_yin, has_gui, has_tui = '印财' in raw_ss, '贵人' in raw_ss, '退财' in raw_ss
+    can_transform = (has_yin or has_gui) and not has_tui
+    
+    final_ss = []
+    for ss in raw_ss:
+        if ss == '阳虎' and can_transform: final_ss.append('正官')
+        elif ss == '阴虎' and can_transform: final_ss.append('副官')
+        else: final_ss.append(ss)
+        
+    # Chấm điểm Ngũ Độn
+    ss_set = set(final_ss)
+    wd_status, wd_color = "XẤU", "#000000"
+    if '退财' in ss_set:
+        if '贵人' in ss_set and '五鬼' not in ss_set: wd_status, wd_color = "BÌNH", "#B8860B"
+    elif '印财' in ss_set or '贵人' in ss_set:
+        wd_status, wd_color = "TỐT", "#CC0000"
+        if '五鬼' in ss_set and '贵人' not in ss_set: wd_status, wd_color = "XẤU", "#000000"
+
+    # 2. TÍNH TAM THẦN TỨ TƯỚNG (THIÊN)
+    month_starts = {1: 1, 2: 0, 3: 11, 4: 10, 5: 9, 6: 10, 7: 11, 8: 0, 9: 1, 10: 2, 11: 3, 12: 2}
+    base_cung = month_starts[lunar_month]
+    cung_thang = (base_cung + lunar_month - 1) % 12
+    cung_ngay = (cung_thang + lunar_day - 1) % 12
+    cung_gio = (cung_ngay + hour_num - 1) % 12
+    thien_cuong = (cung_gio - 1) % 12
+    
+    gen_names = ['天罡', '太乙', '胜光', '小吉', '传送', '从魁', '河魁', '登明', '神后', '大吉', '功曹', '太冲']
+    tc_eval = {
+        '登明': {0: ("TỐT", "#CC0000"), 6: ("TỐT", "#CC0000"), 3: ("XẤU", "#000000"), 9: ("XẤU", "#000000")},
+        '神后': {0: ("BÌNH", "#B8860B"), 6: ("BÌNH", "#B8860B"), 3: ("TỐT", "#CC0000"), 9: ("XẤU", "#000000")},
+        '大吉': {0: ("BÌNH", "#B8860B"), 6: ("TỐT", "#CC0000"), 3: ("TỐT", "#CC0000"), 9: ("XẤU", "#000000")}
+    }
+    
+    gen_dict = {}
+    tc_status = "XẤU"
+    for i, name in enumerate(gen_names):
+        pos = (thien_cuong + i) % 12
+        color = "#999999" # Xám nhạt mặc định
+        if name in tc_eval and pos in [0, 3, 6, 9]:
+            status, color = tc_eval[name][pos]
+            if status in ["TỐT", "BÌNH"]: tc_status = status
+        gen_dict[pos] = (name, color)
+        
+    return final_ss, wd_status, wd_color, gen_dict, tc_status
+
 # ==========================================
 # 3. LẬP BÀN TOÁN HỌC
 # ==========================================
@@ -381,11 +439,14 @@ def evaluate_kigaku_formations(birth_star, current_stars, breaker_branch, mode="
 # ==========================================
 # 5. GIAO DIỆN HTML RENDER 
 # ==========================================
-def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data):
+def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data=None, loai_ban="日家"):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
+    
+    # CSS Thu nhỏ bảng và tạo khung 12 Chi
     html = """
     <style>
-        .qmdj-table { border-collapse: collapse; width: 100%; max-width: 480px; min-width: 380px; height: 460px; table-layout: fixed; font-family: sans-serif; margin: 0 auto; background: #fff;}
+        .qmdj-wrapper { width: 520px; height: 520px; position: relative; margin: 0 auto; font-family: sans-serif; }
+        .qmdj-table { position: absolute; top: 45px; left: 45px; border-collapse: collapse; width: 430px; height: 430px; table-layout: fixed; background: #fff;}
         .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
         
         .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: row-reverse; gap: 6px; align-items: flex-start;}
@@ -399,12 +460,30 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .k-star { font-size: 20px; font-weight: bold; width: 15px; text-align: center; line-height: 1;}
         .k-forms { display: flex; flex-direction: row; gap: 3px; font-weight: bold; padding-top: 1.5px;}
         
-        /* CSS CHO HEXAGRAM GÓC TRÁI DƯỚI */
         .bottom-left-hex { position: absolute; bottom: 8px; left: 5px; display: flex; flex-direction: row; align-items: center; width: auto; gap: 4px; }
+        
+        /* 12 NGUYỆT TƯỚNG BAO BỌC */
+        .moon-gen { position: absolute; font-size: 16px; font-weight: bold; }
+        .g-si { top: 12px; left: 120px; } .g-wu { top: 12px; left: 245px; } .g-wei { top: 12px; right: 120px; }
+        .g-shen { top: 120px; right: 12px; } .g-you { top: 250px; right: 12px; } .g-xu { bottom: 120px; right: 12px; }
+        .g-hai { bottom: 12px; right: 120px; } .g-zi { bottom: 12px; left: 245px; } .g-chou { bottom: 12px; left: 120px; }
+        .g-yin { bottom: 120px; left: 12px; } .g-mao { top: 250px; left: 12px; } .g-chen { top: 120px; left: 12px; }
+        
+        /* NGŨ ĐỘN TRUNG CUNG */
+        .wu-dun-center { position: absolute; bottom: 5px; left: 5px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center;}
     </style>
-    <table class="qmdj-table">
+    <div class="qmdj-wrapper">
     """
+    
+    # 1. VẼ 12 NGUYỆT TƯỚNG (Chỉ vẽ nếu là Thời Bàn)
+    if loai_ban == "时家" and tdn_data:
+        _, _, _, gen_dict, _ = tdn_data
+        pos_classes = {0: 'g-zi', 1: 'g-chou', 2: 'g-yin', 3: 'g-mao', 4: 'g-chen', 5: 'g-si', 6: 'g-wu', 7: 'g-wei', 8: 'g-shen', 9: 'g-you', 10: 'g-xu', 11: 'g-hai'}
+        for pos, (name, color) in gen_dict.items():
+            html += f"<div class='moon-gen {pos_classes[pos]}' style='color:{color};'>{name}</div>"
 
+    # 2. VẼ BÀN KỲ MÔN
+    html += '<table class="qmdj-table">'
     for row in luoi_lac_thu:
         html += "<tr>"
         for p in row:
@@ -415,67 +494,34 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             base_color = stem_colors.get(p, "#000000") 
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
-            
             t_style = f"font-weight: bold; color: {base_color}; font-size: 24px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
             d_style = f"font-weight: bold; color: {base_color}; font-size: 24px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
             ds_val, ds_col = k_d['stars']['d']
-            ds_style = f"color:{ds_col};" 
-            
-            kigaku_html = f"""
-            <div class="kigaku-col">
-                <div class="k-row"><div class="k-star" style="{ds_style}">{ds_val}</div><div class="k-forms">{"".join(k_d['d_forms'])}</div></div>
-            </div>
-            """
+            kigaku_html = f'<div class="kigaku-col"><div class="k-row"><div class="k-star" style="color:{ds_col};">{ds_val}</div><div class="k-forms">{"".join(k_d["d_forms"])}</div></div></div>'
 
             if p == 5:
-                html += f"""
-                <td class="qmdj-td">
-                    {kigaku_html}
-                    <div class="bottom-right-group">
-                        <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
-                    </div>
-                </td>"""
+                # Ngũ Độn Trung Cung
+                wudun_html = ""
+                if loai_ban == "时家" and tdn_data:
+                    final_ss, _, wd_color, _, _ = tdn_data
+                    wudun_html = f"<div class='wu-dun-center' style='color:{wd_color};'>{'<br>'.join(final_ss)}</div>"
+                    
+                html += f'<td class="qmdj-td">{kigaku_html}{wudun_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>'
             else:
-                # TẠO MÃ HTML CHO QUẺ (KÝ HIỆU BÊN TRÁI, CHỮ HÁN BÊN PHẢI)
                 outer_hex_html = ""
                 global_lower_tri = final_hex_data.get(p)
                 if global_lower_tri:
                     out_upper_tri = TIEN_THIEN_MAP[p]
                     out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "△")
-                    if out_eval == "〇": out_hex_color = "#CC0000"
-                    elif out_eval == "△": out_hex_color = "#B8860B"
-                    else: out_hex_color = "#000000"
-                    
-                    outer_hex_html = f"""
-                    <div class="bottom-left-hex" style="z-index: 1; color:{out_hex_color};">
-                        <!-- Cột Trái: Hình ảnh Hexagram -->
-                        <div style="display: flex; flex-direction: column; font-size:28px; line-height:0.85; text-align: center;">
-                            <div>{TRIGRAM_UNICODE[out_upper_tri]}</div>
-                            <div>{TRIGRAM_UNICODE[global_lower_tri]}</div>
-                        </div>
-                        <!-- Cột Phải: Chữ Hán (Thiên, Trạch, Hỏa...) -->
-                        <div style="display: flex; flex-direction: column; font-size:22px; font-weight:bold; line-height:1.1;">
-                            <div>{out_upper_tri}</div>
-                            <div>{global_lower_tri}</div>
-                        </div>
-                    </div>
-                    """
+                    out_hex_color = "#CC0000" if out_eval == "〇" else "#B8860B" if out_eval == "△" else "#000000"
+                    out_hex_name = HEX_NAME_DICT.get((out_upper_tri, global_lower_tri), "Không rõ")
+                    outer_hex_html = f"<div class='bottom-left-hex' style='z-index: 1; color:{out_hex_color};'><div style='display: flex; flex-direction: column; font-size:28px; line-height:0.85; text-align: center;'><div>{TRIGRAM_UNICODE[out_upper_tri]}</div><div>{TRIGRAM_UNICODE[global_lower_tri]}</div></div><div style='display: flex; flex-direction: column; font-size:22px; font-weight:bold; line-height:1.1;'><div>{out_upper_tri}</div><div>{global_lower_tri}</div></div></div>"
 
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
-                top_right_html = f"<div class='top-right-panel'>{form_html}</div>"
-                
-                html += f"""
-                <td class="qmdj-td">
-                    {kigaku_html}
-                    {top_right_html}
-                    {outer_hex_html}
-                    <div class="bottom-right-group">
-                        <div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div>
-                    </div>
-                </td>"""
+                html += f'<td class="qmdj-td">{kigaku_html}<div class="top-right-panel">{form_html}</div>{outer_hex_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>'
         html += "</tr>"
-    html += "</table>"
+    html += "</table></div>"
     return html
 
 # ==========================================
@@ -590,7 +636,12 @@ final_hex_data = {}
 for p in range(1, 10):
     if p != 5: final_hex_data[p] = global_lower_tri_final
 
-qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data)
+# 6.5 THIÊN ĐỊA NHÂN (Chỉ lấy data nếu Thời Bàn)
+tdn_data = None
+if loai_ban == "时家":
+    tdn_data = get_tdn_data(l_month, l_day, chi_gio_idx)
+    
+qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data, loai_ban)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
 st.components.v1.html(combined_html, height=550, scrolling=True)
@@ -678,13 +729,16 @@ with st.container():
     loc_tinh = c5.selectbox("九星 (Cửu Tinh)", options=tinh_list)
     loc_than = c6.selectbox("八神 (Bát Thần)", options=than_list)
     
-    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-    _, c9, c10, c11, c12, c13, _ = st.columns([0.5, 1, 1, 1, 1, 1, 0.5])
+    _, c9, c10, c11, c12, c13, c14, _ = st.columns([0.2, 1, 1, 1, 1, 1, 1, 0.2])
     loc_tran_hung = c9.selectbox("鎮凶 (Trấn Hung)", options=tran_hung_list)
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
     loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
     loc_nhan_hoa = c12.selectbox("人和 (Nhân Hòa)", options=["", "Có"])
     loc_cat_cach = c13.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
+    
+    # Chỉ hiển thị Cát Thời nếu đang ở Thời Bàn
+    options_cat_thoi = ["", "三神四相", "五遁", "两者兼备"] if loai_ban == "时家" else [""]
+    loc_cat_thoi = c14.selectbox("吉时 (Cát Thời)", options=options_cat_thoi, disabled=(loai_ban=="日家"))
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
     clean_status = [re.sub(r"<[^>]+>", "", item[0]) for item in status_cung]
@@ -791,6 +845,13 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         raw_k_forms = [re.sub(r"<[^>]+>", "", f).replace("<br>", "") for f in kigaku_data_scan[p]['d_forms']]
                         if any(bad in form for form in raw_k_forms for bad in bad_forms):
                             return False, ""
+
+                    # KIỂM TRA CÁT THỜI (Chỉ chạy khi chọn Thời Bàn)
+                    if loai_ban == "时家" and loc_cat_thoi:
+                        _, wd_status, _, _, tc_status = get_tdn_data(l_month_s, l_day_s, chi_gio_idx)
+                        if loc_cat_thoi == "三神四相" and tc_status != "TỐT": return False, ""
+                        if loc_cat_thoi == "五遁" and wd_status != "TỐT": return False, ""
+                        if loc_cat_thoi == "两者兼备" and (tc_status != "TỐT" or wd_status != "TỐT"): return False, ""
                         
                     dung_cach = ""
                     if val_tran_hung or val_thoi_cat:
