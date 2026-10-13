@@ -191,7 +191,7 @@ def lap_que_wolong(can_ngay, chi_ngay, dun_type, ju_num, daily_star):
             for i in range(8):
                 cung_data[WOLONG_OUTER_PALACES[(idx_land + i) % 8]]['mon'] = WOLONG_CLOCKWISE_GATES[(idx_gate + i) % 8]
 
-    cung_data[5]['mon'] = "惊门" if dun_type == "阳遁" else "生门"
+    cung_data[5]['mon'] = "杜门" if dun_type == "阳遁" else "开门"
 
     curr_star = daily_star 
     for cung in WOLONG_FLYING_PATH:
