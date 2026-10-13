@@ -523,38 +523,36 @@ with col_opt3: manual_cuutinh = st.selectbox("Cửu Tinh", options=["Tùy Chọn
 user_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
 actual_date = user_dt.date() + timedelta(days=1) if user_dt.hour >= 23 else user_dt.date()
 
-l_month, l_day, is_leap, can_ngay_str, chi_ngay_str, wl_dun, wl_ju, wl_jieqi, wl_yuan = get_custom_lunar_day_data(actual_date)
+# 1. Tính toán gốc
+l_month, l_day, is_leap, can_ngay_str, chi_ngay_str, base_dun, base_ju, wl_jieqi, wl_yuan = get_custom_lunar_day_data(actual_date)
 ngay_can_chi = can_ngay_str + chi_ngay_str
 
-# Tính Can Chi Giờ
 chi_gio_idx = 0 if user_dt.hour >= 23 else (user_dt.hour + 1) // 2 % 12
 chi_gio_str = dia_chi[chi_gio_idx]
 can_gio_str = get_wushu_dun(can_ngay_str, chi_gio_str)
 
+# 2. Phân nhánh dữ liệu theo Loại Bàn
 if loai_ban == "日家":
-    # LOGIC NHẬT BÀN (Giữ nguyên gốc 100%)
     wl_can = can_ngay_str
     wl_chi = chi_ngay_str
-    actual_daily_star = wl_ju
+    wl_dun = base_dun
+    wl_ju = base_ju
+    actual_daily_star = base_ju
     is_nhuan_period = is_leap 
-    
-    title_color = "#D4AF37" if is_nhuan_period else "#555" 
-    font_weight = "bold" if is_nhuan_period else "normal"
-    nhuan_str = "Nhuận " if is_nhuan_period else ""
-    sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
 else:
-    # LOGIC THỜI BÀN
     wl_can = can_gio_str
     wl_chi = chi_gio_str
+    wl_dun = base_dun
     wl_ju = calculate_correct_ju(wl_yuan, wl_can, wl_chi, wl_jieqi)
     actual_daily_star = get_hour_nine_star(chi_ngay_str, wl_chi, wl_dun)
-    
-    sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>阴历: {l_day}/{l_month} | {ngay_can_chi}日 {wl_can}{wl_chi}时 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
+    is_nhuan_period = False
 
-# Lựa chọn Ghi đè bằng tay (Giữ nguyên)
+# 3. GHI ĐÈ DỮ LIỆU TỪ MENU LỰA CHỌN (Phải đặt ở đây trước khi tạo Tiêu đề)
 if manual_hoagiap != "Tùy Chọn":
     wl_can = manual_hoagiap[0]
     wl_chi = manual_hoagiap[1]
+    if loai_ban == "日家": 
+        ngay_can_chi = manual_hoagiap # Đổi Can Chi ngày trên tiêu đề
 
 if manual_cucso != "Tùy Chọn":
     wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
@@ -563,15 +561,26 @@ if manual_cucso != "Tùy Chọn":
 if manual_cuutinh != "Tùy Chọn":
     actual_daily_star = int(manual_cuutinh) 
 
-# Lập bàn 
+# 4. TẠO TIÊU ĐỀ SAU KHI ĐÃ GHI ĐÈ
+if loai_ban == "日家":
+    title_color = "#D4AF37" if is_nhuan_period else "#555" 
+    font_weight = "bold" if is_nhuan_period else "normal"
+    nhuan_str = "Nhuận " if is_nhuan_period else ""
+    sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
+else:
+    sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>阴历: {l_day}/{l_month} | {ngay_can_chi}日 {wl_can}{wl_chi}时 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
+
+# 5. LẬP BÀN VÀ PHÂN TÍCH
 data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, actual_daily_star)
 
 can_tuan = get_xun_leader(wl_can, wl_chi)
 cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
 title = ""
 
+# 6. KHÍ HỌC (KIGAKU)
 cung_day_stars = {p: data[p]['day_star'] for p in range(1, 10)}
-breaker_chi = wl_chi if loai_ban == "日家" else chi_gio_str
+# Biến breaker_chi lấy trực tiếp wl_chi để tự động ăn theo Hoa giáp ghi đè
+breaker_chi = wl_chi 
 kigaku_data = evaluate_kigaku_formations(user_birth_star, cung_day_stars, breaker_chi, loai_ban)
 
 # Lấy quẻ theo Phi Tinh Ngày
