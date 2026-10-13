@@ -347,21 +347,20 @@ def qimen_analyzer_hojo(cung_data, can_tuan, p_land):
 
     return cung_status, stem_colors, mon_colors, than_colors
 
-def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
-    d_stars = qi_men_day_stars 
+def evaluate_kigaku_formations(birth_star, current_stars, breaker_branch, mode="日家"):
     k_data = {i: {'d_forms': [], 'stars': {}} for i in range(1, 10)}
     
-    cung_ngu_hoang_d = [p for p, s in d_stars.items() if s == 5][0]
-    cung_ban_menh_d = [p for p, s in d_stars.items() if s == birth_star][0]
+    cung_ngu_hoang_d = [p for p, s in current_stars.items() if s == 5][0]
+    cung_ban_menh_d = [p for p, s in current_stars.items() if s == birth_star][0]
     
-    _, _, _, _, d_chi, _, _, _, _ = get_custom_lunar_day_data(view_dt.date())
+    breaker_name = "日破" if mode == "日家" else "时破"
     
     def vert(text, color):
         chars = "<br>".join(list(text))
         return f"<div style='color:{color}; text-align:center; font-size: 10.5px; line-height: 1.15;'>{chars}</div>"
     
     for p in range(1, 10):
-        s_val = d_stars[p]
+        s_val = current_stars[p]
         if s_val == 5: color = "#000000"
         elif s_val in KIGAKU_COMPATIBILITY.get(birth_star, []): color = "#CC0000"
         else: color = "#999999"
@@ -374,8 +373,8 @@ def evaluate_kigaku_formations(birth_star, view_dt, qi_men_day_stars):
         if cung_ban_menh_d != 5 and p == KIGAKU_OPPOSITE[cung_ban_menh_d]: k_data[p]['d_forms'].append(vert("的殺", "#000000"))
         if p == cung_ngu_hoang_d: k_data[p]['d_forms'].append(vert("五黄殺", "#000000"))
         if cung_ngu_hoang_d != 5 and p == KIGAKU_OPPOSITE[cung_ngu_hoang_d]: k_data[p]['d_forms'].append(vert("暗剣殺", "#000000"))
-        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[d_chi]]: k_data[p]['d_forms'].append(vert("日破", "#000000"))
-        if p in [1, 9] and d_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['d_forms'].append(vert("対冲", "#000000"))
+        if p == KIGAKU_OPPOSITE[BRANCH_TO_PALACE[breaker_branch]]: k_data[p]['d_forms'].append(vert(breaker_name, "#000000"))
+        if p in [1, 9] and current_stars[p] == KIGAKU_OPPOSITE[p]: k_data[p]['d_forms'].append(vert("対冲", "#000000"))
             
     return k_data
 
@@ -497,7 +496,19 @@ with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), in
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 with col8: loai_ban = st.selectbox("Loại Bàn", options=["日家", "时家"], index=0)
 
-_, _, _, _, _, _, user_birth_star, _, _ = get_custom_lunar_day_data(birth_date)
+# --- TÍNH TOÁN SAO BẢN MỆNH LINH HOẠT THEO LOẠI BÀN ---
+# 1. Lấy thông tin Lịch của Ngày Sinh
+_, _, _, b_can_ngay, b_chi_ngay, b_dun, b_day_star, _, _ = get_custom_lunar_day_data(birth_date)
+
+# 2. Tính Chi Giờ Sinh
+b_chi_gio_idx = 0 if birth_hour >= 23 else (birth_hour + 1) // 2 % 12
+b_chi_gio = dia_chi[b_chi_gio_idx]
+
+# 3. Tính Sao Giờ Sinh (Theo đúng công thức Thời Bàn)
+b_hour_star = get_hour_nine_star(b_chi_ngay, b_chi_gio, b_dun)
+
+# 4. Gán Sao Bản Mệnh linh hoạt
+user_birth_star = b_day_star if loai_ban == "日家" else b_hour_star
 
 hoa_giap_60 = [thien_can[i%10] + dia_chi[i%12] for i in range(60)]
 cuc_so_list = [f"阳遁{i}局" for i in range(1, 10)] + [f"阴遁{i}局" for i in range(1, 10)]
@@ -560,7 +571,8 @@ cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tu
 title = ""
 
 cung_day_stars = {p: data[p]['day_star'] for p in range(1, 10)}
-kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
+breaker_chi = wl_chi if loai_ban == "日家" else chi_gio_str
+kigaku_data = evaluate_kigaku_formations(user_birth_star, cung_day_stars, breaker_chi, loai_ban)
 
 # Lấy quẻ theo Phi Tinh Ngày
 global_lower_gate_final = data[cung_phi_tinh]['mon']
@@ -658,11 +670,12 @@ with st.container():
     loc_than = c6.selectbox("八神 (Bát Thần)", options=than_list)
     
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-    _, c9, c10, c11, c12, _ = st.columns([1.5, 1, 1, 1, 1, 1.5])
+    _, c9, c10, c11, c12, c13, _ = st.columns([0.5, 1, 1, 1, 1, 1, 0.5])
     loc_tran_hung = c9.selectbox("鎮凶 (Trấn Hung)", options=tran_hung_list)
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
     loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
-    loc_cat_cach = c12.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
+    loc_nhan_hoa = c12.selectbox("人和 (Nhân Hòa)", options=["", "Có"])
+    loc_cat_cach = c13.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
     clean_status = [re.sub(r"<[^>]+>", "", item[0]) for item in status_cung]
@@ -740,7 +753,8 @@ if st.button("TÌM KIẾM", use_container_width=True):
 
                 cung_st_scan, stem_colors_scan, mon_colors_scan, than_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 cung_day_stars_scan = {p: scan_data[p]['day_star'] for p in range(1, 10)}
-                kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, current_scan_dt, cung_day_stars_scan)
+                breaker_chi_scan = chi_ngay_scan if loai_ban == "日家" else chi_gio_scan
+                kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, cung_day_stars_scan, breaker_chi_scan, loai_ban)
                 val_cat_cach = extract_raw_name(loc_cat_cach)
 
                 target_palace = huong_list[loc_huong] 
@@ -762,6 +776,12 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         
                     if loc_thien_thoi == "Có":
                         if stem_colors_scan.get(p, "#000000") == "#000000": return False, ""
+
+                    if loc_nhan_hoa == "Có":
+                        bad_forms = ["本命殺", "的殺", "五黄殺", "暗剣殺", "日破", "时破"]
+                        raw_k_forms = [re.sub(r"<[^>]+>", "", f).replace("<br>", "") for f in kigaku_data_scan[p]['d_forms']]
+                        if any(bad in form for form in raw_k_forms for bad in bad_forms):
+                            return False, ""
                         
                     dung_cach = ""
                     if val_tran_hung or val_thoi_cat:
