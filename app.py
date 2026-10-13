@@ -84,6 +84,18 @@ def get_hour_nine_star(day_branch, hour_branch, dun_type):
     res = (start_star + hb_idx) % 9 if dun_type == "阳遁" else (start_star - hb_idx) % 9
     return 9 if res == 0 else res
 
+def calculate_correct_ju(nguyen, can_gio, chi_gio, tiet_khi):
+    base_ju_dict = {"夏至":9,"小暑":7,"大暑":6,"立秋":5,"处暑":6,"白露":5,"秋分":4,"寒露":9,"霜降":8,"立冬":7,"小雪":2,"大雪":1,"冬至":1,"小寒":3,"大寒":4,"立春":5,"雨水":4,"惊蛰":5,"春分":6,"清明":1,"谷雨":2,"立夏":3,"小满":8,"芒种":9}
+    yin_dun_terms = ["夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪"]
+    dun_type = -1 if tiet_khi in yin_dun_terms else 1
+    tuan_index = ((thien_can.index(can_gio) - dia_chi.index(chi_gio)) % 12) // 2
+    nguyen_multiplier = 0 if nguyen == "上" else 1 if nguyen == "中" else 2
+    raw_ju = base_ju_dict[tiet_khi] + (dun_type * (tuan_index + 6 * nguyen_multiplier))
+    return (raw_ju - 1) % 9 + 1
+
+def get_wushu_dun(day_stem, hour_branch):
+    return thien_can[((thien_can.index(day_stem) % 5) * 2 + dia_chi.index(hour_branch)) % 10]
+
 def get_custom_lunar_day_data(solar_date):
     """ THUẬT TOÁN ĐỘC QUYỀN 360 NGÀY ÂM LỊCH TÍNH CẢ TIẾT KHÍ """
     day_obj = sxtwl.fromSolar(solar_date.year, solar_date.month, solar_date.day)
@@ -473,7 +485,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
 def get_current_vn_time(): return datetime.now(timezone(timedelta(hours=7)))
 if "init_dt" not in st.session_state: st.session_state.init_dt = get_current_vn_time()
 
-col1, col2, col3, col4, col5, col6, col7 = st.columns([1.2, 0.8, 0.8, 1.2, 0.8, 0.8, 1])
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([1.1, 0.7, 0.7, 1.1, 0.7, 0.7, 0.9, 0.9])
 
 with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.init_dt.date(), min_value=date(1901, 1, 1), max_value=date(2100, 12, 31))
 with col2: selected_hour = st.selectbox("Giờ Xem", options=list(range(24)), index=st.session_state.init_dt.hour)
@@ -483,6 +495,7 @@ with col4: birth_date = st.date_input("Ngày Sinh", value=date(1993, 1, 7), min_
 with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), index=8)
 with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
+with col8: loai_ban = st.selectbox("Loại Bàn", options=["日家", "时家"], index=0)
 
 _, _, _, _, _, _, user_birth_star, _, _ = get_custom_lunar_day_data(birth_date)
 
@@ -499,34 +512,52 @@ with col_opt3: manual_cuutinh = st.selectbox("Cửu Tinh", options=["Tùy Chọn
 user_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
 actual_date = user_dt.date() + timedelta(days=1) if user_dt.hour >= 23 else user_dt.date()
 
-l_month, l_day, is_leap, wl_can, wl_chi, wl_dun, wl_ju, wl_jieqi, wl_yuan = get_custom_lunar_day_data(actual_date)
-actual_daily_star = wl_ju
-ngay_can_chi = wl_can + wl_chi
-is_nhuan_period = is_leap 
+l_month, l_day, is_leap, can_ngay_str, chi_ngay_str, wl_dun, wl_ju, wl_jieqi, wl_yuan = get_custom_lunar_day_data(actual_date)
+    ngay_can_chi = can_ngay_str + chi_ngay_str
+    
+    # Tính Can Chi Giờ
+    chi_gio_idx = 0 if user_dt.hour >= 23 else (user_dt.hour + 1) // 2 % 12
+    chi_gio_str = dia_chi[chi_gio_idx]
+    can_gio_str = get_wushu_dun(can_ngay_str, chi_gio_str)
 
-if manual_hoagiap != "Tùy Chọn":
-    wl_can = manual_hoagiap[0]
-    wl_chi = manual_hoagiap[1]
-    ngay_can_chi = manual_hoagiap 
+    if loai_ban == "日家":
+        # LOGIC NHẬT BÀN (Giữ nguyên gốc 100%)
+        wl_can = can_ngay_str
+        wl_chi = chi_ngay_str
+        actual_daily_star = wl_ju
+        is_nhuan_period = is_leap 
+        
+        title_color = "#D4AF37" if is_nhuan_period else "#555" 
+        font_weight = "bold" if is_nhuan_period else "normal"
+        nhuan_str = "Nhuận " if is_nhuan_period else ""
+        sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
+    else:
+        # LOGIC THỜI BÀN
+        wl_can = can_gio_str
+        wl_chi = chi_gio_str
+        wl_ju = calculate_correct_ju(wl_yuan, wl_can, wl_chi, wl_jieqi)
+        actual_daily_star = get_hour_nine_star(chi_ngay_str, wl_chi, wl_dun)
+        
+        sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: #555; font-weight: normal; font-size: 16px; text-align: center;'>阴历: {l_day}/{l_month} | {ngay_can_chi}日 {wl_can}{wl_chi}时 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
 
-if manual_cucso != "Tùy Chọn":
-    wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
-    wl_ju = int(manual_cucso.replace("阳遁", "").replace("阴遁", "").replace("局", ""))
+    # Lựa chọn Ghi đè bằng tay (Giữ nguyên)
+    if manual_hoagiap != "Tùy Chọn":
+        wl_can = manual_hoagiap[0]
+        wl_chi = manual_hoagiap[1]
 
-if manual_cuutinh != "Tùy Chọn":
-    actual_daily_star = int(manual_cuutinh) 
+    if manual_cucso != "Tùy Chọn":
+        wl_dun = "阳遁" if "阳" in manual_cucso else "阴遁"
+        wl_ju = int(manual_cucso.replace("阳遁", "").replace("阴遁", "").replace("局", ""))
 
-data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, actual_daily_star)
+    if manual_cuutinh != "Tùy Chọn":
+        actual_daily_star = int(manual_cuutinh) 
 
-can_tuan = get_xun_leader(wl_can, wl_chi)
-cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
+    # Lập bàn 
+    data, p_circle, cung_phi_tinh, p_land = lap_que_wolong(wl_can, wl_chi, wl_dun, wl_ju, actual_daily_star)
 
-title = ""
-title_color = "#D4AF37" if is_nhuan_period else "#555" 
-font_weight = "bold" if is_nhuan_period else "normal"
-nhuan_str = "Nhuận " if is_nhuan_period else ""
-
-sub_title = f"<h4 style='margin-top:0px; margin-bottom:15px; font-family:sans-serif; color: {title_color}; font-weight: {font_weight}; font-size: 16px; text-align: center;'>阴历: {nhuan_str}{l_day}/{l_month} | {ngay_can_chi}日 | {wl_jieqi} {wl_yuan}元 | {wl_dun}{wl_ju}局</h4>"
+    can_tuan = get_xun_leader(wl_can, wl_chi)
+    cung_st, stem_colors, mon_colors, than_colors = qimen_analyzer_hojo(data, can_tuan, p_land)
+    title = ""
 
 cung_day_stars = {p: data[p]['day_star'] for p in range(1, 10)}
 kigaku_data = evaluate_kigaku_formations(user_birth_star, user_dt, cung_day_stars)
@@ -545,7 +576,7 @@ st.components.v1.html(combined_html, height=550, scrolling=True)
 
 
 # ==========================================
-# 7. MODULE SCAN: DỤNG SỰ (TÌM KIẾM THEO NGÀY)
+# 7. MODULE SCAN: DỤNG SỰ
 # ==========================================
 st.markdown("---")
 st.markdown("<h3 style='text-align: center; color: #333; font-family: sans-serif; margin-bottom: 20px;'>DỤNG SỰ</h3>", unsafe_allow_html=True)
@@ -650,31 +681,66 @@ if st.button("TÌM KIẾM", use_container_width=True):
     if val_tran_hung and val_thoi_cat:
         st.error("Vui lòng không chọn cùng lúc Trấn Hung và Thôi Cát.")
     else:
-        with st.spinner('Đang quét dữ liệu tương lai (Quét từng ngày một)...'):
+        with st.spinner('Đang quét dữ liệu tương lai...'):
             results = []
-            max_limit = 365 
-            current_scan_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
+            
+            # Chỉnh giới hạn quét: Nhật Bàn quét 365 ngày, Thời Bàn quét 1080 canh giờ (~90 ngày)
+            max_limit = 365 if loai_ban == "日家" else 1080 
+            
+            # Nếu quét giờ, lùi về đầu canh giờ hiện tại cho chuẩn mốc 2 tiếng
+            if loai_ban == "时家":
+                if user_dt.hour % 2 == 0:
+                    current_scan_dt = (user_dt - timedelta(hours=1)).replace(minute=0, second=0)
+                else:
+                    current_scan_dt = user_dt.replace(minute=0, second=0)
+                current_scan_dt -= timedelta(hours=2) # Để vòng lặp +2 vào là vừa bằng giờ hiện tại
+            else:
+                current_scan_dt = datetime.combine(selected_date, time(selected_hour, selected_minute))
             
             loops = 0
             while loops < max_limit: 
                 if len(results) >= 10: break 
-                
                 loops += 1
-                current_scan_dt += timedelta(days=1)
-                s_date = current_scan_dt.date()
                 
-                l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_jieqi_s, wl_yuan_s = get_custom_lunar_day_data(s_date)
-                
-                scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_ju_s)
-                can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
+                # --- PHÂN NHÁNH BƯỚC NHẢY THỜI GIAN ---
+                if loai_ban == "日家":
+                    current_scan_dt += timedelta(days=1)
+                    s_date = current_scan_dt.date()
+                    l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_jieqi_s, wl_yuan_s = get_custom_lunar_day_data(s_date)
+                    
+                    scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_ju_s)
+                    can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
+                    
+                    time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
+                    nhuan_s_str = "Nhuận " if is_leap_s else ""
+                    c_str = f"阴历: {nhuan_s_str}{l_day_s}/{l_month_s} | {can_ngay_scan}{chi_ngay_scan}日 | {wl_dun_s}{wl_ju_s}局"
+                    
+                else:
+                    current_scan_dt += timedelta(hours=2) # Nhảy 1 canh giờ (2 tiếng)
+                    s_date = current_scan_dt.date() + timedelta(days=1) if current_scan_dt.hour >= 23 else current_scan_dt.date()
+                    
+                    # Lấy thông tin Lịch ngày
+                    l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, _, wl_jieqi_s, wl_yuan_s = get_custom_lunar_day_data(s_date)
+                    
+                    # Lấy thông tin Lịch Giờ
+                    chi_gio_idx = 0 if current_scan_dt.hour >= 23 else (current_scan_dt.hour + 1) // 2 % 12
+                    chi_gio_scan = dia_chi[chi_gio_idx]
+                    can_gio_scan = get_wushu_dun(can_ngay_scan, chi_gio_scan)
+                    
+                    # Cục số và Sao của Giờ
+                    wl_ju_s = calculate_correct_ju(wl_yuan_s, can_gio_scan, chi_gio_scan, wl_jieqi_s)
+                    daily_star_scan = get_hour_nine_star(chi_ngay_scan, chi_gio_scan, wl_dun_s)
+                    
+                    scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_gio_scan, chi_gio_scan, wl_dun_s, wl_ju_s, daily_star_scan)
+                    can_tuan_scan = get_xun_leader(can_gio_scan, chi_gio_scan)
+                    
+                    time_str = f"{s_date.strftime('%d/%m/%Y')} {current_scan_dt.strftime('%H:%M')}"
+                    nhuan_s_str = "Nhuận " if is_leap_s else ""
+                    c_str = f"阴历: {nhuan_s_str}{l_day_s}/{l_month_s} | {can_ngay_scan}{chi_ngay_scan}日 {can_gio_scan}{chi_gio_scan}时 | {wl_dun_s}{wl_ju_s}局"
+
                 cung_st_scan, stem_colors_scan, mon_colors_scan, than_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
-                
                 cung_day_stars_scan = {p: scan_data[p]['day_star'] for p in range(1, 10)}
                 kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, current_scan_dt, cung_day_stars_scan)
-                
-                time_str = f"{current_scan_dt.strftime('%d/%m/%Y')}"
-                nhuan_s_str = "Nhuận " if is_leap_s else ""
-                c_str = f"阴历: {nhuan_s_str}{l_day_s}/{l_month_s} | {can_ngay_scan}{chi_ngay_scan}日 | {wl_dun_s}{wl_ju_s}局"
                 val_cat_cach = extract_raw_name(loc_cat_cach)
 
                 target_palace = huong_list[loc_huong] 
