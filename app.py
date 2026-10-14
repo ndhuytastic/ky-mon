@@ -493,7 +493,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .pos-9 {{ top: 50%; left: 96%; }} .pos-10{{ top: 77%; left: 96%; }} .pos-11{{ top: 96%; left: 77%; }}
         
         /* NGŨ ĐỘN TRUNG CUNG */
-        .wu-dun-center {{ position: absolute; bottom: 1.5cqw; left: 2cqw; font-size: 3cqw; font-weight: bold; line-height: 1.3; text-align: left; letter-spacing: 1px;}}
+        .wu-dun-center {{ position: absolute; bottom: 1.5cqw; left: 2cqw; font-size: 2.7cqw; font-weight: bold; line-height: 1.3; text-align: left; letter-spacing: 1px;}}
     </style>
     <div class="responsive-container">
         <div class="qmdj-wrapper">
