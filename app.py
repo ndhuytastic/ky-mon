@@ -463,8 +463,10 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         
     html = f"""
     <style>
+        * {{ box-sizing: border-box; }}
+        body {{ margin: 0; padding: 0; }}
         /* KHUNG BẢO VỆ CO GIÃN THEO MÀN HÌNH */
-        .responsive-container {{ width: 100%; max-width: 450px; margin: 0 auto; container-type: inline-size; }}
+        .responsive-container { width: 100%; margin: 0 auto; container-type: inline-size; }
         .qmdj-wrapper {{ width: 100%; aspect-ratio: 1 / 1; position: relative; font-family: sans-serif; }}
         
         .qmdj-table {{ position: absolute; top: {tbl_top}; left: {tbl_left}; border-collapse: collapse; width: {tbl_w}; height: {tbl_h}; table-layout: fixed; background: #fff;}}
@@ -667,7 +669,14 @@ if loai_ban == "时家":
     
 qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data, loai_ban)
 
-combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 450px;">{title}{sub_title}{qimen_board_html}</div></div>"""
+combined_html = f"""
+<style>
+    .main-wrapper {{ width: 100%; max-width: 450px; margin: 0 auto; padding-top: 10px; display: flex; flex-direction: column; align-items: center; }}
+</style>
+<div class="main-wrapper">
+    {title}{sub_title}{qimen_board_html}
+</div>
+"""
 st.components.v1.html(combined_html, height=535, scrolling=False)
 
 
