@@ -166,9 +166,10 @@ def get_tdn_data(lunar_month, lunar_day, chi_gio_idx):
     thien_cuong = (cung_gio - 1) % 12
     
     gen_names = ['天罡', '太乙', '胜光', '小吉', '传送', '从魁', '河魁', '登明', '神后', '大吉', '功曹', '太冲']
+
     tc_eval = {
         '登明': {0: ("TỐT", "#CC0000"), 6: ("TỐT", "#CC0000"), 3: ("XẤU", "#000000"), 9: ("XẤU", "#000000")},
-        '神后': {0: ("BÌNH", "#B8860B"), 6: ("BÌNH", "#B8860B"), 3: ("TỐT", "#CC0000"), 9: ("XẤU", "#000000")},
+        '神后': {0: ("BÌNH", "#B8860B"), 6: ("XẤU", "#000000"), 3: ("TỐT", "#CC0000"), 9: ("XẤU", "#000000")},
         '大吉': {0: ("BÌNH", "#B8860B"), 6: ("TỐT", "#CC0000"), 3: ("TỐT", "#CC0000"), 9: ("XẤU", "#000000")}
     }
     
@@ -480,7 +481,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .pos-11{ top: 420px; left: 340px; } /* Hợi - Mép dưới Càn */
         
         /* NGŨ ĐỘN TRUNG CUNG */
-        .wu-dun-center { position: absolute; bottom: 4px; left: 4px; font-size: 10.5px; font-weight: bold; line-height: 1.15; text-align: left;}
+        .wu-dun-center { position: absolute; bottom: 6px; left: 8px; font-size: 14px; font-weight: bold; line-height: 1.3; text-align: left; letter-spacing: 1px;}
     </style>
     <div class="qmdj-wrapper">
     """
@@ -653,7 +654,7 @@ if loai_ban == "时家":
 qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data, loai_ban)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
-st.components.v1.html(combined_html, height=460, scrolling=False)
+st.components.v1.html(combined_html, height=540, scrolling=False)
 
 
 # ==========================================
