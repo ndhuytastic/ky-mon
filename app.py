@@ -481,7 +481,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
         .pos-11{ top: 420px; left: 340px; } /* Hợi - Mép dưới Càn */
         
         /* NGŨ ĐỘN TRUNG CUNG */
-        .wu-dun-center { position: absolute; bottom: 6px; left: 8px; font-size: 14px; font-weight: bold; line-height: 1.3; text-align: left; letter-spacing: 1px;}
+        .wu-dun-center { position: absolute; bottom: 6px; left: 8px; font-size: 12px; font-weight: bold; line-height: 1.3; text-align: left; letter-spacing: 1px;}
     </style>
     <div class="qmdj-wrapper">
     """
