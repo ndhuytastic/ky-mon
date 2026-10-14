@@ -445,7 +445,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     
     # === TỰ ĐỘNG CHỈNH TỶ LỆ CO GIÃN ĐA MÀN HÌNH (RESPONSIVE) ===
     if loai_ban == "日家":
-        tbl_w, tbl_h = "92%", "92%"
+        tbl_w, tbl_h = "100%", "100%"
         tbl_top, tbl_left = "0%", "0%"
         f_can = "5.5cqw"       
         f_hex_img = "6cqw"     
@@ -464,7 +464,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     html = f"""
     <style>
         /* KHUNG BẢO VỆ CO GIÃN THEO MÀN HÌNH */
-        .responsive-container {{ width: 100%; max-width: 480px; margin: 0 auto; container-type: inline-size; }}
+        .responsive-container {{ width: 100%; max-width: 450px; margin: 0 auto; container-type: inline-size; }}
         .qmdj-wrapper {{ width: 100%; aspect-ratio: 1 / 1; position: relative; font-family: sans-serif; }}
         
         .qmdj-table {{ position: absolute; top: {tbl_top}; left: {tbl_left}; border-collapse: collapse; width: {tbl_w}; height: {tbl_h}; table-layout: fixed; background: #fff;}}
