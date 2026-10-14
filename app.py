@@ -442,47 +442,56 @@ def evaluate_kigaku_formations(birth_star, current_stars, breaker_branch, mode="
 def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data=None, loai_ban="日家"):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     
-    # CSS Thu nhỏ bảng và tạo khung 12 Chi
+    # CSS Thu nhỏ toàn cục, triệt tiêu thanh cuộn, tọa độ tuyệt đối cho 12 Tướng
     html = """
     <style>
-        .qmdj-wrapper { width: 520px; height: 520px; position: relative; margin: 0 auto; font-family: sans-serif; }
-        .qmdj-table { position: absolute; top: 45px; left: 45px; border-collapse: collapse; width: 430px; height: 430px; table-layout: fixed; background: #fff;}
-        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 6px; }
+        .qmdj-wrapper { width: 440px; height: 440px; position: relative; margin: 0 auto; font-family: sans-serif; overflow: hidden; }
+        .qmdj-table { position: absolute; top: 40px; left: 40px; border-collapse: collapse; width: 360px; height: 360px; table-layout: fixed; background: #fff;}
+        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 4px; }
         
-        .top-right-panel { position: absolute; top: 4px; right: 5px; display: flex; flex-direction: row-reverse; gap: 6px; align-items: flex-start;}
-        .formation-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-weight: bold; letter-spacing: 0px; color: #000; font-size: 10.5px;}
+        .top-right-panel { position: absolute; top: 4px; right: 4px; display: flex; flex-direction: row-reverse; gap: 4px; align-items: flex-start;}
+        .formation-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-weight: bold; color: #000; font-size: 9.5px;}
         
-        .bottom-right-group { position: absolute; bottom: 8px; right: 5px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
-        .stem-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .bottom-right-group { position: absolute; bottom: 6px; right: 4px; display: flex; flex-direction: row; align-items: flex-end;}
+        .stem-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
         
-        .kigaku-col { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; width: 65px;}
-        .k-row { display: flex; flex-direction: row; align-items: flex-start; gap: 4px; padding-top: 2px;}
-        .k-star { font-size: 20px; font-weight: bold; width: 15px; text-align: center; line-height: 1;}
-        .k-forms { display: flex; flex-direction: row; gap: 3px; font-weight: bold; padding-top: 1.5px;}
+        .kigaku-col { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; }
+        .k-row { display: flex; flex-direction: row; align-items: flex-start; gap: 4px;}
+        .k-star { font-size: 16px; font-weight: bold; width: 14px; text-align: center; line-height: 1;}
+        .k-forms { display: flex; flex-direction: row; gap: 2px; font-weight: bold;}
         
-        .bottom-left-hex { position: absolute; bottom: 8px; left: 5px; display: flex; flex-direction: row; align-items: center; width: auto; gap: 4px; }
+        .bottom-left-hex { position: absolute; bottom: 6px; left: 4px; display: flex; flex-direction: row; align-items: center; gap: 4px; }
+        .hex-img { display: flex; flex-direction: column; font-size: 24px; line-height: 0.85; text-align: center; }
+        .hex-text { display: flex; flex-direction: column; font-size: 16px; font-weight: bold; line-height: 1.1; }
         
-        /* 12 NGUYỆT TƯỚNG BAO BỌC */
-        .moon-gen { position: absolute; font-size: 16px; font-weight: bold; }
-        .g-si { top: 12px; left: 120px; } .g-wu { top: 12px; left: 245px; } .g-wei { top: 12px; right: 120px; }
-        .g-shen { top: 120px; right: 12px; } .g-you { top: 250px; right: 12px; } .g-xu { bottom: 120px; right: 12px; }
-        .g-hai { bottom: 12px; right: 120px; } .g-zi { bottom: 12px; left: 245px; } .g-chou { bottom: 12px; left: 120px; }
-        .g-yin { bottom: 120px; left: 12px; } .g-mao { top: 250px; left: 12px; } .g-chen { top: 120px; left: 12px; }
+        /* 12 NGUYỆT TƯỚNG (Tọa độ Pixel chính xác bám sát viền bảng) */
+        .moon-gen { position: absolute; font-size: 15px; font-weight: bold; transform: translate(-50%, -50%); white-space: nowrap; }
+        .pos-0 { top: 420px; left: 220px; } /* Tý - Chính Bắc */
+        .pos-1 { top: 420px; left: 100px; } /* Sửu - Mép dưới Cấn */
+        .pos-2 { top: 340px; left: 20px;  } /* Dần - Mép trái Cấn */
+        .pos-3 { top: 220px; left: 20px;  } /* Mão - Chính Đông */
+        .pos-4 { top: 100px; left: 20px;  } /* Thìn - Mép trái Tốn */
+        .pos-5 { top: 20px;  left: 100px; } /* Tỵ - Mép trên Tốn */
+        .pos-6 { top: 20px;  left: 220px; } /* Ngọ - Chính Nam */
+        .pos-7 { top: 20px;  left: 340px; } /* Mùi - Mép trên Khôn */
+        .pos-8 { top: 100px; left: 420px; } /* Thân - Mép phải Khôn */
+        .pos-9 { top: 220px; left: 420px; } /* Dậu - Chính Tây */
+        .pos-10{ top: 340px; left: 420px; } /* Tuất - Mép phải Càn */
+        .pos-11{ top: 420px; left: 340px; } /* Hợi - Mép dưới Càn */
         
         /* NGŨ ĐỘN TRUNG CUNG */
-        .wu-dun-center { position: absolute; bottom: 5px; left: 5px; font-size: 11px; font-weight: bold; line-height: 1.2; text-align: center;}
+        .wu-dun-center { position: absolute; bottom: 4px; left: 4px; font-size: 10.5px; font-weight: bold; line-height: 1.15; text-align: left;}
     </style>
     <div class="qmdj-wrapper">
     """
     
-    # 1. VẼ 12 NGUYỆT TƯỚNG (Chỉ vẽ nếu là Thời Bàn)
+    # VẼ LỚP 1: 12 NGUYỆT TƯỚNG (Chỉ vẽ nếu Thời Bàn)
     if loai_ban == "时家" and tdn_data:
         _, _, _, gen_dict, _ = tdn_data
-        pos_classes = {0: 'g-zi', 1: 'g-chou', 2: 'g-yin', 3: 'g-mao', 4: 'g-chen', 5: 'g-si', 6: 'g-wu', 7: 'g-wei', 8: 'g-shen', 9: 'g-you', 10: 'g-xu', 11: 'g-hai'}
         for pos, (name, color) in gen_dict.items():
-            html += f"<div class='moon-gen {pos_classes[pos]}' style='color:{color};'>{name}</div>"
+            html += f"<div class='moon-gen pos-{pos}' style='color:{color};'>{name}</div>"
 
-    # 2. VẼ BÀN KỲ MÔN
+    # VẼ LỚP 2: BÀN KỲ MÔN
     html += '<table class="qmdj-table">'
     for row in luoi_lac_thu:
         html += "<tr>"
@@ -494,15 +503,15 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             base_color = stem_colors.get(p, "#000000") 
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
-            t_style = f"font-weight: bold; color: {base_color}; font-size: 24px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
-            d_style = f"font-weight: bold; color: {base_color}; font-size: 24px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            t_style = f"font-weight: bold; color: {base_color}; font-size: 20px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            d_style = f"font-weight: bold; color: {base_color}; font-size: 20px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
             ds_val, ds_col = k_d['stars']['d']
             kigaku_html = f'<div class="kigaku-col"><div class="k-row"><div class="k-star" style="color:{ds_col};">{ds_val}</div><div class="k-forms">{"".join(k_d["d_forms"])}</div></div></div>'
 
             if p == 5:
-                # Ngũ Độn Trung Cung
                 wudun_html = ""
+                # VẼ LỚP 3: NGŨ ĐỘN (Chỉ hiển thị nếu Thời bàn)
                 if loai_ban == "时家" and tdn_data:
                     final_ss, _, wd_color, _, _ = tdn_data
                     wudun_html = f"<div class='wu-dun-center' style='color:{wd_color};'>{'<br>'.join(final_ss)}</div>"
@@ -516,7 +525,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                     out_eval = EVAL_DICT.get(out_upper_tri, {}).get(global_lower_tri, "△")
                     out_hex_color = "#CC0000" if out_eval == "〇" else "#B8860B" if out_eval == "△" else "#000000"
                     out_hex_name = HEX_NAME_DICT.get((out_upper_tri, global_lower_tri), "Không rõ")
-                    outer_hex_html = f"<div class='bottom-left-hex' style='z-index: 1; color:{out_hex_color};'><div style='display: flex; flex-direction: column; font-size:28px; line-height:0.85; text-align: center;'><div>{TRIGRAM_UNICODE[out_upper_tri]}</div><div>{TRIGRAM_UNICODE[global_lower_tri]}</div></div><div style='display: flex; flex-direction: column; font-size:22px; font-weight:bold; line-height:1.1;'><div>{out_upper_tri}</div><div>{global_lower_tri}</div></div></div>"
+                    outer_hex_html = f"<div class='bottom-left-hex' style='z-index: 1; color:{out_hex_color};'><div class='hex-img'><div>{TRIGRAM_UNICODE[out_upper_tri]}</div><div>{TRIGRAM_UNICODE[global_lower_tri]}</div></div><div class='hex-text'><div>{out_upper_tri}</div><div>{global_lower_tri}</div></div></div>"
 
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 html += f'<td class="qmdj-td">{kigaku_html}<div class="top-right-panel">{form_html}</div>{outer_hex_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>'
@@ -644,7 +653,7 @@ if loai_ban == "时家":
 qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data, loai_ban)
 
 combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
-st.components.v1.html(combined_html, height=550, scrolling=True)
+st.components.v1.html(combined_html, height=460, scrolling=False)
 
 
 # ==========================================
