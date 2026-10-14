@@ -667,7 +667,7 @@ if loai_ban == "时家":
     
 qimen_board_html = render_html_table(data, cung_st, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data, loai_ban)
 
-combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 510px;">{title}{sub_title}{qimen_board_html}</div></div>"""
+combined_html = f"""<div style="display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 10px;"><div style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 450px;">{title}{sub_title}{qimen_board_html}</div></div>"""
 st.components.v1.html(combined_html, height=535, scrolling=False)
 
 
