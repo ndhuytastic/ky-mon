@@ -445,7 +445,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     
     # === TỰ ĐỘNG CHỈNH TỶ LỆ CO GIÃN ĐA MÀN HÌNH (RESPONSIVE) ===
     if loai_ban == "日家":
-        tbl_w, tbl_h = "100%", "100%"
+        tbl_w, tbl_h = "92%", "92%"
         tbl_top, tbl_left = "0%", "0%"
         f_can = "5.5cqw"       
         f_hex_img = "6cqw"     
