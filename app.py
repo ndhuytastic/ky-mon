@@ -465,8 +465,9 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     <style>
         * {{ box-sizing: border-box; }}
         body {{ margin: 0; padding: 0; }}
+        
         /* KHUNG BẢO VỆ CO GIÃN THEO MÀN HÌNH */
-        .responsive-container { width: 100%; margin: 0 auto; container-type: inline-size; }
+        .responsive-container {{ width: 100%; margin: 0 auto; container-type: inline-size; }}
         .qmdj-wrapper {{ width: 100%; aspect-ratio: 1 / 1; position: relative; font-family: sans-serif; }}
         
         .qmdj-table {{ position: absolute; top: {tbl_top}; left: {tbl_left}; border-collapse: collapse; width: {tbl_w}; height: {tbl_h}; table-layout: fixed; background: #fff;}}
