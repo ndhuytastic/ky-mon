@@ -420,8 +420,8 @@ def evaluate_kigaku_formations(birth_star, current_stars, breaker_branch, mode="
     
     for p in range(1, 10):
         s_val = current_stars[p]
+        # Nếu là số 5 thì màu Đen, còn lại tất cả đều màu Xám
         if s_val == 5: color = "#000000"
-        elif s_val in KIGAKU_COMPATIBILITY.get(birth_star, []): color = "#CC0000"
         else: color = "#999999"
         
         k_data[p]['stars']['d'] = (s_val, color) 
@@ -445,7 +445,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     
     # === TỰ ĐỘNG CHỈNH TỶ LỆ CO GIÃN ĐA MÀN HÌNH (RESPONSIVE) ===
     if loai_ban == "日家":
-        tbl_w, tbl_h = "100%", "100%"
+        tbl_w, tbl_h = "92%", "92%"
         tbl_top, tbl_left = "0%", "0%"
         f_can = "5.5cqw"       
         f_hex_img = "6cqw"     
