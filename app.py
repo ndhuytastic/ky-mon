@@ -443,47 +443,60 @@ def evaluate_kigaku_formations(birth_star, current_stars, breaker_branch, mode="
 def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_tinh, kigaku_data, final_hex_data, tdn_data=None, loai_ban="日家"):
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     
-    # CSS Thu nhỏ toàn cục, triệt tiêu thanh cuộn, tọa độ tuyệt đối cho 12 Tướng
-    html = """
+    # === TỰ ĐỘNG CHỈNH TỶ LỆ CO GIÃN ĐA MÀN HÌNH (RESPONSIVE) ===
+    if loai_ban == "日家":
+        tbl_w, tbl_h = "100%", "100%"
+        tbl_top, tbl_left = "0%", "0%"
+        f_can = "5.5cqw"       
+        f_hex_img = "6cqw"     
+        f_hex_txt = "4.5cqw"   
+        f_k_star = "4.5cqw"    
+        f_form = "2.2cqw"      
+    else:
+        tbl_w, tbl_h = "82%", "82%"
+        tbl_top, tbl_left = "9%", "9%"
+        f_can = "4.5cqw"       
+        f_hex_img = "5cqw"     
+        f_hex_txt = "3.5cqw"   
+        f_k_star = "3.5cqw"    
+        f_form = "2cqw"        
+        
+    html = f"""
     <style>
-        .qmdj-wrapper { width: 440px; height: 440px; position: relative; margin: 0 auto; font-family: sans-serif; overflow: hidden; }
-        .qmdj-table { position: absolute; top: 40px; left: 40px; border-collapse: collapse; width: 360px; height: 360px; table-layout: fixed; background: #fff;}
-        .qmdj-td { border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 4px; }
+        /* KHUNG BẢO VỆ CO GIÃN THEO MÀN HÌNH */
+        .responsive-container {{ width: 100%; max-width: 480px; margin: 0 auto; container-type: inline-size; }}
+        .qmdj-wrapper {{ width: 100%; aspect-ratio: 1 / 1; position: relative; font-family: sans-serif; }}
         
-        .top-right-panel { position: absolute; top: 4px; right: 4px; display: flex; flex-direction: row-reverse; gap: 4px; align-items: flex-start;}
-        .formation-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-weight: bold; color: #000; font-size: 9.5px;}
+        .qmdj-table {{ position: absolute; top: {tbl_top}; left: {tbl_left}; border-collapse: collapse; width: {tbl_w}; height: {tbl_h}; table-layout: fixed; background: #fff;}}
+        .qmdj-td {{ border: 1px solid #aaa; width: 33.33%; position: relative; vertical-align: top; padding: 1.5cqw; }}
         
-        .bottom-right-group { position: absolute; bottom: 6px; right: 4px; display: flex; flex-direction: row; align-items: flex-end;}
-        .stem-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .top-right-panel {{ position: absolute; top: 1cqw; right: 1cqw; display: flex; flex-direction: row-reverse; gap: 1cqw; align-items: flex-start;}}
+        .formation-item {{ display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-weight: bold; color: #000; font-size: {f_form};}}
         
-        .kigaku-col { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; }
-        .k-row { display: flex; flex-direction: row; align-items: flex-start; gap: 4px;}
-        .k-star { font-size: 16px; font-weight: bold; width: 14px; text-align: center; line-height: 1;}
-        .k-forms { display: flex; flex-direction: row; gap: 2px; font-weight: bold;}
+        .bottom-right-group {{ position: absolute; bottom: 1.5cqw; right: 1cqw; display: flex; flex-direction: row; align-items: flex-end;}}
+        .stem-col {{ display: flex; flex-direction: column; align-items: center; gap: 0.5cqw; }}
         
-        .bottom-left-hex { position: absolute; bottom: 6px; left: 4px; display: flex; flex-direction: row; align-items: center; gap: 4px; }
-        .hex-img { display: flex; flex-direction: column; font-size: 24px; line-height: 0.85; text-align: center; }
-        .hex-text { display: flex; flex-direction: column; font-size: 16px; font-weight: bold; line-height: 1.1; }
+        .kigaku-col {{ position: absolute; top: 1cqw; left: 1cqw; display: flex; flex-direction: column; }}
+        .k-row {{ display: flex; flex-direction: row; align-items: flex-start; gap: 1cqw;}}
+        .k-star {{ font-size: {f_k_star}; font-weight: bold; width: 3cqw; text-align: center; line-height: 1;}}
+        .k-forms {{ display: flex; flex-direction: row; gap: 0.5cqw; font-weight: bold; font-size: {f_form};}}
         
-        /* 12 NGUYỆT TƯỚNG (Tọa độ Pixel chính xác bám sát viền bảng) */
-        .moon-gen { position: absolute; font-size: 15px; font-weight: bold; transform: translate(-50%, -50%); white-space: nowrap; }
-        .pos-0 { top: 420px; left: 220px; } /* Tý - Chính Bắc */
-        .pos-1 { top: 420px; left: 100px; } /* Sửu - Mép dưới Cấn */
-        .pos-2 { top: 340px; left: 20px;  } /* Dần - Mép trái Cấn */
-        .pos-3 { top: 220px; left: 20px;  } /* Mão - Chính Đông */
-        .pos-4 { top: 100px; left: 20px;  } /* Thìn - Mép trái Tốn */
-        .pos-5 { top: 20px;  left: 100px; } /* Tỵ - Mép trên Tốn */
-        .pos-6 { top: 20px;  left: 220px; } /* Ngọ - Chính Nam */
-        .pos-7 { top: 20px;  left: 340px; } /* Mùi - Mép trên Khôn */
-        .pos-8 { top: 100px; left: 420px; } /* Thân - Mép phải Khôn */
-        .pos-9 { top: 220px; left: 420px; } /* Dậu - Chính Tây */
-        .pos-10{ top: 340px; left: 420px; } /* Tuất - Mép phải Càn */
-        .pos-11{ top: 420px; left: 340px; } /* Hợi - Mép dưới Càn */
+        .bottom-left-hex {{ position: absolute; bottom: 1.5cqw; left: 1cqw; display: flex; flex-direction: row; align-items: center; gap: 1cqw; }}
+        .hex-img {{ display: flex; flex-direction: column; font-size: {f_hex_img}; line-height: 0.85; text-align: center; }}
+        .hex-text {{ display: flex; flex-direction: column; font-size: {f_hex_txt}; font-weight: bold; line-height: 1.1; }}
+        
+        /* 12 NGUYỆT TƯỚNG (Tọa độ phần trăm - Luôn bám viền dù màn hình to hay nhỏ) */
+        .moon-gen {{ position: absolute; font-size: 3.5cqw; font-weight: bold; transform: translate(-50%, -50%); white-space: nowrap; }}
+        .pos-0 {{ top: 96%; left: 50%; }} .pos-1 {{ top: 96%; left: 23%; }} .pos-2 {{ top: 77%; left: 4%;  }}
+        .pos-3 {{ top: 50%; left: 4%;  }} .pos-4 {{ top: 23%; left: 4%;  }} .pos-5 {{ top: 4%;  left: 23%; }}
+        .pos-6 {{ top: 4%;  left: 50%; }} .pos-7 {{ top: 4%;  left: 77%; }} .pos-8 {{ top: 23%; left: 96%; }}
+        .pos-9 {{ top: 50%; left: 96%; }} .pos-10{{ top: 77%; left: 96%; }} .pos-11{{ top: 96%; left: 77%; }}
         
         /* NGŨ ĐỘN TRUNG CUNG */
-        .wu-dun-center { position: absolute; bottom: 6px; left: 8px; font-size: 12px; font-weight: bold; line-height: 1.3; text-align: left; letter-spacing: 1px;}
+        .wu-dun-center {{ position: absolute; bottom: 1.5cqw; left: 2cqw; font-size: 3.2cqw; font-weight: bold; line-height: 1.3; text-align: left; letter-spacing: 1px;}}
     </style>
-    <div class="qmdj-wrapper">
+    <div class="responsive-container">
+        <div class="qmdj-wrapper">
     """
     
     # VẼ LỚP 1: 12 NGUYỆT TƯỚNG (Chỉ vẽ nếu Thời Bàn)
@@ -504,8 +517,9 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
             base_color = stem_colors.get(p, "#000000") 
             t_decor = "underline" if t_can == can_tuan else "none"
             d_decor = "underline" if d_can == can_tuan else "none"
-            t_style = f"font-weight: bold; color: {base_color}; font-size: 20px; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
-            d_style = f"font-weight: bold; color: {base_color}; font-size: 20px; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            
+            t_style = f"font-weight: bold; color: {base_color}; font-size: {f_can}; text-decoration: {t_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
+            d_style = f"font-weight: bold; color: {base_color}; font-size: {f_can}; text-decoration: {d_decor}; text-underline-offset: 3px; text-decoration-thickness: 2px; line-height: 1;"
 
             ds_val, ds_col = k_d['stars']['d']
             kigaku_html = f'<div class="kigaku-col"><div class="k-row"><div class="k-star" style="color:{ds_col};">{ds_val}</div><div class="k-forms">{"".join(k_d["d_forms"])}</div></div></div>'
@@ -531,7 +545,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
                 form_html = "".join([f"<div class='formation-item' style='color:{f_color};'>{f_name}</div>" for f_name, f_color in cung_status[p]])
                 html += f'<td class="qmdj-td">{kigaku_html}<div class="top-right-panel">{form_html}</div>{outer_hex_html}<div class="bottom-right-group"><div class="stem-col"><div style="{t_style}">{t_can}</div><div style="{d_style}">{d_can}</div></div></div></td>'
         html += "</tr>"
-    html += "</table></div>"
+    html += "</table></div></div>"
     return html
 
 # ==========================================
