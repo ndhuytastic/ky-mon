@@ -444,20 +444,12 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     luoi_lac_thu = [[4, 9, 2], [3, 5, 7], [8, 1, 6]]
     
     # === TỰ ĐỘNG CHỈNH TỶ LỆ ===
-    if loai_ban == "日家":
-        tbl_w, tbl_h = "100%", "100%"
-        f_can = "5.5cqw"       
-        f_hex_img = "6cqw"     
-        f_hex_txt = "4.5cqw"   
-        f_k_star = "4.5cqw"    
-        f_form = "2.2cqw"      
-    else:
-        tbl_w, tbl_h = "82%", "82%"
-        f_can = "4.5cqw"       
-        f_hex_img = "5cqw"     
-        f_hex_txt = "3.5cqw"   
-        f_k_star = "3.5cqw"    
-        f_form = "2cqw"        
+    tbl_w, tbl_h = "100%", "100%"
+    f_can = "5.5cqw"       
+    f_hex_img = "6cqw"     
+    f_hex_txt = "4.5cqw"   
+    f_k_star = "4.5cqw"    
+    f_form = "2.2cqw"    
         
     html = f"""
     <style>
@@ -500,14 +492,8 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
     <div class="responsive-container">
         <div class="qmdj-wrapper">
     """
-    
-    # VẼ LỚP 1: 12 NGUYỆT TƯỚNG (Chỉ vẽ nếu Thời Bàn)
-    if loai_ban == "时家" and tdn_data:
-        _, _, _, gen_dict, _ = tdn_data
-        for pos, (name, color) in gen_dict.items():
-            html += f"<div class='moon-gen pos-{pos}' style='color:{color};'>{name}</div>"
 
-    # VẼ LỚP 2: BÀN KỲ MÔN
+    # VẼ LỚP: BÀN KỲ MÔN
     html += '<table class="qmdj-table">'
     for row in luoi_lac_thu:
         html += "<tr>"
@@ -768,7 +754,7 @@ with st.container():
     loc_cat_cach = c13.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
     
     # Chỉ hiển thị Cát Thời nếu đang ở Thời Bàn
-    options_cat_thoi = ["", "三神四相", "五遁", "两者兼备"] if loai_ban == "时家" else [""]
+    options_cat_thoi = ["", "Có"] if loai_ban == "时家" else [""]
     loc_cat_thoi = c14.selectbox("吉时 (Cát Thời)", options=options_cat_thoi, disabled=(loai_ban=="日家"))
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
@@ -877,12 +863,10 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         if any(bad in form for form in raw_k_forms for bad in bad_forms):
                             return False, ""
 
-                    # KIỂM TRA CÁT THỜI (Chỉ chạy khi chọn Thời Bàn)
-                    if loai_ban == "时家" and loc_cat_thoi:
-                        _, wd_status, _, _, tc_status = get_tdn_data(l_month_s, l_day_s, chi_gio_idx)
-                        if loc_cat_thoi == "三神四相" and tc_status != "TỐT": return False, ""
-                        if loc_cat_thoi == "五遁" and wd_status != "TỐT": return False, ""
-                        if loc_cat_thoi == "两者兼备" and (tc_status != "TỐT" or wd_status != "TỐT"): return False, ""
+                    # KIỂM TRA CÁT THỜI (Chỉ chạy khi chọn Thời Bàn, xét theo Ngũ Độn - Thiên Địa Nhân)
+                    if loai_ban == "时家" and loc_cat_thoi == "Có":
+                        _, wd_status, _, _, _ = get_tdn_data(l_month_s, l_day_s, chi_gio_idx)
+                        if wd_status != "TỐT": return False, ""
                         
                     dung_cach = ""
                     if val_tran_hung or val_thoi_cat:
