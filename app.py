@@ -128,7 +128,7 @@ def get_custom_lunar_day_data(solar_date):
 
 # ================= LOGIC THIÊN ĐỊA NHÂN =================
 def get_tdn_data(lunar_month, lunar_day, chi_gio_idx):
-    # 1. TÍNH NGŨ ĐỘN (NHÂN)
+    # 1. TÍNH NGŨ ĐỘN - THIÊN ĐỊA NHÂN
     ss_base_ch = ['贵人', '印财', '退财', '五鬼', '阳虎', '阴虎']
     hour_num = chi_gio_idx + 1
     base_month = (lunar_month - 2) % 6
@@ -148,16 +148,38 @@ def get_tdn_data(lunar_month, lunar_day, chi_gio_idx):
         elif ss == '阴虎' and can_transform: final_ss.append('副官')
         else: final_ss.append(ss)
         
-    # Chấm điểm Ngũ Độn
+    # Chấm điểm Ngũ Độn (Thiên Địa Nhân)
     ss_set = set(final_ss)
     wd_status, wd_color = "XẤU", "#000000"
-    if '退财' in ss_set:
-        if '贵人' in ss_set and '五鬼' not in ss_set: wd_status, wd_color = "BÌNH", "#B8860B"
-    elif '印财' in ss_set or '贵人' in ss_set:
-        wd_status, wd_color = "TỐT", "#CC0000"
-        if '五鬼' in ss_set and '贵人' not in ss_set: wd_status, wd_color = "XẤU", "#000000"
+    
+    if '退财' in ss_set: # Có Thoái Tài
+        if '贵人' in ss_set and '五鬼' not in ss_set: 
+            wd_status, wd_color = "BÌNH", "#B8860B"
+            
+    elif '印财' not in ss_set and '贵人' not in ss_set: # Thiếu cả Ấn và Quý
+        wd_status, wd_color = "XẤU", "#000000"
+        
+    else:
+        is_tot = False
+        
+        # 1. Combo Ngũ Quỷ Vận Tài
+        if '五鬼' in ss_set and '印财' in ss_set:
+            is_tot = True 
+            
+        # 2. Combo liên quan đến Quan
+        has_quan = '正官' in ss_set or '副官' in ss_set
+        if has_quan:
+            if '印财' in ss_set: # Quan + Ấn (Tự lực) hoặc Quan + Ấn + Quý (Quý Nhân giúp)
+                is_tot = True
+                
+        # 3. Combo Bình An Tài Lộc
+        if not has_quan and '五鬼' not in ss_set and '贵人' in ss_set and '印财' in ss_set:
+            is_tot = True
+            
+        if is_tot:
+            wd_status, wd_color = "TỐT", "#CC0000"
 
-    # 2. TÍNH TAM THẦN TỨ TƯỚNG (THIÊN)
+    # 2. TÍNH TAM THẦN TỨ TƯỚNG (DỰ ĐOÁN)
     month_starts = {1: 1, 2: 0, 3: 11, 4: 10, 5: 9, 6: 10, 7: 11, 8: 0, 9: 1, 10: 2, 11: 3, 12: 2}
     base_cung = month_starts[lunar_month]
     cung_thang = (base_cung + lunar_month - 1) % 12
