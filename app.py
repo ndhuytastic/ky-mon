@@ -84,14 +84,27 @@ def get_hour_nine_star(day_branch, hour_branch, dun_type):
     res = (start_star + hb_idx) % 9 if dun_type == "阳遁" else (start_star - hb_idx) % 9
     return 9 if res == 0 else res
 
-def calculate_correct_ju(nguyen, can_gio, chi_gio, tiet_khi):
+def calculate_correct_ju(nguyen, can_gio, chi_gio, tiet_khi, mode="立向"):
     base_ju_dict = {"夏至":9,"小暑":7,"大暑":6,"立秋":5,"处暑":6,"白露":5,"秋分":4,"寒露":9,"霜降":8,"立冬":7,"小雪":2,"大雪":1,"冬至":1,"小寒":3,"大寒":4,"立春":5,"雨水":4,"惊蛰":5,"春分":6,"清明":1,"谷雨":2,"立夏":3,"小满":8,"芒种":9}
     yin_dun_terms = ["夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪"]
     dun_type = -1 if tiet_khi in yin_dun_terms else 1
     tuan_index = ((thien_can.index(can_gio) - dia_chi.index(chi_gio)) % 12) // 2
+    if mode == "坐山": tuan_index = 0 # Tọa Sơn Thời Bàn không xét tuần thủ
     nguyen_multiplier = 0 if nguyen == "上" else 1 if nguyen == "中" else 2
     raw_ju = base_ju_dict[tiet_khi] + (dun_type * (tuan_index + 6 * nguyen_multiplier))
     return (raw_ju - 1) % 9 + 1
+
+def calculate_daily_toason_ju(can_ngay, chi_ngay, dun_type, nguyen):
+    # Thuật toán Tọa Sơn Nhật Bàn (Dựa trên bảng 60 Hoa Giáp)
+    tuan_head = get_xun_leader(can_ngay, chi_ngay)
+    xun_list = ["戊", "己", "庚", "辛", "壬", "癸"] 
+    try: xun_idx = xun_list.index(tuan_head)
+    except: xun_idx = 0
+    group_idx = xun_idx // 2 # 0: Nhóm 1, 1: Nhóm 2, 2: Nhóm 3
+    yuan_mult = 0 if nguyen == "上" else 1 if nguyen == "中" else 2
+    if dun_type == "阳遁": res = 1 + group_idx + (3 * yuan_mult)
+    else: res = 9 - group_idx - (3 * yuan_mult)
+    return (res - 1) % 9 + 1
 
 def get_wushu_dun(day_stem, hour_branch):
     return thien_can[((thien_can.index(day_stem) % 5) * 2 + dia_chi.index(hour_branch)) % 10]
@@ -565,7 +578,7 @@ def render_html_table(cung_data, cung_status, stem_colors, can_tuan, cung_phi_ti
 def get_current_vn_time(): return datetime.now(timezone(timedelta(hours=7)))
 if "init_dt" not in st.session_state: st.session_state.init_dt = get_current_vn_time()
 
-col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([1.1, 0.7, 0.7, 1.1, 0.7, 0.7, 0.9, 0.9])
+col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns([1, 0.7, 0.7, 1, 0.7, 0.7, 0.8, 0.8, 0.8])
 
 with col1: selected_date = st.date_input("Ngày Xem", value=st.session_state.init_dt.date(), min_value=date(1901, 1, 1), max_value=date(2100, 12, 31))
 with col2: selected_hour = st.selectbox("Giờ Xem", options=list(range(24)), index=st.session_state.init_dt.hour)
@@ -576,6 +589,7 @@ with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), inde
 with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 with col8: loai_ban = st.selectbox("Loại Bàn", options=["日家", "时家"], index=0)
+with col9: huong_son = st.selectbox("Hướng-Sơn", options=["立向", "坐山"], index=0)
 
 # --- TÍNH TOÁN SAO BẢN MỆNH LINH HOẠT THEO LOẠI BÀN ---
 # 1. Lấy thông tin Lịch của Ngày Sinh
@@ -617,14 +631,15 @@ if loai_ban == "日家":
     wl_can = can_ngay_str
     wl_chi = chi_ngay_str
     wl_dun = base_dun
-    wl_ju = base_ju
+    if huong_son == "坐山": wl_ju = calculate_daily_toason_ju(wl_can, wl_chi, wl_dun, wl_yuan)
+    else: wl_ju = base_ju
     actual_daily_star = base_ju
     is_nhuan_period = is_leap 
 else:
     wl_can = can_gio_str
     wl_chi = chi_gio_str
     wl_dun = base_dun
-    wl_ju = calculate_correct_ju(wl_yuan, wl_can, wl_chi, wl_jieqi)
+    wl_ju = calculate_correct_ju(wl_yuan, wl_can, wl_chi, wl_jieqi, huong_son)
     actual_daily_star = get_hour_nine_star(chi_ngay_str, wl_chi, wl_dun)
     is_nhuan_period = False
 
@@ -823,6 +838,8 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     s_date = current_scan_dt.date()
                     l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_jieqi_s, wl_yuan_s = get_custom_lunar_day_data(s_date)
                     
+                    if huong_son == "坐山": wl_ju_s = calculate_daily_toason_ju(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_yuan_s)
+                    
                     scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_s, wl_ju_s)
                     can_tuan_scan = get_xun_leader(can_ngay_scan, chi_ngay_scan)
                     
@@ -842,11 +859,12 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     chi_gio_scan = dia_chi[chi_gio_idx]
                     can_gio_scan = get_wushu_dun(can_ngay_scan, chi_gio_scan)
                     
-                    # Cục số và Sao của Giờ
-                    wl_ju_s = calculate_correct_ju(wl_yuan_s, can_gio_scan, chi_gio_scan, wl_jieqi_s)
+                    # Cục số và Sao của Giờ (Áp dụng Tọa Sơn nếu có)
+                    wl_ju_s = calculate_correct_ju(wl_yuan_s, can_gio_scan, chi_gio_scan, wl_jieqi_s, huong_son)
                     daily_star_scan = get_hour_nine_star(chi_ngay_scan, chi_gio_scan, wl_dun_s)
                     
                     scan_data, p_circle_scan, cung_phi_tinh_scan, p_land_scan = lap_que_wolong(can_gio_scan, chi_gio_scan, wl_dun_s, wl_ju_s, daily_star_scan)
+
                     can_tuan_scan = get_xun_leader(can_gio_scan, chi_gio_scan)
                     
                     time_str = f"{s_date.strftime('%d/%m/%Y')} {current_scan_dt.strftime('%H:%M')}"
