@@ -589,7 +589,7 @@ with col5: birth_hour = st.selectbox("Giờ Sinh", options=list(range(24)), inde
 with col6: birth_minute = st.selectbox("Phút Sinh", options=list(range(60)), index=15)
 with col7: selected_tz = st.selectbox("Múi Giờ", options=list(range(-12, 15)), index=19, format_func=lambda x: f"UTC{'+' if x>=0 else ''}{x}")
 with col8: loai_ban = st.selectbox("Loại Bàn", options=["日家", "时家"], index=0)
-with col9: huong_son = st.selectbox("Hướng-Sơn", options=["立向", "坐山"], index=0)
+with col9: huong_son = st.selectbox("Hướng - Sơn", options=["立向", "坐山"], index=0)
 
 # --- TÍNH TOÁN SAO BẢN MỆNH LINH HOẠT THEO LOẠI BÀN ---
 # 1. Lấy thông tin Lịch của Ngày Sinh
