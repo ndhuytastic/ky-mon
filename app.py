@@ -888,7 +888,9 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     _, day_stem_colors_scan, _, _ = qimen_analyzer_hojo(scan_data_day, can_tuan_day, p_land_day)
                     
                     day_day_stars = {p: scan_data_day[p]['day_star'] for p in range(1, 10)}
-                    day_kigaku_scan = evaluate_kigaku_formations(user_birth_star, day_day_stars, chi_ngay_scan, "日家")
+                    
+                    # Truyền đích danh b_day_star (Sao bản mệnh NGÀY) thay vì biến dùng chung đang bị gán là Sao Giờ
+                    day_kigaku_scan = evaluate_kigaku_formations(b_day_star, day_day_stars, chi_ngay_scan, "日家")
                 # --------------------------------------------------
 
                 target_palace = huong_list[loc_huong] 
@@ -912,9 +914,10 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         if stem_colors_scan.get(p, "#000000") == "#000000": return False, ""
 
                     if loc_nhan_hoa == "Có":
-                        bad_forms = ["本命殺", "的殺", "五黄殺", "暗剣殺", "日破", "时破"]
-                        raw_k_forms = [re.sub(r"<[^>]+>", "", f).replace("<br>", "") for f in kigaku_data_scan[p]['d_forms']]
-                        if any(bad in form for form in raw_k_forms for bad in bad_forms):
+                        bad_forms = {"本命殺", "的殺", "五黄殺", "暗剣殺", "日破", "时破"}
+                        # Tối ưu thuật toán quét chuỗi bằng Set (Tập hợp) để không bị sai sót
+                        raw_k_forms = {re.sub(r"<[^>]+>", "", f).replace("<br>", "") for f in kigaku_data_scan[p]['d_forms']}
+                        if raw_k_forms.intersection(bad_forms):
                             return False, ""
 
                     # KIỂM TRA CÁT THỜI (Chỉ chạy khi chọn Thời Bàn, xét theo Ngũ Độn - Thiên Địa Nhân)
@@ -926,10 +929,11 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     if loai_ban == "时家" and loc_cat_nhat == "Có":
                         # Thiên thời Nhật Bàn
                         if day_stem_colors_scan.get(p, "#000000") == "#000000": return False, ""
+                        
                         # Nhân hòa Nhật Bàn
-                        bad_forms_day = ["本命殺", "的殺", "五黄殺", "暗剣殺", "日破"]
-                        raw_k_forms_day = [re.sub(r"<[^>]+>", "", f).replace("<br>", "") for f in day_kigaku_scan[p]['d_forms']]
-                        if any(bad in form for form in raw_k_forms_day for bad in bad_forms_day):
+                        bad_forms_day = {"本命殺", "的殺", "五黄殺", "暗剣殺", "日破"}
+                        raw_k_forms_day = {re.sub(r"<[^>]+>", "", f).replace("<br>", "") for f in day_kigaku_scan[p]['d_forms']}
+                        if raw_k_forms_day.intersection(bad_forms_day):
                             return False, ""
                             
                     dung_cach = ""
