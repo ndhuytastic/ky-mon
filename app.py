@@ -868,8 +868,10 @@ if st.button("TÌM KIẾM", use_container_width=True):
 
                     can_tuan_scan = get_xun_leader(can_gio_scan, chi_gio_scan)
                     
-                    time_str = f"{s_date.strftime('%d/%m/%Y')} {current_scan_dt.strftime('%H:%M')}"
+                    # Hiển thị ngày giờ Dương Lịch GỐC để người dùng nhập lại vào form không bị đẩy lệch 1 ngày
+                    time_str = f"{current_scan_dt.strftime('%d/%m/%Y')} {current_scan_dt.strftime('%H:%M')}"
                     nhuan_s_str = "Nhuận " if is_leap_s else ""
+
                     c_str = f"阴历: {nhuan_s_str}{l_day_s}/{l_month_s} | {can_ngay_scan}{chi_ngay_scan}日 {can_gio_scan}{chi_gio_scan}时 | {wl_dun_s}{wl_ju_s}局"
 
                 cung_st_scan, stem_colors_scan, mon_colors_scan, than_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
