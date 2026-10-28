@@ -783,16 +783,17 @@ with st.container():
     loc_tinh = c5.selectbox("九星 (Cửu Tinh)", options=tinh_list)
     loc_than = c6.selectbox("八神 (Bát Thần)", options=than_list)
     
-    _, c9, c10, c11, c12, c13, c14, _ = st.columns([0.2, 1, 1, 1, 1, 1, 1, 0.2])
+    _, c9, c10, c11, c12, c13, c14, c15, _ = st.columns([0.1, 1, 1, 1, 1, 1, 1, 1, 0.1])
     loc_tran_hung = c9.selectbox("鎮凶 (Trấn Hung)", options=tran_hung_list)
     loc_thoi_cat = c10.selectbox("催吉 (Thôi Cát)", options=thoi_cat_list)
     loc_thien_thoi = c11.selectbox("天时 (Thiên Thời)", options=["", "Có"])
     loc_nhan_hoa = c12.selectbox("人和 (Nhân Hòa)", options=["", "Có"])
     loc_cat_cach = c13.selectbox("吉格 (Cát Cách)", options=cat_cach_list)
     
-    # Chỉ hiển thị Cát Thời nếu đang ở Thời Bàn
+    # Chỉ hiển thị Cát Thời / Cát Nhật nếu đang ở Thời Bàn
     options_cat_thoi = ["", "Có"] if loai_ban == "时家" else [""]
     loc_cat_thoi = c14.selectbox("吉时 (Cát Thời)", options=options_cat_thoi, disabled=(loai_ban=="日家"))
+    loc_cat_nhat = c15.selectbox("吉日 (Cát Nhật)", options=options_cat_thoi, disabled=(loai_ban=="日家"))
 
 def find_fulfilled_plan(plan_list, d_cung, status_cung, can_tuan_scan):
     clean_status = [re.sub(r"<[^>]+>", "", item[0]) for item in status_cung]
@@ -852,7 +853,7 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     s_date = current_scan_dt.date() + timedelta(days=1) if current_scan_dt.hour >= 23 else current_scan_dt.date()
                     
                     # Lấy thông tin Lịch ngày
-                    l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, _, wl_jieqi_s, wl_yuan_s = get_custom_lunar_day_data(s_date)
+                    l_month_s, l_day_s, is_leap_s, can_ngay_scan, chi_ngay_scan, wl_dun_s, day_star_s, wl_jieqi_s, wl_yuan_s = get_custom_lunar_day_data(s_date)
                     
                     # Lấy thông tin Lịch Giờ
                     chi_gio_idx = 0 if current_scan_dt.hour >= 23 else (current_scan_dt.hour + 1) // 2 % 12
@@ -871,11 +872,23 @@ if st.button("TÌM KIẾM", use_container_width=True):
                     nhuan_s_str = "Nhuận " if is_leap_s else ""
                     c_str = f"阴历: {nhuan_s_str}{l_day_s}/{l_month_s} | {can_ngay_scan}{chi_ngay_scan}日 {can_gio_scan}{chi_gio_scan}时 | {wl_dun_s}{wl_ju_s}局"
 
-                cung_st_scan, stem_colors_scan, mon_colors_scan, than_colors_scan = qimen_analyzer_hojo(scan_data, can_tuan_scan, p_land_scan)
                 cung_day_stars_scan = {p: scan_data[p]['day_star'] for p in range(1, 10)}
                 breaker_chi_scan = chi_ngay_scan if loai_ban == "日家" else chi_gio_scan
                 kigaku_data_scan = evaluate_kigaku_formations(user_birth_star, cung_day_stars_scan, breaker_chi_scan, loai_ban)
                 val_cat_cach = extract_raw_name(loc_cat_cach)
+
+                # --- LẬP NHẬT BÀN NGẦM ĐỂ KIỂM TRA "CÁT NHẬT" ---
+                day_stem_colors_scan = None
+                day_kigaku_scan = None
+                if loai_ban == "时家" and loc_cat_nhat == "Có":
+                    wl_ju_day = calculate_daily_toason_ju(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_yuan_s) if huong_son == "坐山" else day_star_s
+                    scan_data_day, _, _, p_land_day = lap_que_wolong(can_ngay_scan, chi_ngay_scan, wl_dun_s, wl_ju_day, day_star_s)
+                    can_tuan_day = get_xun_leader(can_ngay_scan, chi_ngay_scan)
+                    _, day_stem_colors_scan, _, _ = qimen_analyzer_hojo(scan_data_day, can_tuan_day, p_land_day)
+                    
+                    day_day_stars = {p: scan_data_day[p]['day_star'] for p in range(1, 10)}
+                    day_kigaku_scan = evaluate_kigaku_formations(user_birth_star, day_day_stars, chi_ngay_scan, "日家")
+                # --------------------------------------------------
 
                 target_palace = huong_list[loc_huong] 
 
@@ -908,6 +921,16 @@ if st.button("TÌM KIẾM", use_container_width=True):
                         _, wd_status, _, _, _ = get_tdn_data(l_month_s, l_day_s, chi_gio_idx)
                         if wd_status != "TỐT": return False, ""
                         
+                    # KIỂM TRA CÁT NHẬT (Thiên Thời & Nhân Hòa của Nhật Bàn tại cung đang xét)
+                    if loai_ban == "时家" and loc_cat_nhat == "Có":
+                        # Thiên thời Nhật Bàn
+                        if day_stem_colors_scan.get(p, "#000000") == "#000000": return False, ""
+                        # Nhân hòa Nhật Bàn
+                        bad_forms_day = ["本命殺", "的殺", "五黄殺", "暗剣殺", "日破"]
+                        raw_k_forms_day = [re.sub(r"<[^>]+>", "", f).replace("<br>", "") for f in day_kigaku_scan[p]['d_forms']]
+                        if any(bad in form for form in raw_k_forms_day for bad in bad_forms_day):
+                            return False, ""
+                            
                     dung_cach = ""
                     if val_tran_hung or val_thoi_cat:
                         pa1_reqs, pa2_reqs = TRAN_HUNG_DICT[val_tran_hung] if val_tran_hung else THOI_CAT_DICT[val_thoi_cat]
